@@ -8,6 +8,7 @@ import android.os.ParcelFileDescriptor
 import android.os.RemoteException
 import android.system.ErrnoException
 import android.system.Os
+import android.system.OsConstants
 import android.util.Log
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener
 import yangfentuozi.batteryrecorder.server.recorder.Monitor
@@ -28,6 +29,7 @@ import yangfentuozi.hiddenapi.compat.ActivityManagerCompat
 import yangfentuozi.hiddenapi.compat.PackageManagerCompat
 import yangfentuozi.hiddenapi.compat.ServiceManagerCompat
 import java.io.File
+import java.io.FileDescriptor
 import java.io.IOException
 import java.nio.file.Files
 import java.util.Scanner
@@ -83,22 +85,56 @@ class Server internal constructor() : IService.Stub() {
     }
 
     private fun unlockOPlusSampleTimeLimit(intervalMs: Long) {
+        fun readFd(fd: FileDescriptor): String {
+            val buffer = ByteArray(1024)
+            val len = Os.read(fd, buffer, 0, buffer.size)
+            return String(buffer, 0, len)
+        }
+        fun writeFd(fd: FileDescriptor, content: String) {
+            val buffer = content.toByteArray()
+            var toWrite = buffer.size
+            var offset = 0
+            while (toWrite > 0) {
+                val len = Os.write(fd, buffer, offset, toWrite)
+                toWrite -= len
+                offset += len
+            }
+        }
+        val forceActive = "/proc/oplus-votable/GAUGE_UPDATE/force_active"
+        val forceVal = "/proc/oplus-votable/GAUGE_UPDATE/force_val"
+        val perm = "666".toInt(8)
+
+        var forceActiveFd: FileDescriptor? = null
+        var forceValFd: FileDescriptor? = null
+
         try {
-            val forceActive = "/proc/oplus-votable/GAUGE_UPDATE/force_active"
-            val forceVal = "/proc/oplus-votable/GAUGE_UPDATE/force_val"
-            val currentValue = File(forceVal).readText().trim().toLong()
-            if (currentValue > intervalMs || currentValue == 0L) {
-                LoggerX.i<Server>("unlockOPlusSampleTimeLimit: 解锁欧加功率采样频率: ${intervalMs}Ms\ncurrent: $currentValue Ms")
-                val command =
-                    "chmod 666 $forceVal;echo '$intervalMs' > $forceVal;chmod 666 $forceActive;echo '1' > $forceActive"
-                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
-                val exitCode = process.waitFor()
-                if (exitCode != 0) {
-                    throw IOException("unlockOPlusSampleTimeLimit: shell 命令执行失败, exitCode=$exitCode")
+            if (try {
+                    Os.access(forceActive, OsConstants.F_OK)
+                } catch (_: ErrnoException) {
+                    false
+                }
+            ) {
+                LoggerX.i<Server>("unlockOPlusSampleTimeLimit: 欧加功率采样频率解限文件存在")
+
+                Os.chmod(forceActive, perm)
+                Os.chmod(forceVal, perm)
+
+                forceActiveFd = Os.open(forceActive, OsConstants.O_RDWR, perm)
+                forceValFd = Os.open(forceVal, OsConstants.O_RDWR, perm)
+
+                val nowValue = readFd(forceValFd).trim().toLong()
+                val nowActive = readFd(forceActiveFd).trim().toInt() == 1
+                if (!nowActive || nowValue > intervalMs || nowValue == 0L) {
+                    LoggerX.i<Server>("解锁欧加功率采样频率: ${intervalMs}Ms\n当前频率: $nowValue Ms\n当前状态：$nowActive")
+                    writeFd(forceValFd, "$intervalMs\n")
+                    writeFd(forceActiveFd, "1\n")
                 }
             }
         } catch (e: Exception) {
             LoggerX.w<Server>("解锁欧加功率采样频率限制时失败", tr = e)
+        } finally {
+            if (forceActiveFd != null) Os.close(forceActiveFd)
+            if (forceValFd != null) Os.close(forceValFd)
         }
     }
 
