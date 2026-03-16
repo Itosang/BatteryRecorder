@@ -11,6 +11,7 @@ data class ServerActions(
     val setWriteLatencyMs: (Long) -> Unit,
     val setBatchSize: (Int) -> Unit,
     val setScreenOffRecordEnabled: (Boolean) -> Unit,
+    val setAlwaysPollingScreenStatusEnabled: (Boolean) -> Unit,
     val setSegmentDurationMin: (Long) -> Unit,
     val setRootBootAutoStartEnabled: (Boolean) -> Unit
 )

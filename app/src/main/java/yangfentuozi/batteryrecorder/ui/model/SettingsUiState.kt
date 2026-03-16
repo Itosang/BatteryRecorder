@@ -11,6 +11,7 @@ data class SettingsUiState(
     val writeLatencyMs: Long = ConfigConstants.DEF_WRITE_LATENCY_MS,
     val batchSize: Int = ConfigConstants.DEF_BATCH_SIZE,
     val recordScreenOffEnabled: Boolean = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
+    val alwaysPollingScreenStatusEnabled: Boolean = ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
     val segmentDurationMin: Long = ConfigConstants.DEF_SEGMENT_DURATION_MIN,
     val rootBootAutoStartEnabled: Boolean = ConfigConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED,
     val gamePackages: Set<String> = emptySet(),

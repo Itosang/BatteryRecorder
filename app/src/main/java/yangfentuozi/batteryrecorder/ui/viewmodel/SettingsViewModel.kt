@@ -50,6 +50,10 @@ class SettingsViewModel : ViewModel() {
     private val _screenOffRecord = MutableStateFlow(ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED)
     val screenOffRecord: StateFlow<Boolean> = _screenOffRecord.asStateFlow()
 
+    // 轮询检查息屏状态
+    private val _alwaysPollingScreenStatusEnabled = MutableStateFlow(ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED)
+    val alwaysPollingScreenStatusEnabled: StateFlow<Boolean> = _alwaysPollingScreenStatusEnabled.asStateFlow()
+
     // 分段时间 (分钟)
     private val _segmentDurationMin = MutableStateFlow(ConfigConstants.DEF_SEGMENT_DURATION_MIN)
     val segmentDurationMin: StateFlow<Long> = _segmentDurationMin.asStateFlow()
@@ -174,6 +178,12 @@ class SettingsViewModel : ViewModel() {
             prefs.getBoolean(
                 ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED,
                 ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+            )
+
+        _alwaysPollingScreenStatusEnabled.value =
+            prefs.getBoolean(
+                ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
+                ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
             )
 
         _segmentDurationMin.value =
@@ -346,6 +356,16 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    fun setAlwaysPollingScreenStatusEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            prefs.edit { putBoolean(ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED, enabled) }
+            _alwaysPollingScreenStatusEnabled.value = enabled
+            serverConfig = serverConfig.copy(alwaysPollingScreenStatusEnabled = enabled)
+            Service.service?.updateConfig(serverConfig)
+            refreshCombinedState()
+        }
+    }
+
     fun setSegmentDurationMin(value: Long) {
         val finalValue =
             value.coerceIn(
@@ -454,6 +474,7 @@ class SettingsViewModel : ViewModel() {
             writeLatencyMs = _writeLatencyMs.value,
             batchSize = _batchSize.value,
             recordScreenOffEnabled = _screenOffRecord.value,
+            alwaysPollingScreenStatusEnabled = _alwaysPollingScreenStatusEnabled.value,
             segmentDurationMin = _segmentDurationMin.value,
             rootBootAutoStartEnabled = _rootBootAutoStartEnabled.value,
             gamePackages = _gamePackages.value,

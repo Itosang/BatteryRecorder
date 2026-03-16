@@ -4,9 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.layout.padding
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +76,14 @@ fun ServerSection(
                 text = "息屏记录",
                 checked = state.recordScreenOffEnabled,
                 onCheckedChange = actions.setScreenOffRecordEnabled
+            )
+        }
+
+        item {
+            M3ESwitchWidget(
+                text = "轮询获取息屏状态",
+                checked = state.alwaysPollingScreenStatusEnabled,
+                onCheckedChange = actions.setAlwaysPollingScreenStatusEnabled
             )
         }
 

@@ -60,6 +60,7 @@ object ConfigUtil {
                 var screenOffRecordEnabled = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
                 var segmentDurationMin = ConfigConstants.DEF_SEGMENT_DURATION_MIN
                 var logLevel = ConfigConstants.DEF_LOG_LEVEL
+                var alwaysPollingScreenStatusEnabled = ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
 
                 while (eventType != XmlPullParser.END_DOCUMENT) {
                     if (eventType == XmlPullParser.START_TAG) {
@@ -85,6 +86,9 @@ object ConfigUtil {
 
                             ConfigConstants.KEY_LOG_LEVEL ->
                                 logLevel = LoggerX.LogLevel.fromPriority(valueAttr.trim().toIntOrNull() ?: Int.MIN_VALUE)
+
+                            ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
+                                alwaysPollingScreenStatusEnabled = valueAttr.toBooleanStrictOrNull() ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
                         }
                     }
                     eventType = parser.next()
@@ -96,7 +100,8 @@ object ConfigUtil {
                     batchSize = batchSize,
                     screenOffRecordEnabled = screenOffRecordEnabled,
                     segmentDurationMin = segmentDurationMin,
-                    logLevel = logLevel
+                    logLevel = logLevel,
+                    alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
                 ))
             }
         } catch (e: FileNotFoundException) {
@@ -121,7 +126,8 @@ object ConfigUtil {
                 ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
             ),
             segmentDurationMin = prefs.getLong(ConfigConstants.KEY_SEGMENT_DURATION_MIN, ConfigConstants.DEF_SEGMENT_DURATION_MIN),
-            logLevel = LoggerX.LogLevel.fromPriority(prefs.getInt(ConfigConstants.KEY_LOG_LEVEL, ConfigConstants.DEF_LOG_LEVEL.priority))
+            logLevel = LoggerX.LogLevel.fromPriority(prefs.getInt(ConfigConstants.KEY_LOG_LEVEL, ConfigConstants.DEF_LOG_LEVEL.priority)),
+            alwaysPollingScreenStatusEnabled = prefs.getBoolean(ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED, ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED)
         ))
     }
 

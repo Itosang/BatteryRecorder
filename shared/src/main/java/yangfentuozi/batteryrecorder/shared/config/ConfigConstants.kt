@@ -33,6 +33,10 @@ object ConfigConstants {
     const val MAX_SEGMENT_DURATION_MIN = 1440L
     const val DEF_SEGMENT_DURATION_MIN = 1440L
 
+    /** 轮询检查息屏状态 */
+    const val KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED = "always_polling_screen_status_enabled"
+    const val DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED = false
+
     /** 开机后尝试 ROOT 自启动 */
     const val KEY_ROOT_BOOT_AUTO_START_ENABLED = "root_boot_auto_start_enabled"
     const val DEF_ROOT_BOOT_AUTO_START_ENABLED = false

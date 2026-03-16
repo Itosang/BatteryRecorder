@@ -40,15 +40,7 @@ class Monitor(
         }
     }
 
-    private val displayCallback: IDisplayManagerCallback = object : IDisplayManagerCallback.Stub() {
-        @Keep
-        override fun onDisplayEvent(displayId: Int, event: Int) {
-            isInteractive = iPowerManager.isInteractive
-            if (isInteractive && paused) {
-                notifyLock()
-            }
-        }
-    }
+    private var displayCallback: IDisplayManagerCallback? = null
 
     @Volatile
     private var currForegroundApp: String? = null
@@ -63,6 +55,20 @@ class Monitor(
 
     @Volatile
     var screenOffRecord: Boolean = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+
+    private var mAlwaysPollingScreenStatusEnabled: Boolean = ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+    var alwaysPollingScreenStatusEnabled: Boolean
+        get() = mAlwaysPollingScreenStatusEnabled
+        set(value) {
+            if (value != mAlwaysPollingScreenStatusEnabled) {
+                mAlwaysPollingScreenStatusEnabled = value
+                if (value) {
+                    unregisterDisplayEventCallback()
+                } else {
+                    registerDisplayEventCallback()
+                }
+            }
+        }
 
     @Volatile
     private var paused = false
@@ -81,6 +87,7 @@ class Monitor(
                     val power = sample.voltage * sample.current
                     val status = sample.status
                     val temp = sample.temp
+                    if (alwaysPollingScreenStatusEnabled) isInteractive = iPowerManager.isInteractive
                     writer.write(
                         LineRecord(
                             timestamp,
@@ -127,7 +134,7 @@ class Monitor(
     fun start() {
         try {
             iActivityTaskManager.registerTaskStackListener(taskStackListener)
-            iDisplayManager.registerCallback(displayCallback)
+            if (alwaysPollingScreenStatusEnabled) registerDisplayEventCallback()
         } catch (e: RemoteException) {
             throw RuntimeException("start: 注册任务栈监听失败", e)
         }
@@ -154,6 +161,23 @@ class Monitor(
                 callbacks.finishBroadcast()
             }
         }
+    }
+
+    private fun registerDisplayEventCallback() {
+        displayCallback = object : IDisplayManagerCallback.Stub() {
+            @Keep
+            override fun onDisplayEvent(displayId: Int, event: Int) {
+                isInteractive = iPowerManager.isInteractive
+                if (isInteractive && paused) {
+                    notifyLock()
+                }
+            }
+        }
+        iDisplayManager.registerCallback(displayCallback)
+    }
+
+    private fun unregisterDisplayEventCallback() {
+        displayCallback = null
     }
 
     fun stop() {

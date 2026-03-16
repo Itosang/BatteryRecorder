@@ -55,6 +55,7 @@ fun SettingsScreen(
                 setWriteLatencyMs = settingsViewModel::setWriteLatencyMs,
                 setBatchSize = settingsViewModel::setBatchSize,
                 setScreenOffRecordEnabled = settingsViewModel::setScreenOffRecordEnabled,
+                setAlwaysPollingScreenStatusEnabled = settingsViewModel::setAlwaysPollingScreenStatusEnabled,
                 setSegmentDurationMin = settingsViewModel::setSegmentDurationMin,
                 setRootBootAutoStartEnabled = settingsViewModel::setRootBootAutoStartEnabled
             ),

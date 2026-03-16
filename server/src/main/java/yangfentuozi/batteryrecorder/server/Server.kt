@@ -74,6 +74,7 @@ class Server internal constructor() : IService.Stub() {
     override fun updateConfig(config: Config) {
         Handlers.common.post {
             LoggerX.logLevel = config.logLevel
+            monitor.alwaysPollingScreenStatusEnabled = config.alwaysPollingScreenStatusEnabled
             monitor.recordIntervalMs = config.recordIntervalMs
             unlockOPlusSampleTimeLimit(config.recordIntervalMs.coerceAtLeast(200))
             monitor.screenOffRecord = config.screenOffRecordEnabled
