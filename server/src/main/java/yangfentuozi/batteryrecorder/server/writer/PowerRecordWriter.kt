@@ -7,6 +7,7 @@ import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
 import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
+import yangfentuozi.batteryrecorder.shared.writer.AdvancedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -115,27 +116,13 @@ class PowerRecordWriter(
         @Volatile
         var segmentFile: File? = null
             private set
-        protected var autoRetryWriter: AutoRetryStringWriter? = null
+        private var writer: AdvancedWriter? = null
 
         protected var startTime: Long = 0L
         protected var lastTime: Long = 0L
         protected var lastChangedStatusTime = 0L
 
-        protected val buffer = StringBuilder(4096)
-        protected var batchCount = 0
-
         protected val handler: Handler = Handlers.getHandler("RecorderWritingThread")
-        protected val writingRunnable = Runnable {
-            flushBuffer()
-            // 防止异步写完被忽略掉
-            if (batchCount > 0) {
-                postDelayedWriting()
-            }
-        }
-
-        fun postDelayedWriting() {
-            handler.postDelayed(writingRunnable, flushIntervalMs)
-        }
 
         fun write(
             record: LineRecord,
@@ -157,28 +144,15 @@ class PowerRecordWriter(
             val startedNewSegment = startNewSegmentIfNeed(justChangedStatus)
             lastTime = record.timestamp
 
-            buffer.append(record).append("\n")
-            batchCount++
+            writer!!.appendLine(record)
 
             if (startedNewSegment) {
                 LoggerX.d<BaseDelayedRecordWriter>("[写盘] 新分段已创建，立即落盘: file=${segmentFile?.name}")
-                flushBuffer()
-                if (handler.hasCallbacks(writingRunnable)) {
-                    handler.removeCallbacks(writingRunnable)
-                }
+                writer!!.flushNow()
                 return
             }
 
-            if (batchCount >= batchSize) {
-                flushBuffer()
-                if (handler.hasCallbacks(writingRunnable)) {
-                    handler.removeCallbacks(writingRunnable)
-                }
-            } else {
-                if (!handler.hasCallbacks(writingRunnable)) {
-                    postDelayedWriting()
-                }
-            }
+            writer!!.onEnqueued()
             if (justChangedStatus) {
                 LoggerX.d<BaseDelayedRecordWriter>("[写盘] 当前记录文件已切换: file=${segmentFile?.name}")
                 onChangedCurrRecordsFile?.invoke()
@@ -191,7 +165,7 @@ class PowerRecordWriter(
             val nowTime = System.currentTimeMillis()
             if (needStartNewSegment(justChangedStatus, nowTime) ||
                 // case 还没记录过
-                autoRetryWriter == null
+                writer == null
             ) {
                 // 关闭之前的记录，打开新的
                 closeCurrentSegment()
@@ -210,11 +184,14 @@ class PowerRecordWriter(
                     fixFileOwner(file)
                     FileOutputStream(file, true)
                 }
-                autoRetryWriter = AutoRetryStringWriter(
-                    openOutputStream(),
-                    3,
-                    1000,
-                    openOutputStream
+                writer = AdvancedWriter(
+                    handler = handler,
+                    batchSize = { batchSize },
+                    flushIntervalMs = { flushIntervalMs },
+                    outputStream = openOutputStream(),
+                    retryTimes = 3,
+                    retryIntervalMs = 1000,
+                    reopenOutputStream = openOutputStream
                 )
                 return true
             }
@@ -231,22 +208,18 @@ class PowerRecordWriter(
         ): Boolean
 
         fun flushBuffer() {
-            if (batchCount == 0 || autoRetryWriter == null) return
-            LoggerX.d<BaseDelayedRecordWriter>("[写盘] flushBuffer: dir=${dir.name} batchCount=$batchCount file=${segmentFile?.name}")
-            autoRetryWriter!!.write(buffer)
-            buffer.setLength(0) // 清空 StringBuilder
-            batchCount = 0
+            writer?.flushNow()
         }
 
         fun closeCurrentSegment() {
             flushBuffer()
-            if (autoRetryWriter != null) {
+            if (writer != null) {
                 try {
-                    autoRetryWriter!!.close()
+                    writer!!.close()
                 } catch (e: IOException) {
                     LoggerX.e<BaseDelayedRecordWriter>("[写盘] 关闭分段文件失败", tr = e)
                 }
-                autoRetryWriter = null
+                writer = null
                 if (needDeleteSegment(System.currentTimeMillis())) {
                     LoggerX.v<BaseDelayedRecordWriter>("[写盘] 删除短分段: file=${segmentFile?.name}")
                     segmentFile!!.delete()

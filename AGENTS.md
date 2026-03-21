@@ -264,8 +264,7 @@ server/src/main/
 │   │       ├── SysfsSampler.kt
 │   │       └── DumpsysSampler.kt
 │   └── writer/
-│       ├── PowerRecordWriter.kt
-│       └── AutoRetryStringWriter.kt
+│       └── PowerRecordWriter.kt
 ├── aidl/
 └── jni/power_reader.c
 ```
@@ -279,6 +278,7 @@ shared/src/main/
 │   ├── data/
 │   ├── sync/
 │   ├── util/
+│   ├── writer/
 │   └── Constants.kt
 └── aidl/
 ```

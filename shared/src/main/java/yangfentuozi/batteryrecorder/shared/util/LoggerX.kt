@@ -3,11 +3,10 @@ package yangfentuozi.batteryrecorder.shared.util
 import android.util.Log
 import yangfentuozi.batteryrecorder.shared.BuildConfig
 import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
-import java.io.BufferedWriter
+import yangfentuozi.batteryrecorder.shared.writer.AdvancedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.OutputStreamWriter
 import java.nio.file.Files
 import java.time.Instant
 import java.time.LocalDate
@@ -58,31 +57,31 @@ object LoggerX {
         return level.priority >= allowedPriority.priority
     }
 
-    inline fun <reified T> v(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Verbose, msg, args, tr = tr)
+    inline fun <reified T> v(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Verbose, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    inline fun <reified T> d(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Debug, msg, args, tr = tr)
+    inline fun <reified T> d(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Debug, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    inline fun <reified T> i(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Info, msg, args, tr = tr)
+    inline fun <reified T> i(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Info, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    inline fun <reified T> w(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Warning, msg, args, tr = tr)
+    inline fun <reified T> w(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Warning, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    inline fun <reified T> e(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Error, msg, args, tr = tr)
+    inline fun <reified T> e(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Error, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    inline fun <reified T> a(msg: String?, vararg args: Any?, tr: Throwable? = null) {
-        log(T::class.java.simpleName, LogLevel.Assert, msg, args, tr = tr)
+    inline fun <reified T> a(msg: String?, vararg args: Any?, tr: Throwable? = null, notWrite: Boolean = false) {
+        log(T::class.java.simpleName, LogLevel.Assert, msg, args, tr = tr, notWrite = notWrite)
     }
 
-    fun log(tag: String, level: LogLevel, msg: String?, vararg args: Any?, tr: Throwable?) {
+    fun log(tag: String, level: LogLevel, msg: String?, vararg args: Any?, tr: Throwable?, notWrite: Boolean = false) {
         if (!isLoggable(level)) return
         val base = if (args.isEmpty()) msg.toString() else String.format(
             Locale.ENGLISH,
@@ -90,11 +89,11 @@ object LoggerX {
             args
         )
         val content = if (tr == null) base else "$base\n${Log.getStackTraceString(tr)}"
-        println(tag, level, content)
+        println(tag, level, content, notWrite)
     }
 
-    fun println(tag: String, priority: LogLevel, msg: String): Int {
-        writer?.write(tag, priority, msg)
+    fun println(tag: String, priority: LogLevel, msg: String, notWrite: Boolean = false): Int {
+        if (!notWrite) writer?.write(tag, priority, msg)
         return Log.println(priority.priority, tag, msg)
     }
 
@@ -123,10 +122,11 @@ object LoggerX {
         private val fileNameRegex = Regex("""^(\d{4}-\d{2}-\d{2})(?:_(\d+))?\.log$""")
         private val dateFileFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         private val lineTimeFormatter = DateTimeFormatter.ofPattern("dd HH:mm:ss.SSS")
+        private val handler = Handlers.getHandler("LoggingThread")
         private var activeDate = ""
         private var activeIndex = 0
         private var activeLines = 0
-        private lateinit var writer: BufferedWriter
+        private var writer: AdvancedWriter? = null
 
         init {
             if (!logDir.exists() && !logDir.mkdirs()) throw IOException("logDir.mkdirs() failed: ${logDir.absolutePath}")
@@ -135,12 +135,12 @@ object LoggerX {
         }
 
         fun write(tag: String, level: LogLevel, message: String) {
-            Handlers.getHandler("LoggingThread").post {
+            handler.post {
                 try {
                     val today = LocalDate.now()
                     val todayKey = today.format(dateFileFormatter)
-                    if (activeDate != todayKey || !::writer.isInitialized) {
-                        if (::writer.isInitialized) writer.close()
+                    if (activeDate != todayKey || writer == null) {
+                        closeWriter()
                         activeDate = todayKey
                         activeIndex = 0
                         activeLines = 0
@@ -179,25 +179,13 @@ object LoggerX {
                                 }
                             }
                         }
-                        val fileName =
-                            if (activeIndex == 0) "$todayKey.log" else "${todayKey}_${activeIndex}.log"
-                        val logFile = File(logDir, fileName)
-                        if (!logFile.exists() && !logFile.createNewFile()) throw IOException("logFile.createNewFile() failed: ${logFile.absolutePath}")
-                        if (logFile.isDirectory) throw IOException("logFile is a directory: ${logFile.absolutePath}")
-                        fixFileOwner?.invoke(logFile)
-                        writer = BufferedWriter(OutputStreamWriter(FileOutputStream(logFile, true)))
+                        openWriter()
                     }
                     if (activeLines >= maxLinesPerFile) {
-                        writer.close()
                         activeIndex += 1
                         activeLines = 0
-                        val fileName =
-                            if (activeIndex == 0) "$activeDate.log" else "${activeDate}_${activeIndex}.log"
-                        val logFile = File(logDir, fileName)
-                        if (!logFile.exists() && !logFile.createNewFile()) throw IOException("logFile.createNewFile() failed: ${logFile.absolutePath}")
-                        if (logFile.isDirectory) throw IOException("logFile is a directory: ${logFile.absolutePath}")
-                        fixFileOwner?.invoke(logFile)
-                        writer = BufferedWriter(OutputStreamWriter(FileOutputStream(logFile, true)))
+                        closeWriter()
+                        openWriter()
                     }
                     val timestamp = Instant.ofEpochMilli(System.currentTimeMillis())
                         .atZone(ZoneId.systemDefault())
@@ -211,13 +199,55 @@ object LoggerX {
                     sb.append(tag)
                     sb.append(": ")
                     sb.append(message)
-                    writer.write(sb.toString())
-                    writer.newLine()
-                    writer.flush()
-                    activeLines += sb.count { it == '\n' } + 1
+                    val line = sb.toString()
+                    writer?.appendLine(line)
+                    writer?.onEnqueued()
+                    // 尽量避免关键日志丢失：错误级别直接触发一次 flush（写入仍在异步线程执行）
+                    if (level.priority >= Log.ERROR) {
+                        writer?.flushNow()
+                    }
+                    activeLines += line.count { it == '\n' } + 1
                 } catch (e: Exception) {
                     Log.e(this::class.java.simpleName, "writing error", e)
                 }
+            }
+        }
+
+        private fun openWriter() {
+            val fileName = if (activeIndex == 0) "$activeDate.log" else "${activeDate}_${activeIndex}.log"
+            val logFile = File(logDir, fileName)
+            if (!logFile.exists() && !logFile.createNewFile()) throw IOException("logFile.createNewFile() failed: ${logFile.absolutePath}")
+            if (logFile.isDirectory) throw IOException("logFile is a directory: ${logFile.absolutePath}")
+            fixFileOwner?.invoke(logFile)
+            val openOutputStream: (() -> java.io.OutputStream) = {
+                if (!logFile.exists() && !logFile.createNewFile()) {
+                    throw IOException("@openOutputStream: 创建日志文件失败: ${logFile.absolutePath}")
+                }
+                if (logFile.isDirectory) throw IOException("@openOutputStream: logFile is a directory: ${logFile.absolutePath}")
+                fixFileOwner?.invoke(logFile)
+                FileOutputStream(logFile, true)
+            }
+            writer = AdvancedWriter(
+                handler = handler,
+                batchSize = { 64 },
+                flushIntervalMs = { 1_000 },
+                outputStream = openOutputStream(),
+                reopenOutputStream = openOutputStream,
+                retryTimes = 3,
+                retryIntervalMs = 1_000,
+                useAndroidLog = true
+            )
+        }
+
+        private fun closeWriter() {
+            val w = writer ?: return
+            try {
+                w.flushNow()
+                w.close()
+            } catch (e: Exception) {
+                Log.e(this::class.java.simpleName, "closeWriter error", e)
+            } finally {
+                writer = null
             }
         }
     }
