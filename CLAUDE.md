@@ -7,23 +7,26 @@
 - 这是**仓库工作说明**，不是面向最终用户的使用文档
 - 目标是让代理快速理解当前项目结构、关键链路与修改约束
 - 当项目新增关键模块、入口、缓存格式或数据链路时，必须同步更新本文件与 `CLAUDE.md`
+- 文档应优先记录**真实现状**；若代码实现与理想约束不一致，必须如实写明，不得继续保留过时描述
 
 ## 项目概述
 
 BatteryRecorder 是一个 Android 电池功率记录 App。
 
-- App 进程负责 UI、配置、历史数据展示、续航预测与 IPC 客户端
+- App 进程负责 UI、配置、历史数据展示、日志导出、续航预测与 IPC 客户端
 - Server 进程以 root/shell 权限运行，低开销采集电池数据并写入记录文件
 - 采样优先走 JNI sysfs 读取；不可用时回退到 dumpsys/batteryproperties 方案
-- 历史数据支持图表查看、应用维度统计、场景维度统计与续航预测
+- 历史数据支持图表查看、应用维度统计、场景维度统计、记录详情统计与续航预测
+- 应用启动阶段还负责首次文档引导与更新检查
 
 ## 构建约束
 
 不要自主构建。修改完成后直接告知用户测试。
 
 - 签名配置从根目录 `signing.properties` 读取；缺失时回退到 debug keystore
-- APK 输出路径：`app/build/outputs/apk/{release,debug}/batteryrecorder-v*-{variant}.apk`
-- Release 混淆产物会复制到根目录 `out/apk/`
+- APK 输出文件名格式为：`batteryrecorder-v{versionName}-{variant}.apk`
+- APK 默认输出到：`app/build/outputs/apk/{debug,release}/`
+- Release APK 会复制到根目录 `out/apk/`
 - Release mapping 会复制到根目录 `out/mapping/`
 - `versionCode` 由 git commit 数量动态生成，需要完整 git history
 
@@ -31,7 +34,7 @@ BatteryRecorder 是一个 Android 电池功率记录 App。
 
 | 项 | 值 |
 |---|---|
-| 语言 | Kotlin（主）, Java（hiddenapi）, C（JNI） |
+| 语言 | Kotlin（主）, Java（hiddenapi）, C/C++（JNI） |
 | UI | Jetpack Compose + Material 3，无 XML Layout |
 | 架构 | MVVM（ViewModel + StateFlow + Compose） |
 | 构建 | Gradle 8.13 Kotlin DSL, AGP 8.13.2, Kotlin 2.3.0 |
@@ -44,9 +47,9 @@ BatteryRecorder 是一个 Android 电池功率记录 App。
 ## 模块结构与依赖
 
 ```text
-:app                 -> 主应用，UI + IPC 客户端 + 历史/预测
+:app                 -> 主应用，UI + IPC 客户端 + 历史/预测 + 日志导出
 :server              -> 独立 Server 进程，采样 + 写文件 + AIDL 服务端
-:shared              -> 公共配置、数据模型、文件解析、同步协议
+:shared              -> 公共配置、数据模型、文件解析、同步协议、日志基础设施
 :hiddenapi:stub      -> Hidden API stub 声明（compileOnly）
 :hiddenapi:compat    -> Hidden API 兼容封装
 ```
@@ -83,7 +86,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 
 - `Sampler` 是采样抽象
 - `SysfsSampler` 负责加载 JNI 动态库并读取 `/sys/class/power_supply/battery/`
-- `DumpsysSampler` 是 sysfs/JNI 不可用时的回退实现
+- `DumpsysSampler` 是 sysfs/JNI 不可用时的回退实现，JNI 侧同时依赖 `dump_parser.cpp`
 - `Monitor` 按配置间隔循环采样，并监听前台应用与屏幕状态
 - `PowerRecordWriter` 分充电/放电两路写入 CSV，支持批量缓冲、延迟 flush、分段落盘
 - 当前记录格式：
@@ -93,20 +96,23 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 
 - Server 以 shell 权限运行时，记录文件落在 `com.android.shell` 数据目录
 - App 通过 `sync()` AIDL 拿到 `ParcelFileDescriptor`
-- 传输协议由 `PfdFileSender` / `PfdFileReceiver` 实现
+- 传输协议由 `PfdFileSender` / `PfdFileReceiver` / `SyncConstants` 实现
 - 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理
 
-### 功率显示与预测链路
+### 首页统计与预测链路
 
-- 原始功率值展示必须统一经过 `FormatUtil.computePowerW()`
-- 放电显示正值逻辑只能在 ViewModel 层通过 `PowerDisplayMapper` 或等价映射处理，UI 层不做正负转换
-- 预测统计层一律按功耗幅值计算；展示层保留原始正负语义
-- `PredictionDetailViewModel` 仅暴露原始统计值，最终展示由 `PredictionDetailScreen` 结合设置项决定
+- `BatteryRecorderApp` 创建并下传 `MainViewModel`、`SettingsViewModel`
+- `HomeScreen` 局部创建 `LiveRecordViewModel`
+- 首页的“续航预测卡片”和“场景统计卡片”都定义在 `ui/components/home/PredictionCard.kt`
+- 首页统计刷新参数统一来自 `SettingsViewModel.statisticsRequest`
+- 首页支持日志导出、ADB 引导、关于弹窗、首次文档引导与启动更新检查
 
 ### 记录详情链路
 
+- `HistoryViewModel` 在 `BatteryRecorderNavHost` 中创建单个共享实例，供 `HistoryListScreen` 与 `RecordDetailScreen` 共用
 - `HistoryViewModel` 统一产出 `RecordDetailChartUiState`
 - `RecordDetailScreen` 直接消费 `recordChartUiState`
+- `RecordDetailPowerStatsComputer` 负责记录详情页功耗统计
 - 详情页图表偏好通过独立的 `record_detail_chart` SharedPreferences 持久化，不进入业务配置
 - 详情页同时支持：
   - 原始/趋势/隐藏三种功率曲线模式
@@ -115,6 +121,12 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   - 单记录导出
   - 单记录删除
   - 应用维度详情统计
+
+### 应用预测详情链路
+
+- `PredictionDetailScreen` 局部创建 `PredictionDetailViewModel`
+- `PredictionDetailViewModel` 仅暴露原始统计值
+- 最终展示由 `PredictionDetailScreen` 结合 `SettingsViewModel` 中的展示设置完成
 
 ## 关键数据与展示约定
 
@@ -125,8 +137,8 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 
 ### 放电显示正值
 
-- 只允许在 ViewModel 展示层统一处理
-- UI 组件不关心放电显示正负配置
+- 只允许在 ViewModel 或明确的展示映射层统一处理
+- Compose UI 不应各自散落处理正负转换
 
 ### 记录详情图表
 
@@ -135,16 +147,11 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - 分桶结果取中位数作为趋势功率值
 - 平滑绘制是图表层职责，不在仓库层落地“平滑后数据”
 
-### 记录详情应用统计
+### 记录详情统计
 
 - `RecordAppStatsComputer` 负责单条放电记录内的应用维度统计
-- 统计维度包含：
-  - 应用包名
-  - 息屏详情
-  - 平均原始功率
-  - 平均温度
-  - 最高温度
-  - 持续时长
+- `RecordDetailPowerStatsComputer` 负责记录详情页平均功耗统计
+- 记录详情缓存命中时，必须校验缓存内 `sourceLastModified` 与源文件 `lastModified()` 一致
 
 ### 图标缓存
 
@@ -188,7 +195,6 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - `AppStatsComputer`、`SceneStatsComputer` 与记录详情 `power_stats` 共用 `HistoryCacheVersions.HISTORY_STATS_CACHE_VERSION`
 - 任一历史统计缓存格式或 key 组成变化时，统一提升该版本
 - 缓存命名统一通过 `HistoryCacheNaming.kt`
-- 记录详情缓存命中时，还必须校验缓存内 `sourceLastModified` 与源文件 `lastModified()` 一致
 
 ## 目录索引
 
@@ -206,13 +212,29 @@ docs/
 
 ```text
 app/src/main/java/yangfentuozi/batteryrecorder/
+├── data/
+│   ├── history/
+│   │   ├── HistoryRepository.kt
+│   │   ├── BatteryPredictor.kt
+│   │   ├── DischargeRecordScanner.kt
+│   │   ├── SceneStatsComputer.kt
+│   │   ├── AppStatsComputer.kt
+│   │   ├── RecordAppStatsComputer.kt
+│   │   ├── RecordDetailPowerStatsComputer.kt
+│   │   ├── HistoryCacheNaming.kt
+│   │   ├── HistoryCacheVersions.kt
+│   │   ├── StatisticsRequest.kt
+│   │   └── SyncUtil.kt
+│   ├── log/
+│   │   └── LogRepository.kt
+│   └── model/
+├── ipc/
+├── startup/
 ├── ui/
 │   ├── BatteryRecorderApp.kt
 │   ├── MainActivity.kt
 │   ├── BaseActivity.kt
 │   ├── navigation/
-│   │   ├── NavRoute.kt
-│   │   └── BatteryRecorderNavHost.kt
 │   ├── screens/
 │   │   ├── home/HomeScreen.kt
 │   │   ├── settings/SettingsScreen.kt
@@ -221,32 +243,22 @@ app/src/main/java/yangfentuozi/batteryrecorder/
 │   │       ├── HistoryListScreen.kt
 │   │       └── RecordDetailScreen.kt
 │   ├── components/
+│   │   ├── charts/PowerCapacityChart.kt
 │   │   ├── global/
 │   │   ├── home/
-│   │   ├── settings/
-│   │   └── charts/PowerCapacityChart.kt
+│   │   │   └── PredictionCard.kt  (同时包含 SceneStatsCard)
+│   │   └── settings/sections/
 │   ├── dialog/
+│   │   ├── history/ChartGuideDialog.kt
 │   │   ├── home/
-│   │   ├── settings/
-│   │   └── history/ChartGuideDialog.kt
+│   │   │   ├── AboutDialog.kt
+│   │   │   ├── AdbGuideDialog.kt
+│   │   │   ├── DocsIntroDialog.kt
+│   │   │   └── UpdateDialog.kt
+│   │   └── settings/
 │   ├── model/
 │   ├── theme/
 │   └── viewmodel/
-├── data/
-│   ├── model/
-│   └── history/
-│       ├── HistoryRepository.kt
-│       ├── BatteryPredictor.kt
-│       ├── DischargeRecordScanner.kt
-│       ├── SceneStatsComputer.kt
-│       ├── AppStatsComputer.kt
-│       ├── RecordAppStatsComputer.kt
-│       ├── HistoryCacheNaming.kt
-│       ├── HistoryCacheVersions.kt
-│       ├── StatisticsRequest.kt
-│       └── SyncUtil.kt
-├── ipc/
-├── startup/
 └── utils/
 ```
 
@@ -254,6 +266,7 @@ app/src/main/java/yangfentuozi/batteryrecorder/
 
 ```text
 server/src/main/
+├── aidl/
 ├── java/yangfentuozi/batteryrecorder/server/
 │   ├── Main.kt
 │   ├── Server.kt
@@ -265,22 +278,31 @@ server/src/main/
 │   │       └── DumpsysSampler.kt
 │   └── writer/
 │       └── PowerRecordWriter.kt
-├── aidl/
-└── jni/power_reader.c
+└── jni/
+    ├── CMakeLists.txt
+    ├── dump_parser.cpp
+    └── power_reader.c
 ```
 
 ### Shared 模块
 
 ```text
 shared/src/main/
-├── java/yangfentuozi/batteryrecorder/shared/
-│   ├── config/
-│   ├── data/
-│   ├── sync/
-│   ├── util/
-│   ├── writer/
-│   └── Constants.kt
-└── aidl/
+├── aidl/
+└── java/yangfentuozi/batteryrecorder/shared/
+    ├── config/
+    ├── data/
+    │   └── RecordFileParser.kt
+    ├── sync/
+    │   ├── PfdFileSender.kt
+    │   ├── PfdFileReceiver.kt
+    │   └── SyncConstants.kt
+    ├── util/
+    │   ├── Handlers.kt
+    │   └── LoggerX.kt
+    ├── writer/
+    │   └── AdvancedWriter.kt
+    └── Constants.kt
 ```
 
 ## 关键路径索引
@@ -289,11 +311,13 @@ shared/src/main/
 |---|---|
 | App 入口 Composable | `app/.../ui/BatteryRecorderApp.kt` |
 | 导航路由 | `app/.../ui/navigation/NavRoute.kt` |
+| 导航宿主与历史页共享 ViewModel | `app/.../ui/navigation/BatteryRecorderNavHost.kt` |
 | 首页 | `app/.../ui/screens/home/HomeScreen.kt` |
 | 设置页 | `app/.../ui/screens/settings/SettingsScreen.kt` |
 | 历史列表 | `app/.../ui/screens/history/HistoryListScreen.kt` |
 | 记录详情页 | `app/.../ui/screens/history/RecordDetailScreen.kt` |
 | 预测详情页 | `app/.../ui/screens/prediction/PredictionDetailScreen.kt` |
+| 首页预测/场景卡片 | `app/.../ui/components/home/PredictionCard.kt` |
 | 图表说明弹窗 | `app/.../ui/dialog/history/ChartGuideDialog.kt` |
 | ViewModel | `app/.../ui/viewmodel/` |
 | 记录详情图表状态 | `app/.../ui/viewmodel/HistoryViewModel.kt` |
@@ -304,15 +328,17 @@ shared/src/main/
 | 开机自启动 | `app/.../startup/BootCompletedReceiver.kt`, `RootServerStarter.kt`, `BootAutoStartNotification.kt` |
 | 历史仓库 | `app/.../data/history/HistoryRepository.kt` |
 | 单记录应用统计 | `app/.../data/history/RecordAppStatsComputer.kt` |
+| 记录详情功耗统计 | `app/.../data/history/RecordDetailPowerStatsComputer.kt` |
 | 应用预测统计 | `app/.../data/history/AppStatsComputer.kt` |
 | 场景统计 | `app/.../data/history/SceneStatsComputer.kt` |
 | 放电扫描 | `app/.../data/history/DischargeRecordScanner.kt` |
 | 续航预测 | `app/.../data/history/BatteryPredictor.kt` |
 | 缓存命名与版本 | `app/.../data/history/HistoryCacheNaming.kt`, `HistoryCacheVersions.kt` |
+| 日志导出 | `app/.../data/log/LogRepository.kt` |
 | 图表组件 | `app/.../ui/components/charts/PowerCapacityChart.kt` |
 | 图标缓存 | `app/.../utils/AppIconMemoryCache.kt` |
 | 功率换算/格式化 | `app/.../utils/FormatUtil.kt` |
-| 更新检查 | `app/.../utils/UpdateUtil.kt` |
+| 更新检查工具 | `app/.../utils/UpdateUtil.kt` |
 | Server 进程入口 | `server/.../Main.kt` |
 | Server Binder 实现 | `server/.../Server.kt` |
 | 采样循环 | `server/.../recorder/Monitor.kt` |
@@ -320,20 +346,22 @@ shared/src/main/
 | sysfs/JNI 采样 | `server/.../recorder/sampler/SysfsSampler.kt` |
 | dumpsys 回退采样 | `server/.../recorder/sampler/DumpsysSampler.kt` |
 | 写文件 | `server/.../writer/PowerRecordWriter.kt` |
-| JNI 原生代码 | `server/src/main/jni/power_reader.c` |
+| JNI 原生代码 | `server/src/main/jni/power_reader.c`, `server/src/main/jni/dump_parser.cpp` |
 | AIDL 接口 | `server/src/main/aidl/` |
 | 共享配置 | `shared/.../config/` |
-| 共享数据模型 | `shared/.../data/` |
+| 共享数据模型与解析 | `shared/.../data/` |
 | 同步协议 | `shared/.../sync/` |
 | 日志工具 | `shared/.../util/LoggerX.kt` |
 
 ## 架构约定
 
-- `SettingsViewModel` 统一在 `BatteryRecorderApp` 初始化
-- UI 组件不直接依赖 `Service.service`
-- `HistoryRepository` 只负责文件 I/O、解析和统计，不包含 UI 展示逻辑
-- `MainViewModel` 与 `SettingsViewModel` 在应用入口统一创建后向下传递
-- `HistoryViewModel`、`LiveRecordViewModel` 在各自页面局部创建
+- `MainViewModel` 与 `SettingsViewModel` 在 `BatteryRecorderApp` 创建并向下传递
+- `SettingsViewModel.init(context)` 在应用入口阶段完成 SharedPreferences 初始化
+- `HistoryViewModel` 在 `BatteryRecorderNavHost` 创建共享实例，不是“每个历史页面各建一个”
+- `LiveRecordViewModel` 在 `HomeScreen` 局部创建
+- `PredictionDetailViewModel` 在 `PredictionDetailScreen` 局部创建
+- 当前实现中，`HomeScreen` 会直接访问 `Service.service` 注册/反注册 `IRecordListener`；修改该链路时必须同时检查生命周期与监听释放
+- `HistoryRepository` 负责文件 I/O、解析、缓存和统计，不承载 Compose 展示逻辑
 - 详情页图表状态统一收敛到 `RecordDetailChartUiState`
 - 图表本地展示偏好不写入业务配置
 - 应用图标请求只基于当前视口包名集合触发
