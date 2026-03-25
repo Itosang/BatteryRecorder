@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.BatteryRecorder" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowSplashScreenBackground">@android:color/background_light</item>
+        <item name="android:windowSplashScreenBackground">#004787</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
     </style>
 </resources>
