@@ -555,6 +555,8 @@ fun PowerCapacityChart(
         val timeLabelSegments = if (useFivePercentTimeGrid) 20 else 4
         val timeLabelStep = if (useFivePercentTimeGrid) 4 else 1
         {
+            // 普通模式拆成“静态底图 + 独立选中态覆盖层”两张 Canvas：
+            // 底图只在预计算结果变化时重绘，点选反馈则走上层 Canvas，避免拖动选点时整张图反复重画。
             drawVerticalGridLines(
                 coords,
                 gridColor,
@@ -586,13 +588,15 @@ fun PowerCapacityChart(
                 viewportStart,
                 viewportEnd
             )
-
             clipRect(
                 left = coords.paddingLeft,
                 top = coords.paddingTop,
                 right = coords.paddingLeft + coords.chartWidth,
                 bottom = coords.paddingTop + coords.chartHeight
             ) {
+                // 曲线顺序固定为温度 -> 功率 -> 电量。
+                // 温度与电量属于辅助信息，让功率线保持更靠上的视觉优先级；
+                // 电量放在最后，避免较亮颜色被另外两条曲线完全覆盖。
                 layout.tempPath?.let { path ->
                     drawPath(
                         path = path,
@@ -659,11 +663,15 @@ fun PowerCapacityChart(
                     }
                 }
             }
-
+            // 峰值横线和标签故意放在曲线之后、标记之前：
+            // 1. 它需要盖住网格线，保持“峰值基准线”清晰；
+            // 2. 又不能压住电量/温度文字标记，否则会让标签相互争抢可读性。
             layout.peakAnnotationLayout?.let { peakLayout ->
                 drawPeakAnnotation(peakLayout, coords, peakLineColor)
             }
+
             if (layout.capacityMarkerLayouts.isNotEmpty()) {
+                // 标记文本必须在曲线之后绘制，否则会被路径盖住而失去“可读标签”的意义。
                 clipRect(
                     left = coords.paddingLeft,
                     top = coords.paddingTop,
@@ -684,6 +692,7 @@ fun PowerCapacityChart(
                 }
             }
             layout.screenStatePaths?.let { screenPaths ->
+                // 屏幕状态线属于图表外底部附属轨道，不参与主绘图区的遮挡关系。
                 clipRect(
                     left = coords.paddingLeft,
                     top = 0f,
@@ -700,6 +709,8 @@ fun PowerCapacityChart(
             }
 
             if (showAppIcons) {
+                // 图标始终压在最上层，用于表达“该时间桶主要前台应用”。
+                // 如果放到曲线之下，折线与标记文本会把图标切碎，辨识度会明显下降。
                 clipRect(
                     left = coords.paddingLeft,
                     top = coords.paddingTop,
@@ -740,6 +751,8 @@ fun PowerCapacityChart(
                 .fillMaxWidth()
         ) {
             if (isStaticFullscreen) {
+                // 全屏模式允许平移视口，因此不能像普通模式那样把主绘制完全静态化到固定视口。
+                // 这里改为“一张可平移的大内容层 + 每帧按偏移裁剪显示”，以换取拖动时的连续性。
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -867,6 +880,8 @@ fun PowerCapacityChart(
                     val staticCoords = fullscreenStaticLayout?.baseCoords ?: coords
                     val appIconPlacements = fullscreenStaticLayout?.appIconPlacements ?: emptyList()
 
+                    // 全屏静态层预先按“全时段内容坐标”构建；进入视口时仅做 translate。
+                    // 非静态全屏或普通模式则直接按当前视口现算，避免为了很短时间窗构造超宽 Path。
                     val powerPath = if (isStaticFullscreen) {
                         fullscreenStaticLayout?.powerPath
                     } else if (hasVisiblePowerCurve) {
@@ -930,6 +945,8 @@ fun PowerCapacityChart(
                     ) {
                         val contentOffset =
                             if (isStaticFullscreen) -fullscreenContentOffsetPx else 0f
+                        // 只有真正依赖“内容坐标”的元素才跟随平移：
+                        // 曲线、标记、图标会移动；坐标轴和刻度文本仍留在视口坐标系。
                         translate(left = contentOffset) {
                             tempPath?.let { path ->
                                 drawPath(
@@ -1002,7 +1019,8 @@ fun PowerCapacityChart(
                         }
                     }
 
-                    // 滑动选择器
+                    // 峰值标注保持在网格之上、曲线之下，避免与主次刻度线互相遮挡。
+                    // 全屏分支保留原地计算，是因为峰值标签位置依赖当前视口宽度而不是全时段内容宽度。
                     val peakPlotPowerW = if (hasVisiblePowerCurve) {
                         activePowerPoints.maxOfOrNull { powerValueSelector(it) }
                     } else {
@@ -1037,6 +1055,7 @@ fun PowerCapacityChart(
                     }
 
                     if (capacityMarkers.isNotEmpty()) {
+                        // 电量标记复用与曲线相同的内容偏移，保证标记点仍然对齐真实采样时间。
                         val markerCoords = if (isStaticFullscreen) staticCoords else coords
                         val markerOffset =
                             if (isStaticFullscreen) -fullscreenContentOffsetPx else 0f
@@ -1053,6 +1072,7 @@ fun PowerCapacityChart(
                     }
 
                     if (curveVisibility.showTemp) {
+                        // 温度极值属于“依赖曲线几何位置”的覆盖层，必须跟随内容平移，但仍压在曲线之上。
                         val tempCoords = if (isStaticFullscreen) staticCoords else coords
                         val tempOffset = if (isStaticFullscreen) -fullscreenContentOffsetPx else 0f
                         clipRect(
@@ -1093,6 +1113,8 @@ fun PowerCapacityChart(
                         right = paddingLeft + chartWidth,
                         bottom = paddingTop + chartHeight
                     ) {
+                        // 选中态不进入静态层：
+                        // 它既要压住曲线和峰值线，又要随着点击/拖动即时刷新，单独放在这里能保持最低重绘成本。
                         selectedPointState.value
                             ?.takeIf { it.timestamp in viewportStart..viewportEnd }
                             ?.let { selectedPoint ->
@@ -1133,6 +1155,7 @@ fun PowerCapacityChart(
                     }
 
                     if (showAppIcons) {
+                        // 图标继续保持最后绘制，确保选中点圆点和图标都可见时，图标优先表达应用语义。
                         clipRect(
                             left = paddingLeft,
                             top = paddingTop,
@@ -1170,6 +1193,7 @@ fun PowerCapacityChart(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
+                                // 普通模式底图使用离屏合成，避免裁剪与多层 Path 叠加时出现边缘污染。
                                 compositingStrategy = CompositingStrategy.Offscreen
                             },
                         onDraw = normalStaticLayerDrawBlock
@@ -1234,6 +1258,7 @@ fun PowerCapacityChart(
                             }
                     ) {
                         val layout = normalStaticLayout ?: return@Canvas
+                        // 上层 Canvas 只负责交互覆盖层，不重复绘制任何静态元素。
                         drawSelectedPointOverlay(
                             selectedPoint = selectedPointState.value,
                             coords = layout.coords,
@@ -1576,6 +1601,8 @@ private fun prepareChartState(request: ChartPreparationRequest): ChartPreparatio
     val normalStaticLayout = if (isStaticFullscreen) {
         null
     } else {
+        // 普通模式的静态布局完全绑定当前视口：
+        // 任何标记、Path 和屏幕状态线都按可见窗口预计算，后续只需直接重绘这一块区域。
         val coords = ChartCoordinates(
             paddingLeft = request.paddingLeftPx,
             paddingTop = request.paddingTopPx,
@@ -1651,6 +1678,8 @@ private fun prepareChartState(request: ChartPreparationRequest): ChartPreparatio
     val fullscreenStaticLayout = if (!isStaticFullscreen) {
         null
     } else {
+        // 全屏静态布局按全时段内容宽度预建，用“内容坐标”表达所有几何。
+        // 这样拖动只需要改 contentOffset，而不是在每一帧重算完整 Path。
         val baseCoords = ChartCoordinates(
             paddingLeft = request.paddingLeftPx,
             paddingTop = request.paddingTopPx,
@@ -2119,7 +2148,7 @@ private fun DrawScope.drawTimeAxisLabels(
 }
 
 /**
- * 为普通模式静态层预构建峰值线与标签位置。
+ * 预构建峰值横线与标签布局，供普通模式和全屏模式复用。
  *
  * @param peakDisplay 峰值文本与峰值高度
  * @param coords 图表坐标系
@@ -2132,6 +2161,8 @@ private fun buildPeakAnnotationLayout(
     canvasWidthPx: Float,
     density: Density,
 ): PeakAnnotationLayout? {
+    // 峰值标签放在绘图区右外侧保留区，而不是压进图内：
+    // 这样既能和曲线保持对齐，又不会在峰值靠右时遮住终点附近的数据。
     if (canvasWidthPx <= 0f || coords.chartWidth <= 0f) return null
     val peakY = coords.powerToY(peakDisplay.peakPlotPowerW)
     val labelPaint = createTextPaint(0, 24f)
@@ -2229,6 +2260,7 @@ private fun buildTempMarkerLayouts(
         if (textX < coords.paddingLeft) textX = coords.paddingLeft
 
         val isMax = point === maxPoint
+        // 最高温贴点上方、最低温贴点下方，避免两个极值刚好接近时文字互相覆盖。
         val textY = if (isMax) {
             y - padding
         } else {
@@ -2257,6 +2289,8 @@ private fun buildScreenStatePaths(
     density: Density,
 ): ScreenStatePaths? {
     if (points.isEmpty()) return null
+    // 亮屏/息屏轨道独立于主绘图区，预构建 Path 后可在普通模式直接复用，
+    // 避免每次选中点变化都重新遍历整段原始屏幕状态序列。
     val y = coords.paddingTop + coords.chartHeight + with(density) { 8.dp.toPx() }
     val screenOnPath = Path()
     val screenOffPath = Path()
@@ -2315,6 +2349,8 @@ private fun DrawScope.drawTextPointMarkerLayouts(
     color: Color
 ) {
     if (layouts.isEmpty()) return
+    // 这里只消费“已经排版好的布局”，不再关心业务含义。
+    // 这样电量标记与温度极值可以共用同一绘制器，同时把排版约束留在预计算阶段处理。
     val textPaint = createTextPaint(color.toArgb(), 20f)
     layouts.forEach { layout ->
         drawCircle(color, radius = 3.dp.toPx() * 0.65f, center = layout.center)
@@ -2328,7 +2364,7 @@ private fun DrawScope.drawTextPointMarkerLayouts(
 }
 
 /**
- * 绘制预计算后的峰值线与标签。
+ * 成组绘制峰值横线与右侧标签，保持它们处于同一绘制层级。
  *
  * @param layout 峰值布局
  * @param coords 图表坐标系
@@ -2339,6 +2375,7 @@ private fun DrawScope.drawPeakAnnotation(
     coords: ChartCoordinates,
     color: Color
 ) {
+    // 线和文字在同一 helper 中绘制，避免调用方只更新其一导致峰值横线与标签错层。
     drawLine(
         color = color.copy(alpha = 0.9f),
         start = Offset(coords.paddingLeft, layout.peakY),
@@ -2401,6 +2438,8 @@ private fun DrawScope.drawSelectedPointOverlay(
     hasVisiblePowerCurve: Boolean,
     powerValueSelector: (RecordDetailChartPoint) -> Double
 ) {
+    // 选中态只使用当前视口坐标，不接受内容层偏移；
+    // 调用方必须先把点限制到可见窗口，避免在全屏平移时出现“屏外点仍在画辅助线”的错觉。
     clipRect(
         left = coords.paddingLeft,
         top = coords.paddingTop,
