@@ -89,6 +89,7 @@ class MainViewModel : ViewModel() {
     private var statisticsJob: Job? = null
     private var statisticsGeneration: Long = 0L
     private var pendingCurrentRecordsFile: RecordsFile? = null
+    private var isPreservingCurrentRecordUiState: Boolean = false
     private val liveSegmentBuffer = LiveSegmentBuffer()
 
     private val serviceListener = object : Service.ServiceConnection {
@@ -319,6 +320,7 @@ class MainViewModel : ViewModel() {
             if (liveSegmentBuffer.recordsFileName == recordsFile.name) {
                 return@runOnMainThread
             }
+            isPreservingCurrentRecordUiState = false
             pendingCurrentRecordsFile = recordsFile
             switchActiveLiveSegment(recordsFile.name)
             _currentRecordUiState.value =
@@ -353,6 +355,25 @@ class MainViewModel : ViewModel() {
     ) {
         runOnMainThread {
             val pendingFile = pendingCurrentRecordsFile
+            if (isPreservingCurrentRecordUiState) {
+                if (!_isLoadingStats.value) {
+                    if (pendingFile != null) {
+                        LoggerX.v<MainViewModel>("[首页] 当前记录处于保留态，收到新采样后重试分段: ${pendingFile.name}")
+                        refreshStatisticsTrackingCurrentRecord(
+                            context = context.applicationContext,
+                            request = request,
+                            expectedCurrentRecordsFile = pendingFile
+                        )
+                    } else {
+                        LoggerX.v<MainViewModel>("[首页] 当前记录文件暂不可用，收到新采样后重试拉取当前记录")
+                        refreshStatisticsTrackingCurrentRecord(
+                            context = context.applicationContext,
+                            request = request
+                        )
+                    }
+                }
+                return@runOnMainThread
+            }
             if (pendingFile != null && liveSegmentBuffer.recordsFileName != pendingFile.name) {
                 switchActiveLiveSegment(pendingFile.name)
             }
@@ -418,6 +439,7 @@ class MainViewModel : ViewModel() {
 
     private fun clearDisplayedHomeState() {
         pendingCurrentRecordsFile = null
+        isPreservingCurrentRecordUiState = false
         liveSegmentBuffer.recordsFileName = null
         liveSegmentBuffer.points.clear()
         _chargeSummary.value = null
@@ -438,6 +460,33 @@ class MainViewModel : ViewModel() {
     ): String {
         val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
         return "当前记录加载失败：${recordsFile.name}（$detail）"
+    }
+
+    /**
+     * 在跟踪当前记录刷新时，判断是否需要保留上一次有效展示。
+     *
+     * 仅针对 Binder 或当前记录文件临时不可用场景保留旧值，避免首页恢复时被瞬时空结果覆盖。
+     *
+     * @param mode 当前刷新模式。
+     * @param currentUiState 当前首页展示状态。
+     * @param targetRecordsFile 本次尝试加载的目标记录文件。
+     * @param currentRecordResult 本次当前记录加载结果。
+     * @return 需要保留旧展示时返回原因，否则返回 null。
+     */
+    private fun resolveCurrentRecordPreserveReason(
+        mode: StatisticsRefreshMode,
+        currentUiState: CurrentRecordUiState,
+        targetRecordsFile: RecordsFile?,
+        currentRecordResult: CurrentRecordDisplayLoadResult?
+    ): String? {
+        if (mode != StatisticsRefreshMode.TrackCurrentRecord || currentUiState.record == null) {
+            return null
+        }
+        return when {
+            targetRecordsFile == null -> "当前记录文件暂不可用"
+            currentRecordResult is CurrentRecordDisplayLoadResult.Missing -> "当前记录文件暂未同步到本地"
+            else -> null
+        }
     }
 
     private fun startLoadStatistics(
@@ -565,24 +614,41 @@ class MainViewModel : ViewModel() {
                 if (generation == statisticsGeneration) {
                     _chargeSummary.value = chargeSummary
                     _dischargeSummary.value = dischargeSummary
-                    pendingCurrentRecordsFile = nextPendingRecordsFile
-                    switchActiveLiveSegment(nextActiveLiveRecordsFileName)
-                    val currentUiState = _currentRecordUiState.value
-
-                    val nextDisplayStatus = when {
-                        nextPendingRecordsFile != null -> nextPendingRecordsFile.type
-                        resolvedCurrentRecord != null -> resolvedCurrentRecord.type
-                        serviceCurrentRecordsFile != null -> serviceCurrentRecordsFile.type
-                        else -> currentUiState.displayStatus
-                    }
-                    _currentRecordUiState.value =
-                        currentUiState.copy(
-                            recordsFileName = liveSegmentBuffer.recordsFileName,
-                            displayStatus = nextDisplayStatus,
-                            isSwitching = nextPendingRecordsFile != null,
-                            record = resolvedCurrentRecord,
-                            livePoints = snapshotLivePoints()
+                    val previousCurrentUiState = _currentRecordUiState.value
+                    val preserveCurrentRecordReason = resolveCurrentRecordPreserveReason(
+                        mode = mode,
+                        currentUiState = previousCurrentUiState,
+                        targetRecordsFile = targetRecordsFile,
+                        currentRecordResult = currentRecordResult
+                    )
+                    if (preserveCurrentRecordReason != null) {
+                        isPreservingCurrentRecordUiState = true
+                        pendingCurrentRecordsFile = nextPendingRecordsFile
+                        LoggerX.w<MainViewModel>(
+                            "[首页] $preserveCurrentRecordReason，保留上次有效当前记录: ${previousCurrentUiState.record?.name}"
                         )
+                        _currentRecordUiState.value = previousCurrentUiState
+                    } else {
+                        isPreservingCurrentRecordUiState = false
+                        pendingCurrentRecordsFile = nextPendingRecordsFile
+                        switchActiveLiveSegment(nextActiveLiveRecordsFileName)
+                        val currentUiState = _currentRecordUiState.value
+                        val resolvedDisplayStatus = when {
+                            nextPendingRecordsFile != null -> nextPendingRecordsFile.type
+                            resolvedCurrentRecord != null -> resolvedCurrentRecord.type
+                            serviceCurrentRecordsFile != null -> serviceCurrentRecordsFile.type
+                            else -> currentUiState.displayStatus
+                        }
+                        _currentRecordUiState.value =
+                            currentUiState.copy(
+                                recordsFileName = liveSegmentBuffer.recordsFileName,
+                                displayStatus = resolvedDisplayStatus,
+                                isSwitching = nextPendingRecordsFile != null,
+                                record = resolvedCurrentRecord,
+                                livePoints = snapshotLivePoints(),
+                                lastTemp = currentUiState.lastTemp
+                            )
+                    }
 
                     _sceneStats.value = stats?.displayStats
                     if (shouldRefreshPrediction) {

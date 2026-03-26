@@ -83,6 +83,7 @@ fun HomeScreen(
     val latestSettingsInitialized by rememberUpdatedState(settingsInitialized)
     val latestStatisticsRequest by rememberUpdatedState(statisticsRequest)
     var prevServiceConnected by remember { mutableStateOf(false) }
+    var isRecordListenerRegistered by remember { mutableStateOf(false) }
     val dualCellEnabled = settingsState.dualCellEnabled
     val calibrationValue = settingsState.calibrationValue
     val dischargeDisplayPositive = settingsState.dischargeDisplayPositive
@@ -128,16 +129,32 @@ fun HomeScreen(
         }
     }
 
+    fun registerRecordListenerIfNeeded() {
+        if (isRecordListenerRegistered) return
+        val service = Service.service ?: return
+        service.registerRecordListener(listener)
+        isRecordListenerRegistered = true
+    }
+
+    fun unregisterRecordListenerIfNeeded() {
+        if (!isRecordListenerRegistered) return
+        Service.service?.unregisterRecordListener(listener)
+        isRecordListenerRegistered = false
+    }
+
     LaunchedEffect(serviceConnected, settingsInitialized) {
         if (!settingsInitialized) return@LaunchedEffect
         val shouldDoDelayedRefresh = serviceConnected && !prevServiceConnected
         prevServiceConnected = serviceConnected
+        if (!serviceConnected) {
+            isRecordListenerRegistered = false
+        }
         if (!shouldDoDelayedRefresh) return@LaunchedEffect
         if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             return@LaunchedEffect
         }
 
-        Service.service?.registerRecordListener(listener)
+        registerRecordListenerIfNeeded()
         run {
             delay(1500)
             viewModel.refreshStatisticsTrackingCurrentRecord(
@@ -152,6 +169,7 @@ fun HomeScreen(
         if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             return@LaunchedEffect
         }
+        registerRecordListenerIfNeeded()
         // 首次设置初始化完成时补一次前台刷新；后续页面恢复依赖 ON_START，
         // 避免返回首页时走 ClearAndReload 先清空卡片与统计。
         viewModel.refreshStatisticsTrackingCurrentRecord(
@@ -171,17 +189,18 @@ fun HomeScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {
+                    // 先恢复监听，再拉取当前记录，尽量缩短前台恢复时的空窗口。
+                    registerRecordListenerIfNeeded()
                     if (latestSettingsInitialized) {
                         viewModel.refreshStatisticsTrackingCurrentRecord(
                             context = context,
                             request = latestStatisticsRequest
                         )
                     }
-                    Service.service?.registerRecordListener(listener)
                 }
 
                 Lifecycle.Event.ON_STOP -> {
-                    Service.service?.unregisterRecordListener(listener)
+                    unregisterRecordListenerIfNeeded()
                 }
 
                 else -> {}
@@ -190,6 +209,7 @@ fun HomeScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
 
         onDispose {
+            unregisterRecordListenerIfNeeded()
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
