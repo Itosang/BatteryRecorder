@@ -64,6 +64,14 @@ class Server internal constructor() : IService.Stub() {
 
     override fun registerRecordListener(listener: IRecordListener) {
         monitor.registerRecordListener(listener)
+        // 新 listener 注册后立即回放当前分段，避免前后台恢复时必须等待下一次分段变更。
+        val currRecordsFile = getCurrRecordsFile() ?: return
+        try {
+            listener.onChangedCurrRecordsFile(currRecordsFile)
+        } catch (e: RemoteException) {
+            LoggerX.w<Server>("registerRecordListener: 回放当前记录文件失败，注销记录回调", tr = e)
+            monitor.unregisterRecordListener(listener)
+        }
     }
 
     override fun unregisterRecordListener(listener: IRecordListener) {
