@@ -578,12 +578,20 @@ class MainViewModel : ViewModel() {
                         serviceCurrentRecordsFile != null -> serviceCurrentRecordsFile.type
                         else -> currentUiState.displayStatus
                     }
+                    // TrackCurrentRecord 遇到瞬时空结果时保留上一份有效记录，避免卡片被错误覆盖为暂无记录。
+                    val nextDisplayedRecord = when {
+                        resolvedCurrentRecord != null -> resolvedCurrentRecord
+                        mode == StatisticsRefreshMode.TrackCurrentRecord &&
+                            currentRecordResult !is CurrentRecordDisplayLoadResult.Success -> currentUiState.record
+
+                        else -> null
+                    }
                     _currentRecordUiState.value =
                         currentUiState.copy(
                             recordsFileName = liveSegmentBuffer.recordsFileName,
                             displayStatus = nextDisplayStatus,
                             isSwitching = nextPendingRecordsFile != null,
-                            record = resolvedCurrentRecord,
+                            record = nextDisplayedRecord,
                             livePoints = snapshotLivePoints()
                         )
 
