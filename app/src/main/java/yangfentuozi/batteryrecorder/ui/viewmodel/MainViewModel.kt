@@ -273,10 +273,12 @@ class MainViewModel : ViewModel() {
         request: StatisticsRequest = StatisticsRequest()
     ) {
         statisticsJob?.cancel()
+        LoggerX.i<MainViewModel>("[首页] 用户触发手动刷新，沿用当前记录跟踪链路恢复当前记录")
         startLoadStatistics(
             context = context,
             request = request,
-            mode = StatisticsRefreshMode.ClearAndReload
+            mode = StatisticsRefreshMode.TrackCurrentRecord,
+            refreshSource = "手动刷新"
         )
     }
 
@@ -444,7 +446,8 @@ class MainViewModel : ViewModel() {
         context: Context,
         request: StatisticsRequest,
         mode: StatisticsRefreshMode,
-        expectedCurrentRecordsFile: RecordsFile? = null
+        expectedCurrentRecordsFile: RecordsFile? = null,
+        refreshSource: String = "常规刷新"
     ) {
         if (mode == StatisticsRefreshMode.ClearAndReload) {
             clearDisplayedHomeState()
@@ -452,7 +455,7 @@ class MainViewModel : ViewModel() {
 
         val generation = (++statisticsGeneration)
         LoggerX.i<MainViewModel>(
-            "[首页] 开始加载统计: generation=$generation mode=$mode recentFileCount=${request.sceneStatsRecentFileCount} intervalMs=${request.recordIntervalMs}"
+            "[首页] 开始加载统计: generation=$generation source=$refreshSource mode=$mode recentFileCount=${request.sceneStatsRecentFileCount} intervalMs=${request.recordIntervalMs}"
         )
         _isLoadingStats.value = true
         val job = viewModelScope.launch {
@@ -521,19 +524,19 @@ class MainViewModel : ViewModel() {
                 when (currentRecordResult) {
                     is CurrentRecordDisplayLoadResult.Pending -> {
                         LoggerX.d<MainViewModel>(
-                            "[首页] 新分段样本不足，进入等待状态: ${currentRecordResult.recordsFile.name}"
+                            "[首页] $refreshSource 新分段样本不足，进入等待状态: ${currentRecordResult.recordsFile.name}"
                         )
                     }
 
                     is CurrentRecordDisplayLoadResult.Missing -> {
                         LoggerX.w<MainViewModel>(
-                            "[首页] 当前分段尚未同步到本地，进入等待状态: ${currentRecordResult.recordsFile.name}"
+                            "[首页] $refreshSource 当前分段尚未同步到本地，进入等待状态: ${currentRecordResult.recordsFile.name}"
                         )
                     }
 
                     is CurrentRecordDisplayLoadResult.Failed -> {
                         LoggerX.e<MainViewModel>(
-                            "[首页] 当前分段加载失败，终止等待状态: ${currentRecordResult.recordsFile.name}",
+                            "[首页] $refreshSource 当前分段加载失败，终止等待状态: ${currentRecordResult.recordsFile.name}",
                             tr = currentRecordResult.error
                         )
                     }
@@ -599,12 +602,12 @@ class MainViewModel : ViewModel() {
                     _userMessage.value = currentRecordFailureMessage
 
                     LoggerX.i<MainViewModel>(
-                        "[首页] 统计加载完成: generation=$generation currentRecord=${resolvedCurrentRecord?.name} pending=${nextPendingRecordsFile?.name}"
+                        "[首页] 统计加载完成: generation=$generation source=$refreshSource currentRecord=${resolvedCurrentRecord?.name} pending=${nextPendingRecordsFile?.name}"
                     )
                 }
             } finally {
                 if (generation == statisticsGeneration) {
-                    LoggerX.d<MainViewModel>("[首页] 统计任务结束: generation=$generation")
+                    LoggerX.d<MainViewModel>("[首页] 统计任务结束: generation=$generation source=$refreshSource")
                     _isLoadingStats.value = false
                 }
             }
