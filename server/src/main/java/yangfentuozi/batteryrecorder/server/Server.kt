@@ -54,9 +54,9 @@ class Server internal constructor() : IService.Stub() {
 
     override fun getCurrRecordsFile(): RecordsFile? {
         return RecordsFile.fromFile(
-            when (writer.lastStatus) {
-                Charging -> writer.chargeDataWriter.getCurrFile(writer.lastStatus != Charging)
-                Discharging -> writer.dischargeDataWriter.getCurrFile(writer.lastStatus != Discharging)
+            when (writer.lastAcceptedStatus) {
+                Charging -> writer.chargeDataWriter.getCurrFile(false)
+                Discharging -> writer.dischargeDataWriter.getCurrFile(false)
                 else -> null
             } ?: return null
         )
@@ -165,11 +165,11 @@ class Server internal constructor() : IService.Stub() {
         Thread {
             try {
                 val currChargeDataPath =
-                    if (writer.chargeDataWriter.needStartNewSegment(writer.lastStatus != Charging)) null
+                    if (writer.lastAcceptedStatus != Charging || writer.chargeDataWriter.needStartNewSegment(false)) null
                     else writer.chargeDataWriter.segmentFile?.toPath()
 
                 val currDischargeDataPath =
-                    if (writer.dischargeDataWriter.needStartNewSegment(writer.lastStatus != Discharging)) null
+                    if (writer.lastAcceptedStatus != Discharging || writer.dischargeDataWriter.needStartNewSegment(false)) null
                     else writer.dischargeDataWriter.segmentFile?.toPath()
                 var sentCount = 0
 

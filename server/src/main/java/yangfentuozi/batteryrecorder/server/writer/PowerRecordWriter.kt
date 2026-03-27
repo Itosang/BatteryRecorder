@@ -41,6 +41,10 @@ class PowerRecordWriter(
     var lastStatus: BatteryStatus? = null
         private set
 
+    @Volatile
+    var lastAcceptedStatus: BatteryStatus? = null
+        private set
+
     val chargeDataWriter = ChargeDataWriter(chargeDir)
     val dischargeDataWriter = DischargeDataWriter(dischargeDir)
 
@@ -88,6 +92,10 @@ class PowerRecordWriter(
             else -> WriteResult.Rejected
         }
         lastStatus = record.status
+        // 当前文件归属只跟最近一次真正写入成功的可记录状态保持一致。
+        if (result != WriteResult.Rejected) {
+            lastAcceptedStatus = record.status
+        }
         return result
     }
 
