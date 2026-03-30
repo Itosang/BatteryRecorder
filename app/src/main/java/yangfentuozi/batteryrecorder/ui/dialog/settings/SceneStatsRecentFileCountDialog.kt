@@ -13,7 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
 // 预测文件数设置Dialog
@@ -36,15 +36,15 @@ fun SceneStatsRecentFileCountDialog(
                 onValueChange = { newValue: String ->
                     value = newValue
                     isError = newValue.toIntOrNull() == null ||
-                            newValue.toInt() < ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT ||
-                            newValue.toInt() > ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
+                            newValue.toInt() < SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT ||
+                            newValue.toInt() > SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
                 },
                 label = { Text("最近文件数") },
                 isError = isError,
                 supportingText = if (isError) {
                     {
                         Text(
-                            "请输入 ${ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT}-${ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT} 之间的整数"
+                            "请输入 ${SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT}-${SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT} 之间的整数"
                         )
                     }
                 } else null,
@@ -58,7 +58,7 @@ fun SceneStatsRecentFileCountDialog(
             TextButton(
                 onClick = {
                     value.toIntOrNull()?.let { intValue ->
-                        if (intValue in ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT..ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT) {
+                        if (intValue in SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT..SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT) {
                             onSave(intValue)
                         }
                     }

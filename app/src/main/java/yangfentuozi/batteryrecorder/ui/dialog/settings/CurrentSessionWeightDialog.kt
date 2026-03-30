@@ -19,7 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 import kotlin.math.roundToInt
 
@@ -32,10 +32,10 @@ fun CurrentSessionWeightDialog(
     onSave: (maxX100: Int, halfLifeMin: Long) -> Unit,
     onReset: () -> Unit
 ) {
-    val minMaxX = ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
-    val maxMaxX = ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
-    val maxXSteps = ((ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 -
-            ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100) / 10 - 1).coerceAtLeast(0)
+    val minMaxX = SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
+    val maxMaxX = SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
+    val maxXSteps = ((SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 -
+            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100) / 10 - 1).coerceAtLeast(0)
     var maxX by remember {
         val initial = ((currentMaxX100 / 100f) * 10).roundToInt() / 10f
         val normalized = initial.coerceIn(minMaxX, maxMaxX)
@@ -43,8 +43,8 @@ fun CurrentSessionWeightDialog(
         mutableFloatStateOf(snapped)
     }
 
-    val minHalfLife = ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-    val maxHalfLife = ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
+    val minHalfLife = SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
+    val maxHalfLife = SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
     var halfLifeMin by remember {
         val initial = currentHalfLifeMin.coerceIn(minHalfLife, maxHalfLife)
         mutableLongStateOf(initial)
@@ -130,8 +130,8 @@ fun CurrentSessionWeightDialog(
                 onClick = {
                     val maxX100 = (maxX * 100).roundToInt()
                         .coerceIn(
-                            ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                            ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
+                            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
+                            SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
                         )
                     val halfLife = halfLifeMin.coerceIn(minHalfLife, maxHalfLife)
                     onSave(maxX100, halfLife)

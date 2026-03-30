@@ -20,7 +20,7 @@ import yangfentuozi.batteryrecorder.data.history.RecordDetailPowerStatsComputer
 import yangfentuozi.batteryrecorder.data.model.ChartPoint
 import yangfentuozi.batteryrecorder.data.model.RecordDetailChartPoint
 import yangfentuozi.batteryrecorder.data.model.normalizeRecordDetailChartPoints
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
@@ -93,14 +93,14 @@ class HistoryViewModel : ViewModel() {
     private var rawRecordDetailPowerStats: RecordDetailPowerStats? = null
     private var recordPoints: List<ChartPoint> = emptyList()
     private var recordLineRecords: List<LineRecord> = emptyList()
-    private var recordDetailSamplingIntervalMs = ConfigConstants.DEF_RECORD_INTERVAL_MS
+    private var recordDetailSamplingIntervalMs = SettingsConstants.DEF_RECORD_INTERVAL_MS
     private var recordDetailContext: Context? = null
-    private var detailDischargeDisplayPositive = ConfigConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
+    private var detailDischargeDisplayPositive = SettingsConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
 
     // 这三个字段是图表派生状态的输入，不需要被外部订阅，因此使用普通字段即可。
-    private var dualCellEnabled = ConfigConstants.DEF_DUAL_CELL_ENABLED
-    private var calibrationValue = ConfigConstants.DEF_CALIBRATION_VALUE
-    private var recordScreenOffEnabled = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+    private var dualCellEnabled = SettingsConstants.DEF_DUAL_CELL_ENABLED
+    private var calibrationValue = SettingsConstants.DEF_CALIBRATION_VALUE
+    private var recordScreenOffEnabled = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -128,7 +128,7 @@ class HistoryViewModel : ViewModel() {
     private var pagedSourceRecords: List<HistoryRecord>? = null
     private var latestListFile: File? = null
     private var loadedRecordCount = 0
-    private var listDischargeDisplayPositive = ConfigConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
+    private var listDischargeDisplayPositive = SettingsConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
     private var currentListType: BatteryStatus? = null
     private var hasInitializedListContext = false
     private var listLoadToken: Long = 0L

@@ -3,7 +3,7 @@
 ## 通用
 
 - 先确认该设置项属于 `AppSettings`、`StatisticsSettings` 还是 `ServerSettings`
-- 确认 `ConfigConstants` 是否需要新增 key、默认值、范围常量
+- 确认 `SettingsConstants` 是否需要新增 key、默认值、范围常量
 - 确认命名、默认值、类型与同层现有字段保持一致
 - 不要把默认值、裁剪逻辑或枚举转换散落到 UI / IPC / Server 侧
 
@@ -34,8 +34,8 @@
 - 补齐 `SharedSettings.writeServerSettings(...)`
 - 补齐 `SharedSettings.normalizeServerSettings(...)`
 - 如有存储层兼容读取，补齐 `SharedSettings.serverSettingsFromStoredValues(...)`
-- 补齐 `ServerSettingsMapper.toConfig(...)` / `fromConfig(...)`
-- 补齐 `Config` DTO 字段
+- 补齐 `ServerSettingsMapper.toServerConfigDto(...)` / `fromServerConfigDto(...)`
+- 补齐 `ServerConfigDto` DTO 字段
 - 检查 `ConfigProvider` 是否需要透传新字段
 - 检查 `ConfigUtil` 的 XML / ContentProvider 来源适配是否需要更新
 - 检查 `SettingsViewModel.updateServerSettings(...)` 相关调用是否已接入新字段

@@ -17,7 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 import kotlin.math.roundToInt
 
@@ -29,8 +29,8 @@ fun RecordIntervalDialog(
     onSave: (Long) -> Unit,
     onReset: () -> Unit
 ) {
-    val minS = ConfigConstants.MIN_RECORD_INTERVAL_MS / 1000f
-    val maxS = ConfigConstants.MAX_RECORD_INTERVAL_MS / 1000f
+    val minS = SettingsConstants.MIN_RECORD_INTERVAL_MS / 1000f
+    val maxS = SettingsConstants.MAX_RECORD_INTERVAL_MS / 1000f
     var value by remember {
         val initial = (currentValueMs / 1000f).coerceIn(minS, maxS)
         mutableFloatStateOf(initial)

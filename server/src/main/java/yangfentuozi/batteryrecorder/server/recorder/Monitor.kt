@@ -16,7 +16,7 @@ import androidx.annotation.Keep
 import yangfentuozi.batteryrecorder.server.recorder.sampler.Sampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
 import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -55,13 +55,13 @@ class Monitor(
     private val callbacks: RemoteCallbackList<IRecordListener> = RemoteCallbackList()
 
     @Volatile
-    var recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
+    var recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS
 
     @Volatile
-    var screenOffRecord: Boolean = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+    var screenOffRecord: Boolean = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED
 
     private var mAlwaysPollingScreenStatusEnabled: Boolean =
-        ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+        SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
     var alwaysPollingScreenStatusEnabled: Boolean
         get() = mAlwaysPollingScreenStatusEnabled
         set(value) {

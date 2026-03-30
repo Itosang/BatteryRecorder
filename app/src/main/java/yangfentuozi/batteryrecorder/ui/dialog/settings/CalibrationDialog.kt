@@ -36,7 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
@@ -65,8 +65,8 @@ fun CalibrationDialog(
             if (decrease) -1 else 1
         } else {
             next.coerceIn(
-                ConfigConstants.MIN_CALIBRATION_VALUE,
-                ConfigConstants.MAX_CALIBRATION_VALUE
+                SettingsConstants.MIN_CALIBRATION_VALUE,
+                SettingsConstants.MAX_CALIBRATION_VALUE
             )
         }
     }

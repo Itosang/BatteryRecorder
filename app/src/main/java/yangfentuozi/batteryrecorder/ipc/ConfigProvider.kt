@@ -23,7 +23,7 @@ class ConfigProvider : ContentProvider() {
                 SharedSettings.getPreferences(requireContext())
             )
             return Bundle().apply {
-                putParcelable("config", ServerSettingsMapper.toConfig(serverSettings))
+                putParcelable("config", ServerSettingsMapper.toServerConfigDto(serverSettings))
             }
         }
         return null

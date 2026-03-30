@@ -13,7 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
 // 批量大小设置Dialog
@@ -36,12 +36,12 @@ fun BatchSizeDialog(
                 onValueChange = { newValue: String ->
                     value = newValue
                     isError =
-                        newValue.toIntOrNull() == null || newValue.toInt() < ConfigConstants.MIN_BATCH_SIZE || newValue.toInt() > ConfigConstants.MAX_BATCH_SIZE
+                        newValue.toIntOrNull() == null || newValue.toInt() < SettingsConstants.MIN_BATCH_SIZE || newValue.toInt() > SettingsConstants.MAX_BATCH_SIZE
                 },
                 label = { Text("批量大小") },
                 isError = isError,
                 supportingText = if (isError) {
-                    { Text("请输入 ${ConfigConstants.MIN_BATCH_SIZE}-${ConfigConstants.MAX_BATCH_SIZE} 之间的整数") }
+                    { Text("请输入 ${SettingsConstants.MIN_BATCH_SIZE}-${SettingsConstants.MAX_BATCH_SIZE} 之间的整数") }
                 } else null,
                 singleLine = true,
                 modifier = Modifier
@@ -57,7 +57,7 @@ fun BatchSizeDialog(
             TextButton(
                 onClick = {
                     value.toIntOrNull()?.let { intValue ->
-                        if (intValue in ConfigConstants.MIN_BATCH_SIZE..ConfigConstants.MAX_BATCH_SIZE) {
+                        if (intValue in SettingsConstants.MIN_BATCH_SIZE..SettingsConstants.MAX_BATCH_SIZE) {
                             onSave(intValue)
                         }
                     }

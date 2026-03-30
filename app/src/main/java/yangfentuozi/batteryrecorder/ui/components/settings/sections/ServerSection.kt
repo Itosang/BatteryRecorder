@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.startup.BootAutoStartNotification
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
@@ -155,7 +155,7 @@ fun ServerSection(
                 showRecordIntervalDialog = false
             },
             onReset = {
-                actions.setRecordIntervalMs(ConfigConstants.DEF_RECORD_INTERVAL_MS)
+                actions.setRecordIntervalMs(SettingsConstants.DEF_RECORD_INTERVAL_MS)
                 showRecordIntervalDialog = false
             }
         )
@@ -172,7 +172,7 @@ fun ServerSection(
                 showWriteLatencyDialog = false
             },
             onReset = {
-                actions.setWriteLatencyMs(ConfigConstants.DEF_WRITE_LATENCY_MS)
+                actions.setWriteLatencyMs(SettingsConstants.DEF_WRITE_LATENCY_MS)
                 showWriteLatencyDialog = false
             }
         )
@@ -188,7 +188,7 @@ fun ServerSection(
                 showBatchSizeDialog = false
             },
             onReset = {
-                actions.setBatchSize(ConfigConstants.DEF_BATCH_SIZE)
+                actions.setBatchSize(SettingsConstants.DEF_BATCH_SIZE)
                 showBatchSizeDialog = false
             }
         )
@@ -204,7 +204,7 @@ fun ServerSection(
                 showSegmentDurationDialog = false
             },
             onReset = {
-                actions.setSegmentDurationMin(ConfigConstants.DEF_SEGMENT_DURATION_MIN)
+                actions.setSegmentDurationMin(SettingsConstants.DEF_SEGMENT_DURATION_MIN)
                 showSegmentDurationDialog = false
             }
         )
@@ -216,10 +216,10 @@ fun ServerSection(
                 title = "日志保留天数",
                 label = "保留天数",
                 currentValue = state.maxHistoryDays.toString(),
-                errorMessage = "请输入大于等于 ${ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS} 的整数",
+                errorMessage = "请输入大于等于 ${SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS} 的整数",
                 parser = { rawValue ->
                     rawValue.toLongOrNull()
-                        ?.takeIf { it >= ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS }
+                        ?.takeIf { it >= SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS }
                 },
                 onDismiss = { showHistoryDaysDialog = false },
                 onSave = { parsedValue ->
@@ -227,7 +227,7 @@ fun ServerSection(
                     showHistoryDaysDialog = false
                 },
                 onReset = {
-                    logActions.setMaxHistoryDays(ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS)
+                    logActions.setMaxHistoryDays(SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS)
                     showHistoryDaysDialog = false
                 }
             )
@@ -244,7 +244,7 @@ fun ServerSection(
                     showLogLevelDialog = false
                 },
                 onReset = {
-                    logActions.setLogLevel(ConfigConstants.DEF_LOG_LEVEL)
+                    logActions.setLogLevel(SettingsConstants.DEF_LOG_LEVEL)
                     showLogLevelDialog = false
                 }
             )

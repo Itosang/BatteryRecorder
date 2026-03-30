@@ -310,8 +310,8 @@ shared/src/main/
 ├── aidl/
 └── java/yangfentuozi/batteryrecorder/shared/
     ├── config/
-    │   ├── Config.kt
-    │   ├── ConfigConstants.kt
+    │   ├── ServerConfigDto.kt
+    │   ├── SettingsConstants.kt
     │   ├── ConfigUtil.kt
     │   └── SharedSettings.kt
     ├── data/
@@ -400,9 +400,9 @@ shared/src/main/
 - 应用图标请求只基于当前视口包名集合触发
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
 - 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 是设置分层、读写、规范化、映射核心
-- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；`Config` 只是 IPC 边界 DTO，不是设置真值
-- Server 设置同步链路为：`ConfigConstants -> SharedSettings(ServerSettings) -> ServerSettingsMapper -> Config -> Service.updateConfig(...)`
-- 新增 Server 设置项时，最容易漏的是：`ServerSettings`、`SharedSettings` 读写与 normalize、`ServerSettingsMapper`、`Config`、`ConfigProvider`、`ConfigUtil`、`Server.updateConfig()`
+- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；`ServerConfigDto` 只是 IPC 边界 DTO，不是设置真值
+- Server 设置同步链路为：`SettingsConstants -> SharedSettings(ServerSettings) -> ServerSettingsMapper -> ServerConfigDto -> Service.updateConfig(...)`
+- 新增 Server 设置项时，最容易漏的是：`ServerSettings`、`SharedSettings` 读写与 normalize、`ServerSettingsMapper`、`ServerConfigDto`、`ConfigProvider`、`ConfigUtil`、`Server.updateConfig()`
 
 ## 编码约定
 
@@ -434,7 +434,7 @@ shared/src/main/
 ## 修改前检查
 
 - 先确认目标链路的真实入口，不要依据过时文档猜测
-- 涉及“新增设置项”时，优先使用项目私有 skill：`.codex/skills/add-setting-item/`
+- 涉及“新增设置项”时，优先使用项目私有 skill：`.agents/skills/add-setting-item/`
 - 优先搜索 `fast-context MCP`
 - 精确关键词搜索再用本地 grep/查找
 - 只修改与当前任务直接相关的文件

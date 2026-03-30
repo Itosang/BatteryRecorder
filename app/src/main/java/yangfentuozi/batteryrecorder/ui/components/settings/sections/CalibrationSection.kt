@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
@@ -71,7 +71,7 @@ fun CalibrationSection(
                 showDialog = false
             },
             onReset = {
-                actions.setCalibrationValue(ConfigConstants.DEF_CALIBRATION_VALUE)
+                actions.setCalibrationValue(SettingsConstants.DEF_CALIBRATION_VALUE)
                 showDialog = false
             }
         )

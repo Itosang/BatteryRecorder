@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.core.content.edit
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
@@ -22,7 +22,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 try {
                     LoggerX.d(TAG, "[BOOT] 收到开机广播")
                     val prefs = appContext.getSharedPreferences(
-                        ConfigConstants.PREFS_NAME,
+                        SettingsConstants.PREFS_NAME,
                         Context.MODE_PRIVATE
                     )
                     val autoStartEnabled = SharedSettings.readAppSettings(prefs).rootBootAutoStartEnabled
@@ -42,8 +42,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     }
                     if (currentBootCount != Int.MIN_VALUE) {
                         val lastBootCount = prefs.getInt(
-                            ConfigConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
-                            ConfigConstants.DEF_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT
+                            SettingsConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
+                            SettingsConstants.DEF_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT
                         )
                         if (lastBootCount == currentBootCount) {
                             LoggerX.i(TAG, "[BOOT] 命中 boot_count 去重，跳过自启动，boot_count=$currentBootCount")
@@ -51,7 +51,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                         }
                         prefs.edit {
                             putInt(
-                                ConfigConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
+                                SettingsConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
                                 currentBootCount
                             )
                         }

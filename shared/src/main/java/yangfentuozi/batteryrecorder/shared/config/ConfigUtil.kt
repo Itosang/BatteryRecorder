@@ -17,14 +17,16 @@ private const val TAG = "ConfigUtil"
 
 object ConfigUtil {
     // 来源适配器先返回 ServerSettings，让服务端配置合法化统一收敛到领域模型；
-    // Config 仅保留为现有 IPC 边界的薄包装。
-    fun getConfigByContentProvider(): Config? =
-        getServerSettingsByContentProvider()?.let(ServerSettingsMapper::toConfig)
+    // ServerConfigDto 仅保留为现有 IPC 边界的薄包装。
+    fun getServerConfigDtoByContentProvider(): ServerConfigDto? =
+        getServerSettingsByContentProvider()?.let(ServerSettingsMapper::toServerConfigDto)
 
     fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
             LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
-            val settings = ServerSettingsMapper.fromConfig(readConfigDtoByContentProvider())
+            val settings = ServerSettingsMapper.fromServerConfigDto(
+                readServerConfigDtoByContentProvider()
+            )
             logServerSettings("getServerSettingsByContentProvider", settings)
             settings
         } catch (e: RemoteException) {
@@ -36,9 +38,9 @@ object ConfigUtil {
         }
     }
 
-    // 兼容仍依赖 Config 的服务端调用方；真正的来源解析与合法化统一先落到 ServerSettings。
-    fun getConfigByReading(configFile: File): Config? =
-        readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toConfig)
+    // 兼容仍依赖服务端 DTO 的调用方；真正的来源解析与合法化统一先落到 ServerSettings。
+    fun getServerConfigDtoByReading(configFile: File): ServerConfigDto? =
+        readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toServerConfigDto)
 
     fun getServerSettingsBySharedPreferences(prefs: SharedPreferences): ServerSettings {
         val settings = SharedSettings.readServerSettings(prefs)
@@ -75,28 +77,28 @@ object ConfigUtil {
                         val trimmedValue = valueAttr?.trim()
 
                         when (nameAttr) {
-                            ConfigConstants.KEY_RECORD_INTERVAL_MS ->
+                            SettingsConstants.KEY_RECORD_INTERVAL_MS ->
                                 recordIntervalMs = trimmedValue?.toLongOrNull()
 
-                            ConfigConstants.KEY_BATCH_SIZE ->
+                            SettingsConstants.KEY_BATCH_SIZE ->
                                 batchSize = trimmedValue?.toIntOrNull()
 
-                            ConfigConstants.KEY_WRITE_LATENCY_MS ->
+                            SettingsConstants.KEY_WRITE_LATENCY_MS ->
                                 writeLatencyMs = trimmedValue?.toLongOrNull()
 
-                            ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED ->
+                            SettingsConstants.KEY_SCREEN_OFF_RECORD_ENABLED ->
                                 screenOffRecordEnabled = trimmedValue?.toBooleanStrictOrNull()
 
-                            ConfigConstants.KEY_SEGMENT_DURATION_MIN ->
+                            SettingsConstants.KEY_SEGMENT_DURATION_MIN ->
                                 segmentDurationMin = trimmedValue?.toLongOrNull()
 
-                            ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS ->
+                            SettingsConstants.KEY_LOG_MAX_HISTORY_DAYS ->
                                 maxHistoryDays = trimmedValue?.toLongOrNull()
 
-                            ConfigConstants.KEY_LOG_LEVEL ->
+                            SettingsConstants.KEY_LOG_LEVEL ->
                                 logLevelPriority = trimmedValue?.toIntOrNull()
 
-                            ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
+                            SettingsConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
                                 alwaysPollingScreenStatusEnabled =
                                     trimmedValue?.toBooleanStrictOrNull()
                         }
@@ -129,7 +131,7 @@ object ConfigUtil {
         }
     }
 
-    private fun readConfigDtoByContentProvider(): Config {
+    private fun readServerConfigDtoByContentProvider(): ServerConfigDto {
         val reply = ActivityManagerCompat.contentProviderCall(
             "yangfentuozi.batteryrecorder.configProvider",
             "requestConfig",
@@ -137,14 +139,14 @@ object ConfigUtil {
             null
         )
         if (reply == null) throw NullPointerException("reply is null")
-        reply.classLoader = Config::class.java.classLoader
-        val config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            reply.getParcelable("config", Config::class.java)
+        reply.classLoader = ServerConfigDto::class.java.classLoader
+        val serverConfigDto = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            reply.getParcelable("config", ServerConfigDto::class.java)
         } else {
             @Suppress("DEPRECATION")
             reply.getParcelable("config")
         }
-        return config ?: throw NullPointerException("config is null")
+        return serverConfigDto ?: throw NullPointerException("config is null")
     }
 
     private fun logServerSettings(source: String, settings: ServerSettings) {

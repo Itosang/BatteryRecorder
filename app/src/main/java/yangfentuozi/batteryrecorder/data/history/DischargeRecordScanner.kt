@@ -3,7 +3,7 @@ package yangfentuozi.batteryrecorder.data.history
 import android.content.Context
 import yangfentuozi.batteryrecorder.BuildConfig
 import yangfentuozi.batteryrecorder.shared.Constants
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -103,8 +103,8 @@ object DischargeRecordScanner {
         recentFileCount: Int
     ): List<File> {
         val effectiveRecentFileCount = recentFileCount.coerceIn(
-            ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
-            ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
+            SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
+            SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
         )
         val dataDir = File(
             File(context.dataDir, Constants.APP_POWER_DATA_PATH),

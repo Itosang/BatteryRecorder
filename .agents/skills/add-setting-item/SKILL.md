@@ -1,11 +1,11 @@
 ---
 name: add-setting-item
-description: 为 BatteryRecorder 仓库新增单个设置项的固定流程。用于需要修改设置链路、区分 AppSettings/StatisticsSettings/ServerSettings，尤其是新增 ServerSettings 项并检查 SharedSettings、ServerSettingsMapper、Config、ConfigProvider、ConfigUtil、Server.updateConfig 等同步节点时。
+description: 为 BatteryRecorder 仓库新增单个设置项的固定流程。用于需要修改设置链路、区分 AppSettings/StatisticsSettings/ServerSettings，尤其是新增 ServerSettings 项并检查 SharedSettings、ServerSettingsMapper、ServerConfigDto、ConfigProvider、ConfigUtil、Server.updateConfig 等同步节点时。
 ---
 
 # add-setting-item
 
-1. 先判断设置项归属：`AppSettings`、`StatisticsSettings`、`ServerSettings`。不要把 `Config` 当成设置真值。
+1. 先判断设置项归属：`AppSettings`、`StatisticsSettings`、`ServerSettings`。不要把 `ServerConfigDto` 当成设置真值。
 2. 先读取 `references/setting-flow.md`，确认当前分层、映射和同步链路。
 3. 实施前再对照 `references/setting-checklist.md`，逐项补齐读写、规范化和同步节点。
 4. 只改本次设置项直接相关的文件；不要顺手重构整条设置系统。

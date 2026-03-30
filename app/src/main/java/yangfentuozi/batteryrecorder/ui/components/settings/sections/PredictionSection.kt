@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
@@ -74,7 +74,7 @@ fun PredictionSection(
                 showRecentCountDialog = false
             },
             onReset = {
-                actions.setSceneStatsRecentFileCount(ConfigConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT)
+                actions.setSceneStatsRecentFileCount(SettingsConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT)
                 showRecentCountDialog = false
             }
         )
@@ -91,8 +91,8 @@ fun PredictionSection(
                 showWeightDialog = false
             },
             onReset = {
-                actions.setPredCurrentSessionWeightMaxX100(ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100)
-                actions.setPredCurrentSessionWeightHalfLifeMin(ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN)
+                actions.setPredCurrentSessionWeightMaxX100(SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100)
+                actions.setPredCurrentSessionWeightHalfLifeMin(SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN)
                 showWeightDialog = false
             }
         )

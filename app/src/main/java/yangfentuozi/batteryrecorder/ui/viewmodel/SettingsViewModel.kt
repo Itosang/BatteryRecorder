@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.shared.config.AppSettingKeys
 import yangfentuozi.batteryrecorder.shared.config.AppSettings
-import yangfentuozi.batteryrecorder.shared.config.Config
+import yangfentuozi.batteryrecorder.shared.config.ServerConfigDto
 import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
@@ -406,13 +406,13 @@ class SettingsViewModel : ViewModel() {
             SharedSettings.writeServerSettings(prefs, normalizedSettings)
             _serverSettings.value = normalizedSettings
             applyLoggerSettings(normalizedSettings)
-            pushServerConfig(ServerSettingsMapper.toConfig(normalizedSettings), message)
+            pushServerConfig(ServerSettingsMapper.toServerConfigDto(normalizedSettings), message)
         }
     }
 
-    private fun pushServerConfig(config: Config, message: String) {
+    private fun pushServerConfig(serverConfigDto: ServerConfigDto, message: String) {
         LoggerX.i(TAG, message)
-        Service.service?.updateConfig(config)
+        Service.service?.updateConfig(serverConfigDto)
     }
 
     private fun applyLoggerSettings(settings: ServerSettings) {

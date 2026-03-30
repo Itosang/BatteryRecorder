@@ -25,7 +25,7 @@ import yangfentuozi.batteryrecorder.data.history.SceneStatsComputer
 import yangfentuozi.batteryrecorder.data.history.SyncUtil
 import yangfentuozi.batteryrecorder.data.log.LogRepository
 import yangfentuozi.batteryrecorder.ipc.Service
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
@@ -244,7 +244,7 @@ class MainViewModel : ViewModel() {
     fun loadStatistics(
         context: Context,
         request: StatisticsSettings = StatisticsSettings(),
-        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
+        recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS
     ) {
         if (_isLoadingStats.value) {
             LoggerX.v(TAG, "[首页] loadStatistics 已在进行，跳过重复请求")
@@ -261,7 +261,7 @@ class MainViewModel : ViewModel() {
     fun refreshStatistics(
         context: Context,
         request: StatisticsSettings = StatisticsSettings(),
-        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
+        recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS
     ) {
         if (_isLoadingStats.value) {
             LoggerX.v(TAG, "[首页] refreshStatistics 已在进行，跳过")
@@ -278,7 +278,7 @@ class MainViewModel : ViewModel() {
     fun forceRefreshStatistics(
         context: Context,
         request: StatisticsSettings = StatisticsSettings(),
-        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
+        recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS
     ) {
         statisticsJob?.cancel()
         startLoadStatistics(
@@ -300,7 +300,7 @@ class MainViewModel : ViewModel() {
     fun refreshStatisticsTrackingCurrentRecord(
         context: Context,
         request: StatisticsSettings = StatisticsSettings(),
-        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS,
+        recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS,
         expectedCurrentRecordsFile: RecordsFile? = null
     ) {
         statisticsJob?.cancel()

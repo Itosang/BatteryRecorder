@@ -2,7 +2,7 @@ package yangfentuozi.batteryrecorder.shared.config
 
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
-object ConfigConstants {
+object SettingsConstants {
     const val PREFS_NAME = "app_settings"
 
     // server

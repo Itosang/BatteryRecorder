@@ -15,10 +15,10 @@ import yangfentuozi.batteryrecorder.server.recorder.sampler.DumpsysSampler
 import yangfentuozi.batteryrecorder.server.recorder.sampler.SysfsSampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
-import yangfentuozi.batteryrecorder.shared.config.Config
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
+import yangfentuozi.batteryrecorder.shared.config.ServerConfigDto
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
@@ -73,9 +73,10 @@ class Server internal constructor() : IService.Stub() {
         monitor.unregisterRecordListener(listener)
     }
 
-    override fun updateConfig(config: Config) {
+    override fun updateConfig(config: ServerConfigDto) {
         Handlers.common.post {
-            LoggerX.d(TAG, 
+            LoggerX.d(
+                TAG,
                 "updateConfig: 应用配置, intervalMs=${config.recordIntervalMs} writeLatencyMs=${config.writeLatencyMs} batchSize=${config.batchSize} screenOffRecord=${config.screenOffRecordEnabled} segmentDurationMin=${config.segmentDurationMin} logLevel=${config.logLevel} polling=${config.alwaysPollingScreenStatusEnabled}"
             )
             LoggerX.maxHistoryDays = config.maxHistoryDays
@@ -266,7 +267,7 @@ class Server internal constructor() : IService.Stub() {
 
         val appInfo = getAppInfo(Constants.APP_PACKAGE_NAME)
         appDataDir = File(appInfo.dataDir)
-        appConfigFile = File("${appInfo.dataDir}/shared_prefs/${ConfigConstants.PREFS_NAME}.xml")
+        appConfigFile = File("${appInfo.dataDir}/shared_prefs/${SettingsConstants.PREFS_NAME}.xml")
         appPowerDataDir = File("${appInfo.dataDir}/${Constants.APP_POWER_DATA_PATH}")
 
         val sampler = if (SysfsSampler.init(appInfo)) SysfsSampler else DumpsysSampler()
@@ -322,7 +323,7 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.i(TAG, "init: 通过 ConfigProvider 读取配置")
             ConfigUtil.getServerSettingsByContentProvider()
         }
-        serverSettings?.let(ServerSettingsMapper::toConfig)?.let(::updateConfig)
+        serverSettings?.let(ServerSettingsMapper::toServerConfigDto)?.let(::updateConfig)
             ?: LoggerX.w(TAG, "init: 未读取到配置, 使用当前默认值")
 
         monitor.start()
