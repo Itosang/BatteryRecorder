@@ -378,7 +378,8 @@ object ServerSettingsMapper {
             alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
         )
 
-    fun fromServerConfigDto(serverConfigDto: ServerConfigDto): ServerSettings =
+    /** DTO 边界进入服务端配置链路时，显式在这里完成合法化。 */
+    fun toNormalizedServerSettings(serverConfigDto: ServerConfigDto): ServerSettings =
         SharedSettings.normalizeServerSettings(
             recordIntervalMs = serverConfigDto.recordIntervalMs,
             batchSize = serverConfigDto.batchSize,

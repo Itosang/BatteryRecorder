@@ -4,8 +4,8 @@
 
 - `SettingsConstants`：设置项 key、默认值、范围常量的定义处。
 - `SharedSettings.kt`：设置系统核心，负责 `AppSettings / StatisticsSettings / ServerSettings` 分层、SharedPreferences 读写、规范化、以及 `ServerSettingsMapper` 映射。
-- `ConfigUtil.kt`：只负责 root/shell 场景下的设置来源适配，把外部来源接回 `ServerSettings` / `ServerConfigDto`。
-- `ServerConfigDto`：仅用于 AIDL 与 `ConfigProvider` 的 IPC 边界 DTO，不是设置真值。
+- `ConfigUtil.kt`：只负责 root/shell 场景下的设置来源适配。外部原始值先接回 `SharedSettings.serverSettingsFromStoredValues(...)` 或 `ServerSettingsMapper.fromServerConfigDto(...)`，主入口落在 `ServerSettings`。
+- `ServerConfigDto`：仅用于 AIDL 与 `ConfigProvider` 的 IPC 边界 DTO，不是设置真值；DTO 进入领域后的合法化统一经 `ServerSettingsMapper.fromServerConfigDto(...) -> SharedSettings.normalizeServerSettings(...)`。
 - `SettingsViewModel`：面向 UI 暴露三层设置状态；Server 设置统一走 `updateServerSettings(...)` 持久化并下发。
 
 ## 2. 三类设置项入口
@@ -42,7 +42,11 @@
 
 - `ServerSettings` 才是服务端设置领域模型，`ServerConfigDto` 只是 IPC 边界薄包装。
 - 默认值、范围裁剪、枚举解析统一收敛在 `SharedSettings.kt`，不要把规则散落到 UI、Provider 或 Server。
-- `ConfigUtil.kt` 只处理“从哪里读到设置”，不负责定义设置语义。
+- `ConfigUtil.kt` 只处理“从哪里读到设置”，不负责定义设置语义；不要再围绕旧 `coerceConfigValue` 或已删除 DTO 薄包装方法理解当前入口。
+- 当前推荐识别方式是：
+  - 读 SharedPreferences / XML 原始值：看 `SharedSettings.serverSettingsFromStoredValues(...)`
+  - 读 IPC DTO：看 `ServerSettingsMapper.fromServerConfigDto(...)`
+  - 重套一份领域规则：看 `SharedSettings.normalizeServerSettings(...)`
 - 新增设置项时，优先参考同层现有字段的完整链路，不要只看单个调用点。
 
 ## 4. 最容易漏的点
