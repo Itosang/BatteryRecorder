@@ -19,9 +19,7 @@ object ConfigUtil {
     fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
             LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
-            val settings = ServerSettingsMapper.toNormalizedServerSettings(
-                readServerConfigDtoByContentProvider()
-            )
+            val settings = readServerConfigDtoByContentProvider()
             logServerSettings("getServerSettingsByContentProvider", settings)
             settings
         } catch (e: RemoteException) {
@@ -117,7 +115,7 @@ object ConfigUtil {
         }
     }
 
-    private fun readServerConfigDtoByContentProvider(): ServerConfigDto {
+    private fun readServerConfigDtoByContentProvider(): ServerSettings {
         val reply = ActivityManagerCompat.contentProviderCall(
             "yangfentuozi.batteryrecorder.configProvider",
             "requestConfig",
@@ -125,14 +123,14 @@ object ConfigUtil {
             null
         )
         if (reply == null) throw NullPointerException("reply is null")
-        reply.classLoader = ServerConfigDto::class.java.classLoader
-        val serverConfigDto = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            reply.getParcelable("config", ServerConfigDto::class.java)
+        reply.classLoader = ServerSettings::class.java.classLoader
+        val serverSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            reply.getParcelable("config", ServerSettings::class.java)
         } else {
             @Suppress("DEPRECATION")
             reply.getParcelable("config")
         }
-        return serverConfigDto ?: throw NullPointerException("config is null")
+        return serverSettings ?: throw NullPointerException("config is null")
     }
 
     private fun logServerSettings(source: String, settings: ServerSettings) {

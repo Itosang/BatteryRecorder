@@ -1,2 +1,2 @@
 package yangfentuozi.batteryrecorder.shared.config;
-parcelable ServerConfigDto;
+parcelable ServerSettings;

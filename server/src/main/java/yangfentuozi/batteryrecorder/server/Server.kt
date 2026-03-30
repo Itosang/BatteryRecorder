@@ -16,7 +16,7 @@ import yangfentuozi.batteryrecorder.server.recorder.sampler.SysfsSampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
-import yangfentuozi.batteryrecorder.shared.config.ServerConfigDto
+import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
@@ -73,9 +73,8 @@ class Server internal constructor() : IService.Stub() {
         monitor.unregisterRecordListener(listener)
     }
 
-    override fun updateConfig(config: ServerConfigDto) {
+    override fun updateConfig(settings: ServerSettings) {
         Handlers.common.post {
-            val settings = ServerSettingsMapper.toNormalizedServerSettings(config)
             LoggerX.d(
                 TAG,
                 "updateConfig: 应用配置, intervalMs=${settings.recordIntervalMs} writeLatencyMs=${settings.writeLatencyMs} batchSize=${settings.batchSize} screenOffRecord=${settings.screenOffRecordEnabled} segmentDurationMin=${settings.segmentDurationMin} logLevel=${settings.logLevel} polling=${settings.alwaysPollingScreenStatusEnabled}"

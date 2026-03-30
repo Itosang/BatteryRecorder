@@ -3,6 +3,8 @@ package yangfentuozi.batteryrecorder.shared.config
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 data class AppSettings(
@@ -25,6 +27,7 @@ data class StatisticsSettings(
         SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
 )
 
+@Parcelize
 data class ServerSettings(
     val recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
     val batchSize: Int = SettingsConstants.batchSize.def,
@@ -35,7 +38,7 @@ data class ServerSettings(
     val logLevel: LoggerX.LogLevel = SettingsConstants.logLevel.def,
     val alwaysPollingScreenStatusEnabled: Boolean =
         SettingsConstants.alwaysPollingScreenStatusEnabled.def
-)
+): Parcelable
 
 object SharedSettings {
     fun getPreferences(context: Context): SharedPreferences =
@@ -184,31 +187,4 @@ object SharedSettings {
     fun encodeLogLevel(value: LoggerX.LogLevel): Int = value.priority
 
     fun decodeLogLevel(value: Int): LoggerX.LogLevel = LoggerX.LogLevel.fromPriority(value)
-}
-
-object ServerSettingsMapper {
-    fun toServerConfigDto(settings: ServerSettings): ServerConfigDto =
-        ServerConfigDto(
-            recordIntervalMs = settings.recordIntervalMs,
-            batchSize = settings.batchSize,
-            writeLatencyMs = settings.writeLatencyMs,
-            screenOffRecordEnabled = settings.screenOffRecordEnabled,
-            segmentDurationMin = settings.segmentDurationMin,
-            maxHistoryDays = settings.maxHistoryDays,
-            logLevel = settings.logLevel,
-            alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
-        )
-
-    /** DTO 边界进入服务端配置链路时，显式在这里完成合法化。 */
-    fun toNormalizedServerSettings(serverConfigDto: ServerConfigDto): ServerSettings =
-        SharedSettings.normalizeServerSettings(
-            recordIntervalMs = serverConfigDto.recordIntervalMs,
-            batchSize = serverConfigDto.batchSize,
-            writeLatencyMs = serverConfigDto.writeLatencyMs,
-            screenOffRecordEnabled = serverConfigDto.screenOffRecordEnabled,
-            segmentDurationMin = serverConfigDto.segmentDurationMin,
-            maxHistoryDays = serverConfigDto.maxHistoryDays,
-            logLevel = serverConfigDto.logLevel,
-            alwaysPollingScreenStatusEnabled = serverConfigDto.alwaysPollingScreenStatusEnabled
-        )
 }
