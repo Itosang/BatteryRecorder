@@ -55,7 +55,7 @@ fun LogSection(
                 errorMessage = "请输入大于等于 ${SettingsConstants.logMaxHistoryDays.min} 的整数",
                 parser = { rawValue ->
                     rawValue.toLongOrNull()
-                        ?.takeIf { it >= SettingsConstants.logMaxHistoryDays.max }
+                        ?.takeIf { it >= SettingsConstants.logMaxHistoryDays.min }
                 },
                 onDismiss = { showHistoryDaysDialog = false },
                 onSave = { parsedValue ->

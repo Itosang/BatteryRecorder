@@ -1,8 +1,8 @@
 package yangfentuozi.batteryrecorder.ui.dialog.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,7 +36,10 @@ fun SegmentDurationDialog(
         onDismissRequest = onDismiss,
         title = { Text("记录分段时间") },
         text = {
-            Column {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it },
@@ -50,9 +53,7 @@ fun SegmentDurationDialog(
                         }
                     },
                     singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp, start = 8.dp, end = 8.dp)
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
