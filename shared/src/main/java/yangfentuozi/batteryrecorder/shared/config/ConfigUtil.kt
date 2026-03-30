@@ -66,12 +66,12 @@ object ConfigUtil {
 
     fun readServerSettingsByReading(configFile: File): ServerSettings? {
         if (!configFile.exists()) {
-            LoggerX.e(TAG, "getConfigByReading: 配置文件不存在, path=${configFile.absolutePath}")
+            LoggerX.e(TAG, "readServerSettingsByReading: 配置文件不存在, path=${configFile.absolutePath}")
             return null
         }
 
         return try {
-            LoggerX.i(TAG, "getConfigByReading: 开始读取配置文件, path=${configFile.absolutePath}")
+            LoggerX.i(TAG, "readServerSettingsByReading: 开始读取配置文件, path=${configFile.absolutePath}")
             FileInputStream(configFile).use { fis ->
                 val parser = Xml.newPullParser()
                 parser.setInput(fis, "UTF-8")
@@ -95,32 +95,32 @@ object ConfigUtil {
                         when (nameAttr) {
                             ConfigConstants.KEY_RECORD_INTERVAL_MS ->
                                 recordIntervalMs =
-                                    valueAttr.toLongOrNull()
+                                    valueAttr?.trim()?.toLongOrNull()
                                         ?: ConfigConstants.DEF_RECORD_INTERVAL_MS
 
                             ConfigConstants.KEY_BATCH_SIZE ->
                                 batchSize =
-                                    valueAttr.toIntOrNull()
+                                    valueAttr?.trim()?.toIntOrNull()
                                         ?: ConfigConstants.DEF_BATCH_SIZE
 
                             ConfigConstants.KEY_WRITE_LATENCY_MS ->
                                 writeLatencyMs =
-                                    valueAttr.toLongOrNull()
+                                    valueAttr?.trim()?.toLongOrNull()
                                         ?: ConfigConstants.DEF_WRITE_LATENCY_MS
 
                             ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED -> {
                                 screenOffRecordEnabled =
-                                    valueAttr.toBooleanStrictOrNull()
+                                    valueAttr?.trim()?.toBooleanStrictOrNull()
                                         ?: ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
                             }
 
                             ConfigConstants.KEY_SEGMENT_DURATION_MIN ->
                                 segmentDurationMin =
-                                    valueAttr.toLongOrNull()
+                                    valueAttr?.trim()?.toLongOrNull()
                                         ?: ConfigConstants.DEF_SEGMENT_DURATION_MIN
 
                             ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS ->
-                                maxHistoryDays = valueAttr.toLongOrNull()
+                                maxHistoryDays = valueAttr?.trim()?.toLongOrNull()
                                     ?: ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
 
                             ConfigConstants.KEY_LOG_LEVEL ->
@@ -131,7 +131,7 @@ object ConfigUtil {
 
                             ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
                                 alwaysPollingScreenStatusEnabled =
-                                    valueAttr.toBooleanStrictOrNull()
+                                    valueAttr?.trim()?.toBooleanStrictOrNull()
                                         ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
                         }
                     }
@@ -157,13 +157,13 @@ object ConfigUtil {
                 settings
             }
         } catch (e: FileNotFoundException) {
-            LoggerX.e(TAG, "getConfigByReading: 配置文件不存在", tr = e)
+            LoggerX.e(TAG, "readServerSettingsByReading: 配置文件不存在", tr = e)
             null
         } catch (e: IOException) {
-            LoggerX.e(TAG, "getConfigByReading: 读取配置文件失败", tr = e)
+            LoggerX.e(TAG, "readServerSettingsByReading: 读取配置文件失败", tr = e)
             null
         } catch (e: XmlPullParserException) {
-            LoggerX.e(TAG, "getConfigByReading: 解析配置文件失败", tr = e)
+            LoggerX.e(TAG, "readServerSettingsByReading: 解析配置文件失败", tr = e)
             null
         }
     }
