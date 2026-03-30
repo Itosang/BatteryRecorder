@@ -102,10 +102,7 @@ object DischargeRecordScanner {
         context: Context,
         recentFileCount: Int
     ): List<File> {
-        val effectiveRecentFileCount = recentFileCount.coerceIn(
-            SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
-            SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
-        )
+        val effectiveRecentFileCount = SettingsConstants.sceneStatsRecentFileCount.coerce(recentFileCount)
         val dataDir = File(
             File(context.dataDir, Constants.APP_POWER_DATA_PATH),
             BatteryStatus.Discharging.dataDirName

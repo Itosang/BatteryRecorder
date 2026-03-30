@@ -13,13 +13,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
-import yangfentuozi.batteryrecorder.shared.config.AppSettingKeys
 import yangfentuozi.batteryrecorder.shared.config.AppSettings
 import yangfentuozi.batteryrecorder.shared.config.ServerConfigDto
 import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
+import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
-import yangfentuozi.batteryrecorder.shared.config.StatisticsSettingKeys
 import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
@@ -218,7 +217,7 @@ class SettingsViewModel : ViewModel() {
     fun setCheckUpdateOnStartup(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(AppSettingKeys.CHECK_UPDATE_ON_STARTUP, enabled)
+                SettingsConstants.checkUpdateOnStartup.writeToSP(this, enabled)
             }
             _appSettings.value = _appSettings.value.copy(checkUpdateOnStartup = enabled)
         }
@@ -227,7 +226,7 @@ class SettingsViewModel : ViewModel() {
     fun setDualCellEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(AppSettingKeys.DUAL_CELL_ENABLED, enabled)
+                SettingsConstants.dualCellEnabled.writeToSP(this, enabled)
             }
             _appSettings.value = _appSettings.value.copy(dualCellEnabled = enabled)
         }
@@ -236,24 +235,24 @@ class SettingsViewModel : ViewModel() {
     fun setDischargeDisplayPositiveEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(AppSettingKeys.DISCHARGE_DISPLAY_POSITIVE, enabled)
+                SettingsConstants.dischargeDisplayPositive.writeToSP(this, enabled)
             }
             _appSettings.value = _appSettings.value.copy(dischargeDisplayPositive = enabled)
         }
     }
 
     fun setCalibrationValue(value: Int) {
-        val finalValue = SharedSettings.normalizeCalibrationValue(value)
+        val finalValue = SettingsConstants.calibrationValue.coerce(value)
         viewModelScope.launch {
             prefs.edit {
-                putInt(AppSettingKeys.CALIBRATION_VALUE, finalValue)
+                SettingsConstants.calibrationValue.writeToSP(this, finalValue)
             }
             _appSettings.value = _appSettings.value.copy(calibrationValue = finalValue)
         }
     }
 
     fun setRecordIntervalMs(value: Long) {
-        val finalValue = SharedSettings.normalizeRecordIntervalMs(value)
+        val finalValue = SettingsConstants.recordIntervalMs.coerce(value)
         updateServerSettings(
             message = "[设置] 更新记录间隔并准备下发: intervalMs=$finalValue"
         ) { current ->
@@ -262,7 +261,7 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setWriteLatencyMs(value: Long) {
-        val finalValue = SharedSettings.normalizeWriteLatencyMs(value)
+        val finalValue = SettingsConstants.writeLatencyMs.coerce(value)
         updateServerSettings(
             message = "[设置] 更新写入延迟并准备下发: writeLatencyMs=$finalValue"
         ) { current ->
@@ -271,7 +270,7 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setBatchSize(value: Int) {
-        val finalValue = SharedSettings.normalizeBatchSize(value)
+        val finalValue = SettingsConstants.batchSize.coerce(value)
         updateServerSettings(
             message = "[设置] 更新批次大小并准备下发: batchSize=$finalValue"
         ) { current ->
@@ -296,7 +295,7 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setSegmentDurationMin(value: Long) {
-        val finalValue = SharedSettings.normalizeSegmentDurationMin(value)
+        val finalValue = SettingsConstants.segmentDurationMin.coerce(value)
         updateServerSettings(
             message = "[设置] 更新分段时长并准备下发: value=$finalValue"
         ) { current ->
@@ -307,14 +306,14 @@ class SettingsViewModel : ViewModel() {
     fun setRootBootAutoStartEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(AppSettingKeys.ROOT_BOOT_AUTO_START_ENABLED, enabled)
+                SettingsConstants.rootBootAutoStartEnabled.writeToSP(this, enabled)
             }
             _appSettings.value = _appSettings.value.copy(rootBootAutoStartEnabled = enabled)
         }
     }
 
     fun setMaxHistoryDays(value: Long) {
-        val finalValue = SharedSettings.normalizeMaxHistoryDays(value)
+        val finalValue = SettingsConstants.logMaxHistoryDays.coerce(value)
         updateServerSettings(
             message = "[设置] 更新日志保留天数并准备下发: maxHistoryDays=$finalValue"
         ) { current ->
@@ -339,18 +338,18 @@ class SettingsViewModel : ViewModel() {
                 gameBlacklist = newBlacklist
             )
             prefs.edit {
-                putStringSet(StatisticsSettingKeys.GAME_PACKAGES, packages)
-                putStringSet(StatisticsSettingKeys.GAME_BLACKLIST, newBlacklist)
+                SettingsConstants.gamePackages.writeToSP(this, packages)
+                SettingsConstants.gameBlacklist.writeToSP(this, newBlacklist)
             }
             _statisticsSettings.value = updated
         }
     }
 
     fun setSceneStatsRecentFileCount(value: Int) {
-        val finalValue = SharedSettings.normalizeSceneStatsRecentFileCount(value)
+        val finalValue = SettingsConstants.sceneStatsRecentFileCount.coerce(value)
         viewModelScope.launch {
             prefs.edit {
-                putInt(StatisticsSettingKeys.SCENE_STATS_RECENT_FILE_COUNT, finalValue)
+                SettingsConstants.sceneStatsRecentFileCount.writeToSP(this, finalValue)
             }
             _statisticsSettings.value =
                 _statisticsSettings.value.copy(sceneStatsRecentFileCount = finalValue)
@@ -360,7 +359,7 @@ class SettingsViewModel : ViewModel() {
     fun setPredCurrentSessionWeightEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_ENABLED, enabled)
+                SettingsConstants.predCurrentSessionWeightEnabled.writeToSP(this, enabled)
             }
             _statisticsSettings.value =
                 _statisticsSettings.value.copy(predCurrentSessionWeightEnabled = enabled)
@@ -368,10 +367,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setPredCurrentSessionWeightMaxX100(value: Int) {
-        val finalValue = SharedSettings.normalizePredCurrentSessionWeightMaxX100(value)
+        val finalValue = SettingsConstants.predCurrentSessionWeightMaxX100.coerce(value)
         viewModelScope.launch {
             prefs.edit {
-                putInt(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_MAX_X100, finalValue)
+                SettingsConstants.predCurrentSessionWeightMaxX100.writeToSP(this, finalValue)
             }
             _statisticsSettings.value =
                 _statisticsSettings.value.copy(predCurrentSessionWeightMaxX100 = finalValue)
@@ -379,10 +378,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setPredCurrentSessionWeightHalfLifeMin(value: Long) {
-        val finalValue = SharedSettings.normalizePredCurrentSessionWeightHalfLifeMin(value)
+        val finalValue = SettingsConstants.predCurrentSessionWeightHalfLifeMin.coerce(value)
         viewModelScope.launch {
             prefs.edit {
-                putLong(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN, finalValue)
+                SettingsConstants.predCurrentSessionWeightHalfLifeMin.writeToSP(this, finalValue)
             }
             _statisticsSettings.value =
                 _statisticsSettings.value.copy(predCurrentSessionWeightHalfLifeMin = finalValue)

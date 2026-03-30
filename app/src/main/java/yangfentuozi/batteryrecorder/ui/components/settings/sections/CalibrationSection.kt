@@ -71,10 +71,9 @@ fun CalibrationSection(
                 showDialog = false
             },
             onReset = {
-                actions.setCalibrationValue(SettingsConstants.DEF_CALIBRATION_VALUE)
+                actions.setCalibrationValue(SettingsConstants.calibrationValue.def)
                 showDialog = false
             }
         )
     }
 }
-

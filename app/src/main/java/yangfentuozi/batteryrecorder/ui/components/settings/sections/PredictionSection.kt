@@ -74,7 +74,7 @@ fun PredictionSection(
                 showRecentCountDialog = false
             },
             onReset = {
-                actions.setSceneStatsRecentFileCount(SettingsConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT)
+                actions.setSceneStatsRecentFileCount(SettingsConstants.sceneStatsRecentFileCount.def)
                 showRecentCountDialog = false
             }
         )
@@ -91,8 +91,12 @@ fun PredictionSection(
                 showWeightDialog = false
             },
             onReset = {
-                actions.setPredCurrentSessionWeightMaxX100(SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100)
-                actions.setPredCurrentSessionWeightHalfLifeMin(SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN)
+                actions.setPredCurrentSessionWeightMaxX100(
+                    SettingsConstants.predCurrentSessionWeightMaxX100.def
+                )
+                actions.setPredCurrentSessionWeightHalfLifeMin(
+                    SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
+                )
                 showWeightDialog = false
             }
         )

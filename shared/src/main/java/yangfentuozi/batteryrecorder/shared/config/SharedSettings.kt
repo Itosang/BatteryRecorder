@@ -5,68 +5,36 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
-object AppSettingKeys {
-    const val CHECK_UPDATE_ON_STARTUP = SettingsConstants.KEY_CHECK_UPDATE_ON_STARTUP
-    const val DUAL_CELL_ENABLED = SettingsConstants.KEY_DUAL_CELL_ENABLED
-    const val DISCHARGE_DISPLAY_POSITIVE = SettingsConstants.KEY_DISCHARGE_DISPLAY_POSITIVE
-    const val CALIBRATION_VALUE = SettingsConstants.KEY_CALIBRATION_VALUE
-    const val ROOT_BOOT_AUTO_START_ENABLED = SettingsConstants.KEY_ROOT_BOOT_AUTO_START_ENABLED
-}
-
-object StatisticsSettingKeys {
-    const val GAME_PACKAGES = SettingsConstants.KEY_GAME_PACKAGES
-    const val GAME_BLACKLIST = SettingsConstants.KEY_GAME_BLACKLIST
-    const val SCENE_STATS_RECENT_FILE_COUNT = SettingsConstants.KEY_SCENE_STATS_RECENT_FILE_COUNT
-    const val PRED_CURRENT_SESSION_WEIGHT_ENABLED =
-        SettingsConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_ENABLED
-    const val PRED_CURRENT_SESSION_WEIGHT_MAX_X100 =
-        SettingsConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-    const val PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN =
-        SettingsConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-}
-
-object ServerSettingKeys {
-    const val RECORD_INTERVAL_MS = SettingsConstants.KEY_RECORD_INTERVAL_MS
-    const val BATCH_SIZE = SettingsConstants.KEY_BATCH_SIZE
-    const val WRITE_LATENCY_MS = SettingsConstants.KEY_WRITE_LATENCY_MS
-    const val SCREEN_OFF_RECORD_ENABLED = SettingsConstants.KEY_SCREEN_OFF_RECORD_ENABLED
-    const val SEGMENT_DURATION_MIN = SettingsConstants.KEY_SEGMENT_DURATION_MIN
-    const val ALWAYS_POLLING_SCREEN_STATUS_ENABLED =
-        SettingsConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
-    const val MAX_HISTORY_DAYS = SettingsConstants.KEY_LOG_MAX_HISTORY_DAYS
-    const val LOG_LEVEL = SettingsConstants.KEY_LOG_LEVEL
-}
-
 data class AppSettings(
-    val checkUpdateOnStartup: Boolean = SettingsConstants.DEF_CHECK_UPDATE_ON_STARTUP,
-    val dualCellEnabled: Boolean = SettingsConstants.DEF_DUAL_CELL_ENABLED,
-    val dischargeDisplayPositive: Boolean = SettingsConstants.DEF_DISCHARGE_DISPLAY_POSITIVE,
-    val calibrationValue: Int = SettingsConstants.DEF_CALIBRATION_VALUE,
-    val rootBootAutoStartEnabled: Boolean = SettingsConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED
+    val checkUpdateOnStartup: Boolean = SettingsConstants.checkUpdateOnStartup.def,
+    val dualCellEnabled: Boolean = SettingsConstants.dualCellEnabled.def,
+    val dischargeDisplayPositive: Boolean = SettingsConstants.dischargeDisplayPositive.def,
+    val calibrationValue: Int = SettingsConstants.calibrationValue.def,
+    val rootBootAutoStartEnabled: Boolean = SettingsConstants.rootBootAutoStartEnabled.def
 )
 
 data class StatisticsSettings(
     val gamePackages: Set<String> = emptySet(),
     val gameBlacklist: Set<String> = emptySet(),
-    val sceneStatsRecentFileCount: Int = SettingsConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT,
+    val sceneStatsRecentFileCount: Int = SettingsConstants.sceneStatsRecentFileCount.def,
     val predCurrentSessionWeightEnabled: Boolean =
-        SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_ENABLED,
+        SettingsConstants.predCurrentSessionWeightEnabled.def,
     val predCurrentSessionWeightMaxX100: Int =
-        SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
+        SettingsConstants.predCurrentSessionWeightMaxX100.def,
     val predCurrentSessionWeightHalfLifeMin: Long =
-        SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
+        SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
 )
 
 data class ServerSettings(
-    val recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS,
-    val batchSize: Int = SettingsConstants.DEF_BATCH_SIZE,
-    val writeLatencyMs: Long = SettingsConstants.DEF_WRITE_LATENCY_MS,
-    val screenOffRecordEnabled: Boolean = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
-    val segmentDurationMin: Long = SettingsConstants.DEF_SEGMENT_DURATION_MIN,
-    val maxHistoryDays: Long = SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS,
-    val logLevel: LoggerX.LogLevel = SettingsConstants.DEF_LOG_LEVEL,
+    val recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
+    val batchSize: Int = SettingsConstants.batchSize.def,
+    val writeLatencyMs: Long = SettingsConstants.writeLatencyMs.def,
+    val screenOffRecordEnabled: Boolean = SettingsConstants.screenOffRecordEnabled.def,
+    val segmentDurationMin: Long = SettingsConstants.segmentDurationMin.def,
+    val maxHistoryDays: Long = SettingsConstants.logMaxHistoryDays.def,
+    val logLevel: LoggerX.LogLevel = SettingsConstants.logLevel.def,
     val alwaysPollingScreenStatusEnabled: Boolean =
-        SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+        SettingsConstants.alwaysPollingScreenStatusEnabled.def
 )
 
 object SharedSettings {
@@ -77,33 +45,11 @@ object SharedSettings {
 
     fun readAppSettings(prefs: SharedPreferences): AppSettings =
         AppSettings(
-            checkUpdateOnStartup =
-                prefs.getBoolean(
-                    AppSettingKeys.CHECK_UPDATE_ON_STARTUP,
-                    SettingsConstants.DEF_CHECK_UPDATE_ON_STARTUP
-                ),
-            dualCellEnabled =
-                prefs.getBoolean(
-                    AppSettingKeys.DUAL_CELL_ENABLED,
-                    SettingsConstants.DEF_DUAL_CELL_ENABLED
-                ),
-            dischargeDisplayPositive =
-                prefs.getBoolean(
-                    AppSettingKeys.DISCHARGE_DISPLAY_POSITIVE,
-                    SettingsConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
-                ),
-            calibrationValue =
-                normalizeCalibrationValue(
-                    prefs.getInt(
-                        AppSettingKeys.CALIBRATION_VALUE,
-                        SettingsConstants.DEF_CALIBRATION_VALUE
-                    )
-                ),
-            rootBootAutoStartEnabled =
-                prefs.getBoolean(
-                    AppSettingKeys.ROOT_BOOT_AUTO_START_ENABLED,
-                    SettingsConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED
-                )
+            checkUpdateOnStartup = SettingsConstants.checkUpdateOnStartup.readFromSP(prefs),
+            dualCellEnabled = SettingsConstants.dualCellEnabled.readFromSP(prefs),
+            dischargeDisplayPositive = SettingsConstants.dischargeDisplayPositive.readFromSP(prefs),
+            calibrationValue = SettingsConstants.calibrationValue.readFromSP(prefs),
+            rootBootAutoStartEnabled = SettingsConstants.rootBootAutoStartEnabled.readFromSP(prefs)
         )
 
     fun readStatisticsSettings(context: Context): StatisticsSettings =
@@ -111,38 +57,15 @@ object SharedSettings {
 
     fun readStatisticsSettings(prefs: SharedPreferences): StatisticsSettings =
         StatisticsSettings(
-            gamePackages =
-                prefs.getStringSet(StatisticsSettingKeys.GAME_PACKAGES, emptySet())?.toSet()
-                    ?: emptySet(),
-            gameBlacklist =
-                prefs.getStringSet(StatisticsSettingKeys.GAME_BLACKLIST, emptySet())?.toSet()
-                    ?: emptySet(),
-            sceneStatsRecentFileCount =
-                normalizeSceneStatsRecentFileCount(
-                    prefs.getInt(
-                        StatisticsSettingKeys.SCENE_STATS_RECENT_FILE_COUNT,
-                        SettingsConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT
-                    )
-                ),
+            gamePackages = SettingsConstants.gamePackages.readFromSP(prefs),
+            gameBlacklist = SettingsConstants.gameBlacklist.readFromSP(prefs),
+            sceneStatsRecentFileCount = SettingsConstants.sceneStatsRecentFileCount.readFromSP(prefs),
             predCurrentSessionWeightEnabled =
-                prefs.getBoolean(
-                    StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_ENABLED,
-                    SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_ENABLED
-                ),
+                SettingsConstants.predCurrentSessionWeightEnabled.readFromSP(prefs),
             predCurrentSessionWeightMaxX100 =
-                normalizePredCurrentSessionWeightMaxX100(
-                    prefs.getInt(
-                        StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                        SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-                    )
-                ),
+                SettingsConstants.predCurrentSessionWeightMaxX100.readFromSP(prefs),
             predCurrentSessionWeightHalfLifeMin =
-                normalizePredCurrentSessionWeightHalfLifeMin(
-                    prefs.getLong(
-                        StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-                        SettingsConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-                    )
-                )
+                SettingsConstants.predCurrentSessionWeightHalfLifeMin.readFromSP(prefs)
         )
 
     fun readServerSettings(context: Context): ServerSettings =
@@ -150,64 +73,36 @@ object SharedSettings {
 
     fun readServerSettings(prefs: SharedPreferences): ServerSettings =
         serverSettingsFromStoredValues(
-            recordIntervalMs =
-                prefs.getLong(
-                    ServerSettingKeys.RECORD_INTERVAL_MS,
-                    SettingsConstants.DEF_RECORD_INTERVAL_MS
-                ),
-            batchSize =
-                prefs.getInt(ServerSettingKeys.BATCH_SIZE, SettingsConstants.DEF_BATCH_SIZE),
-            writeLatencyMs =
-                prefs.getLong(
-                    ServerSettingKeys.WRITE_LATENCY_MS,
-                    SettingsConstants.DEF_WRITE_LATENCY_MS
-                ),
-            screenOffRecordEnabled =
-                prefs.getBoolean(
-                    ServerSettingKeys.SCREEN_OFF_RECORD_ENABLED,
-                    SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED
-                ),
-            segmentDurationMin =
-                prefs.getLong(
-                    ServerSettingKeys.SEGMENT_DURATION_MIN,
-                    SettingsConstants.DEF_SEGMENT_DURATION_MIN
-                ),
-            maxHistoryDays =
-                prefs.getLong(
-                    ServerSettingKeys.MAX_HISTORY_DAYS,
-                    SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS
-                ),
-            logLevelPriority =
-                prefs.getInt(
-                    ServerSettingKeys.LOG_LEVEL,
-                    encodeLogLevel(SettingsConstants.DEF_LOG_LEVEL)
-                ),
+            recordIntervalMs = SettingsConstants.recordIntervalMs.readFromSP(prefs),
+            batchSize = SettingsConstants.batchSize.readFromSP(prefs),
+            writeLatencyMs = SettingsConstants.writeLatencyMs.readFromSP(prefs),
+            screenOffRecordEnabled = SettingsConstants.screenOffRecordEnabled.readFromSP(prefs),
+            segmentDurationMin = SettingsConstants.segmentDurationMin.readFromSP(prefs),
+            maxHistoryDays = SettingsConstants.logMaxHistoryDays.readFromSP(prefs),
+            logLevelPriority = encodeLogLevel(SettingsConstants.logLevel.readFromSP(prefs)),
             alwaysPollingScreenStatusEnabled =
-                prefs.getBoolean(
-                    ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
-                    SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
-                )
+                SettingsConstants.alwaysPollingScreenStatusEnabled.readFromSP(prefs)
         )
 
     /** 核心规范化入口，显式字段最终都走这里。 */
     fun normalizeServerSettings(
-        recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS,
-        batchSize: Int = SettingsConstants.DEF_BATCH_SIZE,
-        writeLatencyMs: Long = SettingsConstants.DEF_WRITE_LATENCY_MS,
-        screenOffRecordEnabled: Boolean = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
-        segmentDurationMin: Long = SettingsConstants.DEF_SEGMENT_DURATION_MIN,
-        maxHistoryDays: Long = SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS,
-        logLevel: LoggerX.LogLevel = SettingsConstants.DEF_LOG_LEVEL,
+        recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
+        batchSize: Int = SettingsConstants.batchSize.def,
+        writeLatencyMs: Long = SettingsConstants.writeLatencyMs.def,
+        screenOffRecordEnabled: Boolean = SettingsConstants.screenOffRecordEnabled.def,
+        segmentDurationMin: Long = SettingsConstants.segmentDurationMin.def,
+        maxHistoryDays: Long = SettingsConstants.logMaxHistoryDays.def,
+        logLevel: LoggerX.LogLevel = SettingsConstants.logLevel.def,
         alwaysPollingScreenStatusEnabled: Boolean =
-            SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+            SettingsConstants.alwaysPollingScreenStatusEnabled.def
     ): ServerSettings =
         ServerSettings(
-            recordIntervalMs = normalizeRecordIntervalMs(recordIntervalMs),
-            batchSize = normalizeBatchSize(batchSize),
-            writeLatencyMs = normalizeWriteLatencyMs(writeLatencyMs),
+            recordIntervalMs = SettingsConstants.recordIntervalMs.coerce(recordIntervalMs),
+            batchSize = SettingsConstants.batchSize.coerce(batchSize),
+            writeLatencyMs = SettingsConstants.writeLatencyMs.coerce(writeLatencyMs),
             screenOffRecordEnabled = screenOffRecordEnabled,
-            segmentDurationMin = normalizeSegmentDurationMin(segmentDurationMin),
-            maxHistoryDays = normalizeMaxHistoryDays(maxHistoryDays),
+            segmentDurationMin = SettingsConstants.segmentDurationMin.coerce(segmentDurationMin),
+            maxHistoryDays = SettingsConstants.logMaxHistoryDays.coerce(maxHistoryDays),
             logLevel = logLevel,
             alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
         )
@@ -224,20 +119,18 @@ object SharedSettings {
         alwaysPollingScreenStatusEnabled: Boolean? = null
     ): ServerSettings =
         normalizeServerSettings(
-            recordIntervalMs = recordIntervalMs ?: SettingsConstants.DEF_RECORD_INTERVAL_MS,
-            batchSize = batchSize ?: SettingsConstants.DEF_BATCH_SIZE,
-            writeLatencyMs = writeLatencyMs ?: SettingsConstants.DEF_WRITE_LATENCY_MS,
+            recordIntervalMs = recordIntervalMs ?: SettingsConstants.recordIntervalMs.def,
+            batchSize = batchSize ?: SettingsConstants.batchSize.def,
+            writeLatencyMs = writeLatencyMs ?: SettingsConstants.writeLatencyMs.def,
             screenOffRecordEnabled =
-                screenOffRecordEnabled ?: SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
-            segmentDurationMin = segmentDurationMin ?: SettingsConstants.DEF_SEGMENT_DURATION_MIN,
-            maxHistoryDays = maxHistoryDays ?: SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS,
+                screenOffRecordEnabled ?: SettingsConstants.screenOffRecordEnabled.def,
+            segmentDurationMin = segmentDurationMin ?: SettingsConstants.segmentDurationMin.def,
+            maxHistoryDays = maxHistoryDays ?: SettingsConstants.logMaxHistoryDays.def,
             logLevel =
-                decodeLogLevel(
-                    logLevelPriority ?: encodeLogLevel(SettingsConstants.DEF_LOG_LEVEL)
-                ),
+                decodeLogLevel(logLevelPriority ?: encodeLogLevel(SettingsConstants.logLevel.def)),
             alwaysPollingScreenStatusEnabled =
                 alwaysPollingScreenStatusEnabled
-                    ?: SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+                    ?: SettingsConstants.alwaysPollingScreenStatusEnabled.def
         )
 
     /** 对象重载仅用于已有 ServerSettings 重新套用同一套规则，避免调用方手动拆字段。 */
@@ -266,99 +159,27 @@ object SharedSettings {
     }
 
     fun Editor.writeAppSettings(settings: AppSettings) {
-        putBoolean(AppSettingKeys.CHECK_UPDATE_ON_STARTUP, settings.checkUpdateOnStartup)
-        putBoolean(AppSettingKeys.DUAL_CELL_ENABLED, settings.dualCellEnabled)
-        putBoolean(
-            AppSettingKeys.DISCHARGE_DISPLAY_POSITIVE,
-            settings.dischargeDisplayPositive
-        )
-        putInt(
-            AppSettingKeys.CALIBRATION_VALUE,
-            normalizeCalibrationValue(settings.calibrationValue)
-        )
-        putBoolean(
-            AppSettingKeys.ROOT_BOOT_AUTO_START_ENABLED,
-            settings.rootBootAutoStartEnabled
-        )
+        SettingsConstants.checkUpdateOnStartup.writeToSP(this, settings.checkUpdateOnStartup)
+        SettingsConstants.dualCellEnabled.writeToSP(this, settings.dualCellEnabled)
+        SettingsConstants.dischargeDisplayPositive.writeToSP(this, settings.dischargeDisplayPositive)
+        SettingsConstants.calibrationValue.writeToSP(this, settings.calibrationValue)
+        SettingsConstants.rootBootAutoStartEnabled.writeToSP(this, settings.rootBootAutoStartEnabled)
     }
 
     fun Editor.writeServerSettings(settings: ServerSettings) {
         val normalized = normalizeServerSettings(settings)
-        putLong(
-            ServerSettingKeys.RECORD_INTERVAL_MS,
-            normalized.recordIntervalMs
-        )
-        putInt(ServerSettingKeys.BATCH_SIZE, normalized.batchSize)
-        putLong(
-            ServerSettingKeys.WRITE_LATENCY_MS,
-            normalized.writeLatencyMs
-        )
-        putBoolean(
-            ServerSettingKeys.SCREEN_OFF_RECORD_ENABLED,
-            normalized.screenOffRecordEnabled
-        )
-        putLong(
-            ServerSettingKeys.SEGMENT_DURATION_MIN,
-            normalized.segmentDurationMin
-        )
-        putLong(
-            ServerSettingKeys.MAX_HISTORY_DAYS,
-            normalized.maxHistoryDays
-        )
-        putInt(ServerSettingKeys.LOG_LEVEL, encodeLogLevel(normalized.logLevel))
-        putBoolean(
-            ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
+        SettingsConstants.recordIntervalMs.writeToSP(this, normalized.recordIntervalMs)
+        SettingsConstants.batchSize.writeToSP(this, normalized.batchSize)
+        SettingsConstants.writeLatencyMs.writeToSP(this, normalized.writeLatencyMs)
+        SettingsConstants.screenOffRecordEnabled.writeToSP(this, normalized.screenOffRecordEnabled)
+        SettingsConstants.segmentDurationMin.writeToSP(this, normalized.segmentDurationMin)
+        SettingsConstants.logMaxHistoryDays.writeToSP(this, normalized.maxHistoryDays)
+        SettingsConstants.logLevel.writeToSP(this, normalized.logLevel)
+        SettingsConstants.alwaysPollingScreenStatusEnabled.writeToSP(
+            this,
             normalized.alwaysPollingScreenStatusEnabled
         )
     }
-
-    fun normalizeCalibrationValue(value: Int): Int =
-        value.coerceIn(
-            SettingsConstants.MIN_CALIBRATION_VALUE,
-            SettingsConstants.MAX_CALIBRATION_VALUE
-        )
-
-    fun normalizeSceneStatsRecentFileCount(value: Int): Int =
-        value.coerceIn(
-            SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
-            SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
-        )
-
-    fun normalizePredCurrentSessionWeightMaxX100(value: Int): Int =
-        value.coerceIn(
-            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-            SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-        )
-
-    fun normalizePredCurrentSessionWeightHalfLifeMin(value: Long): Long =
-        value.coerceIn(
-            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-            SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-        )
-
-    fun normalizeRecordIntervalMs(value: Long): Long =
-        value.coerceIn(
-            SettingsConstants.MIN_RECORD_INTERVAL_MS,
-            SettingsConstants.MAX_RECORD_INTERVAL_MS
-        )
-
-    fun normalizeBatchSize(value: Int): Int =
-        value.coerceIn(SettingsConstants.MIN_BATCH_SIZE, SettingsConstants.MAX_BATCH_SIZE)
-
-    fun normalizeWriteLatencyMs(value: Long): Long =
-        value.coerceIn(
-            SettingsConstants.MIN_WRITE_LATENCY_MS,
-            SettingsConstants.MAX_WRITE_LATENCY_MS
-        )
-
-    fun normalizeSegmentDurationMin(value: Long): Long =
-        value.coerceIn(
-            SettingsConstants.MIN_SEGMENT_DURATION_MIN,
-            SettingsConstants.MAX_SEGMENT_DURATION_MIN
-        )
-
-    fun normalizeMaxHistoryDays(value: Long): Long =
-        value.coerceAtLeast(SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS)
 
     fun encodeLogLevel(value: LoggerX.LogLevel): Int = value.priority
 

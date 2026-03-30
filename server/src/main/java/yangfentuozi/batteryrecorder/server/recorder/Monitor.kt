@@ -55,13 +55,13 @@ class Monitor(
     private val callbacks: RemoteCallbackList<IRecordListener> = RemoteCallbackList()
 
     @Volatile
-    var recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS
+    var recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def
 
     @Volatile
-    var screenOffRecord: Boolean = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+    var screenOffRecord: Boolean = SettingsConstants.screenOffRecordEnabled.def
 
     private var mAlwaysPollingScreenStatusEnabled: Boolean =
-        SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+        SettingsConstants.alwaysPollingScreenStatusEnabled.def
     var alwaysPollingScreenStatusEnabled: Boolean
         get() = mAlwaysPollingScreenStatusEnabled
         set(value) {

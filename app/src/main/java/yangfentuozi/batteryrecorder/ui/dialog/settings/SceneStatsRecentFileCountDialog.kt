@@ -24,6 +24,7 @@ fun SceneStatsRecentFileCountDialog(
     onSave: (Int) -> Unit,
     onReset: () -> Unit
 ) {
+    val config = SettingsConstants.sceneStatsRecentFileCount
     var value by remember { mutableStateOf(currentValue.toString()) }
     var isError by remember { mutableStateOf(false) }
 
@@ -36,15 +37,15 @@ fun SceneStatsRecentFileCountDialog(
                 onValueChange = { newValue: String ->
                     value = newValue
                     isError = newValue.toIntOrNull() == null ||
-                            newValue.toInt() < SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT ||
-                            newValue.toInt() > SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
+                            newValue.toInt() < config.min ||
+                            newValue.toInt() > config.max
                 },
                 label = { Text("最近文件数") },
                 isError = isError,
                 supportingText = if (isError) {
                     {
                         Text(
-                            "请输入 ${SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT}-${SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT} 之间的整数"
+                            "请输入 ${config.min}-${config.max} 之间的整数"
                         )
                     }
                 } else null,
@@ -58,7 +59,7 @@ fun SceneStatsRecentFileCountDialog(
             TextButton(
                 onClick = {
                     value.toIntOrNull()?.let { intValue ->
-                        if (intValue in SettingsConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT..SettingsConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT) {
+                        if (intValue in config.min..config.max) {
                             onSave(intValue)
                         }
                     }

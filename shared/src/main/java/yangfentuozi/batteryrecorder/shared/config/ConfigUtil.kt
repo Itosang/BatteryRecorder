@@ -63,28 +63,28 @@ object ConfigUtil {
                         val trimmedValue = valueAttr?.trim()
 
                         when (nameAttr) {
-                            SettingsConstants.KEY_RECORD_INTERVAL_MS ->
+                            SettingsConstants.recordIntervalMs.key ->
                                 recordIntervalMs = trimmedValue?.toLongOrNull()
 
-                            SettingsConstants.KEY_BATCH_SIZE ->
+                            SettingsConstants.batchSize.key ->
                                 batchSize = trimmedValue?.toIntOrNull()
 
-                            SettingsConstants.KEY_WRITE_LATENCY_MS ->
+                            SettingsConstants.writeLatencyMs.key ->
                                 writeLatencyMs = trimmedValue?.toLongOrNull()
 
-                            SettingsConstants.KEY_SCREEN_OFF_RECORD_ENABLED ->
+                            SettingsConstants.screenOffRecordEnabled.key ->
                                 screenOffRecordEnabled = trimmedValue?.toBooleanStrictOrNull()
 
-                            SettingsConstants.KEY_SEGMENT_DURATION_MIN ->
+                            SettingsConstants.segmentDurationMin.key ->
                                 segmentDurationMin = trimmedValue?.toLongOrNull()
 
-                            SettingsConstants.KEY_LOG_MAX_HISTORY_DAYS ->
+                            SettingsConstants.logMaxHistoryDays.key ->
                                 maxHistoryDays = trimmedValue?.toLongOrNull()
 
-                            SettingsConstants.KEY_LOG_LEVEL ->
+                            SettingsConstants.logLevel.key ->
                                 logLevelPriority = trimmedValue?.toIntOrNull()
 
-                            SettingsConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
+                            SettingsConstants.alwaysPollingScreenStatusEnabled.key ->
                                 alwaysPollingScreenStatusEnabled =
                                     trimmedValue?.toBooleanStrictOrNull()
                         }

@@ -10,12 +10,13 @@ import yangfentuozi.batteryrecorder.shared.util.LoggerX
  */
 @Parcelize
 data class ServerConfigDto(
-    val recordIntervalMs: Long = SettingsConstants.DEF_RECORD_INTERVAL_MS,
-    val batchSize: Int = SettingsConstants.DEF_BATCH_SIZE,
-    val writeLatencyMs: Long = SettingsConstants.DEF_WRITE_LATENCY_MS,
-    val screenOffRecordEnabled: Boolean = SettingsConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
-    val segmentDurationMin: Long = SettingsConstants.DEF_SEGMENT_DURATION_MIN,
-    val maxHistoryDays: Long = SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS,
-    val logLevel: LoggerX.LogLevel = SettingsConstants.DEF_LOG_LEVEL,
-    val alwaysPollingScreenStatusEnabled: Boolean = SettingsConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+    val recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
+    val batchSize: Int = SettingsConstants.batchSize.def,
+    val writeLatencyMs: Long = SettingsConstants.writeLatencyMs.def,
+    val screenOffRecordEnabled: Boolean = SettingsConstants.screenOffRecordEnabled.def,
+    val segmentDurationMin: Long = SettingsConstants.segmentDurationMin.def,
+    val maxHistoryDays: Long = SettingsConstants.logMaxHistoryDays.def,
+    val logLevel: LoggerX.LogLevel = SettingsConstants.logLevel.def,
+    val alwaysPollingScreenStatusEnabled: Boolean =
+        SettingsConstants.alwaysPollingScreenStatusEnabled.def
 ) : Parcelable

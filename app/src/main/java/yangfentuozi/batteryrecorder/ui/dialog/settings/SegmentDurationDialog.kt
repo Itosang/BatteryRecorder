@@ -26,10 +26,11 @@ fun SegmentDurationDialog(
     onSave: (Long) -> Unit,
     onReset: () -> Unit
 ) {
+    val config = SettingsConstants.segmentDurationMin
     var value by remember { mutableStateOf(currentValueMin.toString()) }
     val parsedValue = value.toLongOrNull()
     val isError =
-        parsedValue == null || parsedValue < SettingsConstants.MIN_SEGMENT_DURATION_MIN || parsedValue > SettingsConstants.MAX_SEGMENT_DURATION_MIN
+        parsedValue == null || parsedValue < config.min || parsedValue > config.max
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,7 +44,7 @@ fun SegmentDurationDialog(
                     isError = isError,
                     supportingText = {
                         when {
-                            isError -> Text("请输入 ${SettingsConstants.MIN_SEGMENT_DURATION_MIN}-${SettingsConstants.MAX_SEGMENT_DURATION_MIN} 之间的整数")
+                            isError -> Text("请输入 ${config.min}-${config.max} 之间的整数")
                             parsedValue == 0L -> Text("设置为 0 表示不按时间自动分段")
                             else -> Text("$parsedValue 分钟 = ${"%.1f".format(parsedValue / 60.0)} 小时")
                         }

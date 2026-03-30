@@ -32,21 +32,22 @@ fun CurrentSessionWeightDialog(
     onSave: (maxX100: Int, halfLifeMin: Long) -> Unit,
     onReset: () -> Unit
 ) {
-    val minMaxX = SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
-    val maxMaxX = SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 / 100f
-    val maxXSteps = ((SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 -
-            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100) / 10 - 1).coerceAtLeast(0)
+    val maxXConfig = SettingsConstants.predCurrentSessionWeightMaxX100
+    val halfLifeConfig = SettingsConstants.predCurrentSessionWeightHalfLifeMin
+    val minMaxX = maxXConfig.min / 100f
+    val maxMaxX = maxXConfig.max / 100f
+    val maxXSteps = ((maxXConfig.max - maxXConfig.min) / 10 - 1).coerceAtLeast(0)
     var maxX by remember {
         val initial = ((currentMaxX100 / 100f) * 10).roundToInt() / 10f
-        val normalized = initial.coerceIn(minMaxX, maxMaxX)
+        val normalized = maxXConfig.coerce((initial * 100).roundToInt()) / 100f
         val snapped = (normalized * 10).roundToInt() / 10f
         mutableFloatStateOf(snapped)
     }
 
-    val minHalfLife = SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-    val maxHalfLife = SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
+    val minHalfLife = halfLifeConfig.min
+    val maxHalfLife = halfLifeConfig.max
     var halfLifeMin by remember {
-        val initial = currentHalfLifeMin.coerceIn(minHalfLife, maxHalfLife)
+        val initial = halfLifeConfig.coerce(currentHalfLifeMin)
         mutableLongStateOf(initial)
     }
 
@@ -73,7 +74,7 @@ fun CurrentSessionWeightDialog(
                     Slider(
                         value = maxX,
                         onValueChange = { v ->
-                            maxX = ((v * 10).roundToInt() / 10f).coerceIn(minMaxX, maxMaxX)
+                            maxX = maxXConfig.coerce((v * 100).roundToInt()) / 100f
                         },
                         valueRange = minMaxX..maxMaxX,
                         steps = maxXSteps,
@@ -128,12 +129,8 @@ fun CurrentSessionWeightDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val maxX100 = (maxX * 100).roundToInt()
-                        .coerceIn(
-                            SettingsConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                            SettingsConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-                        )
-                    val halfLife = halfLifeMin.coerceIn(minHalfLife, maxHalfLife)
+                    val maxX100 = maxXConfig.coerce((maxX * 100).roundToInt())
+                    val halfLife = halfLifeConfig.coerce(halfLifeMin)
                     onSave(maxX100, halfLife)
                 }
             ) {

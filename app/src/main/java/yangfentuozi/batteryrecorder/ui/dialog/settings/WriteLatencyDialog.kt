@@ -29,10 +29,11 @@ fun WriteLatencyDialog(
     onSave: (Long) -> Unit,
     onReset: () -> Unit
 ) {
-    val minS = SettingsConstants.MIN_WRITE_LATENCY_MS / 1000f
-    val maxS = SettingsConstants.MAX_WRITE_LATENCY_MS / 1000f
+    val config = SettingsConstants.writeLatencyMs
+    val minS = config.min / 1000f
+    val maxS = config.max / 1000f
     var value by remember {
-        val initial = (currentValueMs / 1000f).coerceIn(minS, maxS)
+        val initial = config.coerce(currentValueMs) / 1000f
         mutableFloatStateOf(initial)
     }
 
