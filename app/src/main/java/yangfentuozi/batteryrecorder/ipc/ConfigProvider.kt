@@ -5,7 +5,6 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
@@ -23,7 +22,7 @@ class ConfigProvider : ContentProvider() {
                 SharedSettings.getPreferences(requireContext())
             )
             return Bundle().apply {
-                putParcelable("config", ServerSettingsMapper.toServerConfigDto(serverSettings))
+                putParcelable("config", serverSettings)
             }
         }
         return null
