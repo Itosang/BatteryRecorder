@@ -155,7 +155,7 @@ fun ServerSection(
                 showRecordIntervalDialog = false
             },
             onReset = {
-                actions.setRecordIntervalMs(SettingsConstants.DEF_RECORD_INTERVAL_MS)
+                actions.setRecordIntervalMs(SettingsConstants.recordIntervalMs.def)
                 showRecordIntervalDialog = false
             }
         )
@@ -172,7 +172,7 @@ fun ServerSection(
                 showWriteLatencyDialog = false
             },
             onReset = {
-                actions.setWriteLatencyMs(SettingsConstants.DEF_WRITE_LATENCY_MS)
+                actions.setWriteLatencyMs(SettingsConstants.writeLatencyMs.def)
                 showWriteLatencyDialog = false
             }
         )
@@ -188,7 +188,7 @@ fun ServerSection(
                 showBatchSizeDialog = false
             },
             onReset = {
-                actions.setBatchSize(SettingsConstants.DEF_BATCH_SIZE)
+                actions.setBatchSize(SettingsConstants.batchSize.def)
                 showBatchSizeDialog = false
             }
         )
@@ -204,7 +204,7 @@ fun ServerSection(
                 showSegmentDurationDialog = false
             },
             onReset = {
-                actions.setSegmentDurationMin(SettingsConstants.DEF_SEGMENT_DURATION_MIN)
+                actions.setSegmentDurationMin(SettingsConstants.segmentDurationMin.def)
                 showSegmentDurationDialog = false
             }
         )
@@ -216,10 +216,10 @@ fun ServerSection(
                 title = "日志保留天数",
                 label = "保留天数",
                 currentValue = state.maxHistoryDays.toString(),
-                errorMessage = "请输入大于等于 ${SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS} 的整数",
+                errorMessage = "请输入大于等于 ${SettingsConstants.logMaxHistoryDays.min} 的整数",
                 parser = { rawValue ->
                     rawValue.toLongOrNull()
-                        ?.takeIf { it >= SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS }
+                        ?.takeIf { SettingsConstants.logMaxHistoryDays.coerce(it) == it }
                 },
                 onDismiss = { showHistoryDaysDialog = false },
                 onSave = { parsedValue ->
@@ -227,7 +227,7 @@ fun ServerSection(
                     showHistoryDaysDialog = false
                 },
                 onReset = {
-                    logActions.setMaxHistoryDays(SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS)
+                    logActions.setMaxHistoryDays(SettingsConstants.logMaxHistoryDays.def)
                     showHistoryDaysDialog = false
                 }
             )
@@ -244,7 +244,7 @@ fun ServerSection(
                     showLogLevelDialog = false
                 },
                 onReset = {
-                    logActions.setLogLevel(SettingsConstants.DEF_LOG_LEVEL)
+                    logActions.setLogLevel(SettingsConstants.logLevel.def)
                     showLogLevelDialog = false
                 }
             )

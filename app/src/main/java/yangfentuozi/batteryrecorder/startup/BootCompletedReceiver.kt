@@ -41,17 +41,15 @@ class BootCompletedReceiver : BroadcastReceiver() {
                         Int.MIN_VALUE
                     }
                     if (currentBootCount != Int.MIN_VALUE) {
-                        val lastBootCount = prefs.getInt(
-                            SettingsConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
-                            SettingsConstants.DEF_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT
-                        )
+                        val lastBootCount =
+                            SettingsConstants.rootBootAutoStartLastBootCount.readFromSP(prefs)
                         if (lastBootCount == currentBootCount) {
                             LoggerX.i(TAG, "[BOOT] 命中 boot_count 去重，跳过自启动，boot_count=$currentBootCount")
                             return@Thread
                         }
                         prefs.edit {
-                            putInt(
-                                SettingsConstants.KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT,
+                            SettingsConstants.rootBootAutoStartLastBootCount.writeToSP(
+                                this,
                                 currentBootCount
                             )
                         }

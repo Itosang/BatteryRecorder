@@ -29,10 +29,11 @@ fun RecordIntervalDialog(
     onSave: (Long) -> Unit,
     onReset: () -> Unit
 ) {
-    val minS = SettingsConstants.MIN_RECORD_INTERVAL_MS / 1000f
-    val maxS = SettingsConstants.MAX_RECORD_INTERVAL_MS / 1000f
+    val config = SettingsConstants.recordIntervalMs
+    val minS = config.min / 1000f
+    val maxS = config.max / 1000f
     var value by remember {
-        val initial = (currentValueMs / 1000f).coerceIn(minS, maxS)
+        val initial = config.coerce(currentValueMs) / 1000f
         mutableFloatStateOf(initial)
     }
 

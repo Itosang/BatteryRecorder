@@ -53,6 +53,7 @@ fun CalibrationDialog(
     onSave: (Int) -> Unit,
     onReset: () -> Unit
 ) {
+    val config = SettingsConstants.calibrationValue
     var value by remember(currentValue) { mutableIntStateOf(currentValue) }
     var rawPower by remember { mutableStateOf<Long?>(null) }
     val adjustCalibrationValue: (Int, Boolean) -> Int = { current, decrease ->
@@ -64,10 +65,7 @@ fun CalibrationDialog(
         if (next == 0) {
             if (decrease) -1 else 1
         } else {
-            next.coerceIn(
-                SettingsConstants.MIN_CALIBRATION_VALUE,
-                SettingsConstants.MAX_CALIBRATION_VALUE
-            )
+            config.coerce(next)
         }
     }
 

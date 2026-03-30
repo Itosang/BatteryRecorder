@@ -43,10 +43,10 @@ object LoggerX {
     var fixFileOwner: ((File) -> Unit)? = null
 
     @Volatile
-    var maxHistoryDays: Long = SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS
+    var maxHistoryDays: Long = SettingsConstants.logMaxHistoryDays.def
 
     @Volatile
-    var logLevel: LogLevel = SettingsConstants.DEF_LOG_LEVEL
+    var logLevel: LogLevel = SettingsConstants.logLevel.def
 
     fun isLoggable(level: LogLevel): Boolean {
         val allowedPriority =
@@ -150,7 +150,7 @@ object LoggerX {
         companion object {
             private val priorityMap = entries.associateBy { it.priority }
             fun fromPriority(priority: Int): LogLevel =
-                priorityMap[priority] ?: SettingsConstants.DEF_LOG_LEVEL
+                priorityMap[priority] ?: SettingsConstants.logLevel.def
         }
 
         fun coerceAtMost(maximumPriority: LogLevel): LogLevel {
