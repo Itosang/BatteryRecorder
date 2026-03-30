@@ -17,7 +17,6 @@ import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
 import yangfentuozi.batteryrecorder.shared.config.ServerSettings
-import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
@@ -323,8 +322,7 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.i(TAG, "init: 通过 ConfigProvider 读取配置")
             ConfigUtil.getServerSettingsByContentProvider()
         }
-        serverSettings?.let(ServerSettingsMapper::toServerConfigDto)?.let(::updateConfig)
-            ?: LoggerX.w(TAG, "init: 未读取到配置, 使用当前默认值")
+        serverSettings?.let(::updateConfig) ?: LoggerX.w(TAG, "init: 未读取到配置, 使用当前默认值")
 
         monitor.start()
         LoggerX.i(TAG, "init: Monitor 已启动, 进入消息循环")
