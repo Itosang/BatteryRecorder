@@ -133,7 +133,7 @@ fun ServerSection(
                 showRecordIntervalDialog = false
             },
             onReset = {
-                actions.setRecordIntervalMs(SettingsConstants.DEF_RECORD_INTERVAL_MS)
+                actions.setRecordIntervalMs(SettingsConstants.recordIntervalMs.def)
                 showRecordIntervalDialog = false
             }
         )
@@ -150,7 +150,7 @@ fun ServerSection(
                 showWriteLatencyDialog = false
             },
             onReset = {
-                actions.setWriteLatencyMs(SettingsConstants.DEF_WRITE_LATENCY_MS)
+                actions.setWriteLatencyMs(SettingsConstants.writeLatencyMs.def)
                 showWriteLatencyDialog = false
             }
         )
@@ -166,7 +166,7 @@ fun ServerSection(
                 showBatchSizeDialog = false
             },
             onReset = {
-                actions.setBatchSize(SettingsConstants.DEF_BATCH_SIZE)
+                actions.setBatchSize(SettingsConstants.batchSize.def)
                 showBatchSizeDialog = false
             }
         )
@@ -182,7 +182,7 @@ fun ServerSection(
                 showSegmentDurationDialog = false
             },
             onReset = {
-                actions.setSegmentDurationMin(SettingsConstants.DEF_SEGMENT_DURATION_MIN)
+                actions.setSegmentDurationMin(SettingsConstants.segmentDurationMin.def)
                 showSegmentDurationDialog = false
             }
         )
