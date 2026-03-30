@@ -26,10 +26,10 @@ class ConfigProvider : ContentProvider() {
                 Context.MODE_PRIVATE
             )
             return Bundle().apply {
-                val serverSettings = SharedSettings.readServerSettings(prefs)
+                // 这里或许后续可以继续优化实现
                 putParcelable(
                     "config",
-                    ServerSettingsMapper.toConfig(serverSettings)
+                    ServerSettingsMapper.toConfig(SharedSettings.readServerSettings(prefs))
                 )
             }
         }

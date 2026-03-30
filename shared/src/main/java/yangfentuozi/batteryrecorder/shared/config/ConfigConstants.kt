@@ -31,7 +31,7 @@ object ConfigConstants {
     /** 数据分段时长（分钟） */
     const val KEY_SEGMENT_DURATION_MIN = "segment_duration_min"
     const val MIN_SEGMENT_DURATION_MIN = 0L
-    const val MAX_SEGMENT_DURATION_MIN = 1440L
+    const val MAX_SEGMENT_DURATION_MIN = 2880L
     const val DEF_SEGMENT_DURATION_MIN = 1440L
 
     /** 轮询检查息屏状态 */

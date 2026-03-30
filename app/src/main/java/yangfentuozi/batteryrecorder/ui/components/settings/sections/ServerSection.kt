@@ -52,7 +52,7 @@ fun ServerSection(
     ) { _ -> }
 
     SplicedColumnGroup(
-        title = "服务端与采样",
+        title = "服务",
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {

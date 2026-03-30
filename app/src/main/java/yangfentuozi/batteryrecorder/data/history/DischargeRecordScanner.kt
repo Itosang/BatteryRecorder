@@ -124,6 +124,9 @@ object DischargeRecordScanner {
 
     /**
      * 扫描最近的放电文件，并仅对通过异常值校验的文件回调结果。
+     *
+     * recordIntervalMs 用来推导允许的最大采样间隔，从而判断历史文件里的点间隔是否异常。
+     * 它来自 ServerSettings，而不是 StatisticsSettings；这里显式传入是为了保持统计配置边界干净。
      */
     fun scan(
         context: Context,

@@ -31,8 +31,8 @@ import yangfentuozi.batteryrecorder.ui.model.LogActions
 import yangfentuozi.batteryrecorder.ui.model.PredictionActions
 import yangfentuozi.batteryrecorder.ui.model.ServerActions
 import yangfentuozi.batteryrecorder.ui.model.SettingsActions
-import yangfentuozi.batteryrecorder.ui.model.SettingsScreenState
 import yangfentuozi.batteryrecorder.ui.model.SettingsUiProps
+import yangfentuozi.batteryrecorder.ui.model.SettingsUiState
 import yangfentuozi.batteryrecorder.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -75,8 +75,12 @@ fun SettingsScreen(
             )
         )
     }
+    /**
+     * 这里搞一个合集是为了设置页传参方便
+     * 正常来说应该使用单独的
+     * */
     val settingsState = remember(appSettings, statisticsSettings, serverSettings) {
-        SettingsScreenState(
+        SettingsUiState(
             checkUpdateOnStartup = appSettings.checkUpdateOnStartup,
             dualCellEnabled = appSettings.dualCellEnabled,
             dischargeDisplayPositive = appSettings.dischargeDisplayPositive,

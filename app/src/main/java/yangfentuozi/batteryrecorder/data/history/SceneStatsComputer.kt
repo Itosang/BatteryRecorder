@@ -74,13 +74,17 @@ object SceneStatsComputer {
 
     /**
      * 聚合最近放电文件的场景统计，并生成展示/预测双口径结果。
+     *
+     * recordIntervalMs 虽然会影响统计时对“采样断档/有效区间”的判断，
+     * 但它的归属仍然是服务端采样配置，不属于 StatisticsSettings。
+     * 这里单独传入它，是为了让统计链显式依赖 server 输入，而不是把 server 配置混进统计设置模型。
      */
     fun compute(
         context: Context,
         request: StatisticsSettings,
         recordIntervalMs: Long,
         currentDischargeFileName: String? = null,
-    ): SceneComputeResult? {
+    ): SceneComputeResult {
         val files = DischargeRecordScanner.listRecentDischargeFiles(
             context = context,
             recentFileCount = request.sceneStatsRecentFileCount
