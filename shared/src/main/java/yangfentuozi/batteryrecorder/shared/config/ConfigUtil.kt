@@ -16,7 +16,7 @@ import java.io.IOException
 private const val TAG = "ConfigUtil"
 
 object ConfigUtil {
-    /** 来源适配层只负责读取配置来源，并把结果收敛为已合法化的 ServerSettings。 */
+    /** 来源适配层只负责读取配置来源并组装 ServerSettings。 */
     fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
             LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
@@ -32,7 +32,7 @@ object ConfigUtil {
         }
     }
 
-    /** XML 原始值读取后统一走 SharedSettings 的规范化规则。 */
+    /** XML 原始值只做解析与缺字段默认值回退，不做额外合法化。 */
     fun readServerSettingsByReading(configFile: File): ServerSettings? {
         if (!configFile.exists()) {
             LoggerX.e(TAG, "readServerSettingsByReading: 配置文件不存在, path=${configFile.absolutePath}")
@@ -91,7 +91,7 @@ object ConfigUtil {
                     eventType = parser.next()
                 }
 
-                val settings = SharedSettings.normalizeServerSettings(
+                val settings = ServerSettings(
                     recordIntervalMs = recordIntervalMs ?: SettingsConstants.recordIntervalMs.def,
                     batchSize = batchSize ?: SettingsConstants.batchSize.def,
                     writeLatencyMs = writeLatencyMs ?: SettingsConstants.writeLatencyMs.def,

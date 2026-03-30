@@ -398,20 +398,10 @@ class SettingsViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             val updatedSettings = transform(_serverSettings.value)
-            val normalizedSettings = SharedSettings.normalizeServerSettings(
-                recordIntervalMs = updatedSettings.recordIntervalMs,
-                batchSize = updatedSettings.batchSize,
-                writeLatencyMs = updatedSettings.writeLatencyMs,
-                screenOffRecordEnabled = updatedSettings.screenOffRecordEnabled,
-                segmentDurationMin = updatedSettings.segmentDurationMin,
-                maxHistoryDays = updatedSettings.maxHistoryDays,
-                logLevel = updatedSettings.logLevel,
-                alwaysPollingScreenStatusEnabled = updatedSettings.alwaysPollingScreenStatusEnabled
-            )
-            SharedSettings.writeServerSettings(prefs, normalizedSettings)
-            _serverSettings.value = normalizedSettings
-            applyLoggerSettings(normalizedSettings)
-            pushServerConfig(normalizedSettings, message)
+            SharedSettings.writeServerSettings(prefs, updatedSettings)
+            _serverSettings.value = updatedSettings
+            applyLoggerSettings(updatedSettings)
+            pushServerConfig(updatedSettings, message)
         }
     }
 
