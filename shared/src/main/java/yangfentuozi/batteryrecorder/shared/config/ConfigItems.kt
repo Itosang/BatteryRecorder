@@ -1,17 +1,13 @@
 package yangfentuozi.batteryrecorder.shared.config
 
 import android.content.SharedPreferences
-import android.os.Parcelable
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
 
-@Parcelize
 data class LongConfigItem(
     val key: String,
     val def: Long,
     val min: Long,
     val max: Long
-) : Parcelable {
+) {
     fun coerce(value: Long): Long {
         return value.coerceIn(min, max)
     }
@@ -25,13 +21,12 @@ data class LongConfigItem(
     }
 }
 
-@Parcelize
 data class IntConfigItem(
     val key: String,
     val def: Int,
     val min: Int,
     val max: Int
-) : Parcelable {
+) {
     fun coerce(value: Int): Int {
         return value.coerceIn(min, max)
     }
@@ -45,11 +40,10 @@ data class IntConfigItem(
     }
 }
 
-@Parcelize
 data class BooleanConfigItem(
     val key: String,
     val def: Boolean
-) : Parcelable {
+) {
     fun readFromSP(sharedPreferences: SharedPreferences): Boolean {
         return sharedPreferences.getBoolean(key, def)
     }
@@ -59,11 +53,10 @@ data class BooleanConfigItem(
     }
 }
 
-@Parcelize
 data class StringSetConfigItem(
     val key: String,
     val def: Set<String> = emptySet()
-) : Parcelable {
+) {
     fun readFromSP(sharedPreferences: SharedPreferences): Set<String> {
         return sharedPreferences.getStringSet(key, def)?.toSet() ?: def
     }
@@ -73,13 +66,11 @@ data class StringSetConfigItem(
     }
 }
 
-@Parcelize
 data class EnumConfigItem<T>(
     val key: String,
     val def: T,
-    @IgnoredOnParcel
     val converter: EnumConfigConverter<T>
-) : Parcelable
+) 
         where T : Enum<T> {
 
     fun readFromSP(sharedPreferences: SharedPreferences): T {
