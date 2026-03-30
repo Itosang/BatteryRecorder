@@ -312,7 +312,8 @@ shared/src/main/
     ├── config/
     │   ├── Config.kt
     │   ├── ConfigConstants.kt
-    │   └── ConfigUtil.kt
+    │   ├── ConfigUtil.kt
+    │   └── SharedSettings.kt
     ├── data/
     │   ├── BatteryStatus.kt
     │   ├── LineRecord.kt
@@ -380,7 +381,7 @@ shared/src/main/
 | AIDL 接口                   | `server/src/main/aidl/`                                                                            |
 | 共享配置                      | `shared/.../config/`                                                                               |
 | 共享数据模型与解析                 | `shared/.../data/`                                                                                 |
-| 共享配置读取工具                  | `shared/.../config/ConfigUtil.kt`                                                                  |
+| 共享配置核心文件                  | `shared/.../config/SharedSettings.kt`, `shared/.../config/ConfigUtil.kt`                           |
 | 同步协议                      | `shared/.../sync/`                                                                                 |
 | 日志工具                      | `shared/.../util/LoggerX.kt`                                                                       |
 
@@ -398,7 +399,10 @@ shared/src/main/
 - 图表本地展示偏好不写入业务配置
 - 应用图标请求只基于当前视口包名集合触发
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
-- `SettingsViewModel.loadSettings()` 中构造 `serverConfig` 时，必须传入 `Config` 的所有字段；新增 `Config` 字段后若遗漏，App 进程重启而 Server 存活时，修改任意其他设置项会通过 `serverConfig.copy(...)` 将遗漏字段以默认值静默推送给 Server
+- 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 是设置分层、读写、规范化、映射核心
+- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；`Config` 只是 IPC 边界 DTO，不是设置真值
+- Server 设置同步链路为：`ConfigConstants -> SharedSettings(ServerSettings) -> ServerSettingsMapper -> Config -> Service.updateConfig(...)`
+- 新增 Server 设置项时，最容易漏的是：`ServerSettings`、`SharedSettings` 读写与 normalize、`ServerSettingsMapper`、`Config`、`ConfigProvider`、`ConfigUtil`、`Server.updateConfig()`
 
 ## 编码约定
 
@@ -430,6 +434,7 @@ shared/src/main/
 ## 修改前检查
 
 - 先确认目标链路的真实入口，不要依据过时文档猜测
+- 涉及“新增设置项”时，优先使用项目私有 skill：`.codex/skills/add-setting-item/`
 - 优先搜索 `fast-context MCP`
 - 精确关键词搜索再用本地 grep/查找
 - 只修改与当前任务直接相关的文件
