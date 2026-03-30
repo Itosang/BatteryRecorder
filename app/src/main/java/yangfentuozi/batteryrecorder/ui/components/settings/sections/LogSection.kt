@@ -52,10 +52,10 @@ fun LogSection(
                 title = "日志保留天数",
                 label = "保留天数",
                 currentValue = state.maxHistoryDays.toString(),
-                errorMessage = "请输入大于等于 ${SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS} 的整数",
+                errorMessage = "请输入大于等于 ${SettingsConstants.logMaxHistoryDays.min} 的整数",
                 parser = { rawValue ->
                     rawValue.toLongOrNull()
-                        ?.takeIf { it >= SettingsConstants.MIN_LOG_MAX_HISTORY_DAYS }
+                        ?.takeIf { it >= SettingsConstants.logMaxHistoryDays.max }
                 },
                 onDismiss = { showHistoryDaysDialog = false },
                 onSave = { parsedValue ->
@@ -63,7 +63,7 @@ fun LogSection(
                     showHistoryDaysDialog = false
                 },
                 onReset = {
-                    logActions.setMaxHistoryDays(SettingsConstants.DEF_LOG_MAX_HISTORY_DAYS)
+                    logActions.setMaxHistoryDays(SettingsConstants.logMaxHistoryDays.def)
                     showHistoryDaysDialog = false
                 }
             )
@@ -80,7 +80,7 @@ fun LogSection(
                     showLogLevelDialog = false
                 },
                 onReset = {
-                    logActions.setLogLevel(SettingsConstants.DEF_LOG_LEVEL)
+                    logActions.setLogLevel(SettingsConstants.logLevel.def)
                     showLogLevelDialog = false
                 }
             )
