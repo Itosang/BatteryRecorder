@@ -76,22 +76,9 @@ fun LogLevelDialog(
         },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-//                Row(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceBetween,
-//                    verticalAlignment = Alignment.CenterVertically
-//                ) {
-//                    Text(
-//                        text = "",
-//                        style = MaterialTheme.typography.bodyLarge
-//                    )
-//
-//                }
                 Slider(
                     value = selectedIndex.toFloat(),
                     onValueChange = { value ->
