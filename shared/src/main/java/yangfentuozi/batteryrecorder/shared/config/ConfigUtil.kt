@@ -1,6 +1,5 @@
 package yangfentuozi.batteryrecorder.shared.config
 
-import android.content.SharedPreferences
 import android.os.Build
 import android.os.RemoteException
 import android.util.Xml
@@ -16,15 +15,11 @@ import java.io.IOException
 private const val TAG = "ConfigUtil"
 
 object ConfigUtil {
-    // 来源适配器先返回 ServerSettings，让服务端配置合法化统一收敛到领域模型；
-    // ServerConfigDto 仅保留为现有 IPC 边界的薄包装。
-    fun getServerConfigDtoByContentProvider(): ServerConfigDto? =
-        getServerSettingsByContentProvider()?.let(ServerSettingsMapper::toServerConfigDto)
-
+    /** 来源适配层只负责读取配置来源，并把结果收敛为已合法化的 ServerSettings。 */
     fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
             LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
-            val settings = ServerSettingsMapper.fromServerConfigDto(
+            val settings = ServerSettingsMapper.toNormalizedServerSettings(
                 readServerConfigDtoByContentProvider()
             )
             logServerSettings("getServerSettingsByContentProvider", settings)
@@ -38,16 +33,7 @@ object ConfigUtil {
         }
     }
 
-    // 兼容仍依赖服务端 DTO 的调用方；真正的来源解析与合法化统一先落到 ServerSettings。
-    fun getServerConfigDtoByReading(configFile: File): ServerConfigDto? =
-        readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toServerConfigDto)
-
-    fun getServerSettingsBySharedPreferences(prefs: SharedPreferences): ServerSettings {
-        val settings = SharedSettings.readServerSettings(prefs)
-        logServerSettings("getServerSettingsBySharedPreferences", settings)
-        return settings
-    }
-
+    /** XML 原始值读取后统一走 SharedSettings 的规范化规则。 */
     fun readServerSettingsByReading(configFile: File): ServerSettings? {
         if (!configFile.exists()) {
             LoggerX.e(TAG, "readServerSettingsByReading: 配置文件不存在, path=${configFile.absolutePath}")

@@ -37,12 +37,13 @@
 - 补齐 `ServerSettingsMapper.toServerConfigDto(...)` / `fromServerConfigDto(...)`
 - 补齐 `ServerConfigDto` DTO 字段
 - 检查 `ConfigProvider` 是否需要透传新字段
-- 检查 `ConfigUtil` 的 XML / ContentProvider 来源适配是否需要更新
+- 检查 `ConfigUtil` 的 XML / ContentProvider 来源适配是否需要更新，并确认适配后仍回到 `ServerSettings` / `SharedSettings.serverSettingsFromStoredValues(...)`，不要新增旧式 DTO 合法化薄包装
 - 检查 `SettingsViewModel.updateServerSettings(...)` 相关调用是否已接入新字段
 - 检查 `Server.updateConfig()` 是否真正消费并应用了新字段
 
 ## 收尾
 
 - 搜索新 key / 新字段名，确认没有只改半条链路
+- 搜索 `coerceConfigValue` 或旧薄包装入口引用，确认文档和实现都没有继续把它们当成当前推荐路径
 - 若设置链路或关键入口发生变化，同步更新 `AGENTS.md`
 - 不要自行 build Android 项目；改完后提示用户手动测试

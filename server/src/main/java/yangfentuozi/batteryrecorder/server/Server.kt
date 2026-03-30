@@ -75,23 +75,24 @@ class Server internal constructor() : IService.Stub() {
 
     override fun updateConfig(config: ServerConfigDto) {
         Handlers.common.post {
+            val settings = ServerSettingsMapper.toNormalizedServerSettings(config)
             LoggerX.d(
                 TAG,
-                "updateConfig: 应用配置, intervalMs=${config.recordIntervalMs} writeLatencyMs=${config.writeLatencyMs} batchSize=${config.batchSize} screenOffRecord=${config.screenOffRecordEnabled} segmentDurationMin=${config.segmentDurationMin} logLevel=${config.logLevel} polling=${config.alwaysPollingScreenStatusEnabled}"
+                "updateConfig: 应用配置, intervalMs=${settings.recordIntervalMs} writeLatencyMs=${settings.writeLatencyMs} batchSize=${settings.batchSize} screenOffRecord=${settings.screenOffRecordEnabled} segmentDurationMin=${settings.segmentDurationMin} logLevel=${settings.logLevel} polling=${settings.alwaysPollingScreenStatusEnabled}"
             )
-            LoggerX.maxHistoryDays = config.maxHistoryDays
-            LoggerX.logLevel = config.logLevel
+            LoggerX.maxHistoryDays = settings.maxHistoryDays
+            LoggerX.logLevel = settings.logLevel
 
-            unlockOPlusSampleTimeLimit(config.recordIntervalMs.coerceAtLeast(200))
+            unlockOPlusSampleTimeLimit(settings.recordIntervalMs.coerceAtLeast(200))
 
-            monitor.alwaysPollingScreenStatusEnabled = config.alwaysPollingScreenStatusEnabled
-            monitor.recordIntervalMs = config.recordIntervalMs
-            monitor.screenOffRecord = config.screenOffRecordEnabled
+            monitor.alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
+            monitor.recordIntervalMs = settings.recordIntervalMs
+            monitor.screenOffRecord = settings.screenOffRecordEnabled
             monitor.notifyLock()
 
-            writer.flushIntervalMs = config.writeLatencyMs
-            writer.batchSize = config.batchSize
-            writer.maxSegmentDurationMs = config.segmentDurationMin * 60 * 1000L
+            writer.flushIntervalMs = settings.writeLatencyMs
+            writer.batchSize = settings.batchSize
+            writer.maxSegmentDurationMs = settings.segmentDurationMin * 60 * 1000L
         }
     }
 

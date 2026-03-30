@@ -400,9 +400,11 @@ shared/src/main/
 - 应用图标请求只基于当前视口包名集合触发
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
 - 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 是设置分层、读写、规范化、映射核心
-- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；`ServerConfigDto` 只是 IPC 边界 DTO，不是设置真值
+- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；来源读取后优先回到 `ServerSettings` / `SharedSettings.serverSettingsFromStoredValues(...)`，而不是在 `ConfigUtil` 内继续维护独立合法化规则
+- `ServerConfigDto` 只是现有 AIDL / `ConfigProvider` 边界 DTO，不是设置真值；DTO 进入领域后统一经 `ServerSettingsMapper.fromServerConfigDto(...) -> SharedSettings.normalizeServerSettings(...)` 收敛
 - Server 设置同步链路为：`SettingsConstants -> SharedSettings(ServerSettings) -> ServerSettingsMapper -> ServerConfigDto -> Service.updateConfig(...)`
 - 新增 Server 设置项时，最容易漏的是：`ServerSettings`、`SharedSettings` 读写与 normalize、`ServerSettingsMapper`、`ServerConfigDto`、`ConfigProvider`、`ConfigUtil`、`Server.updateConfig()`
+- 不要再沿用旧 `coerceConfigValue` 或已删除薄包装方法的心智模型；当前推荐入口是 `SharedSettings.normalizeServerSettings(...)` 与 `SharedSettings.serverSettingsFromStoredValues(...)`
 
 ## 编码约定
 
