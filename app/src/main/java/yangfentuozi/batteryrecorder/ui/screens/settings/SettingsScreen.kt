@@ -1,12 +1,11 @@
 package yangfentuozi.batteryrecorder.ui.screens.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -24,6 +23,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.CalibrationSection
+import yangfentuozi.batteryrecorder.ui.components.settings.sections.LogSection
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.PredictionSection
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.ServerSection
 import yangfentuozi.batteryrecorder.ui.model.CalibrationActions
@@ -128,17 +128,18 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 CalibrationSection(props = props)
             }
-            item { Spacer(modifier = Modifier.size(16.dp)) }
             item {
-                // 服务器设置
                 ServerSection(props = props)
             }
-            item { Spacer(modifier = Modifier.size(16.dp)) }
+            item {
+                LogSection(props = props)
+            }
             item {
                 PredictionSection(props = props)
             }
