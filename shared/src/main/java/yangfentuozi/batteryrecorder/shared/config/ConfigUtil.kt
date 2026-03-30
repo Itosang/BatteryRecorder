@@ -16,51 +16,33 @@ import java.io.IOException
 private const val TAG = "ConfigUtil"
 
 object ConfigUtil {
-    fun getConfigByContentProvider(): Config? {
+    // 来源适配器先返回 ServerSettings，让服务端配置合法化统一收敛到领域模型；
+    // Config 仅保留为现有 IPC 边界的薄包装。
+    fun getConfigByContentProvider(): Config? =
+        getServerSettingsByContentProvider()?.let(ServerSettingsMapper::toConfig)
+
+    fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
-            LoggerX.i(TAG, "getConfigByContentProvider: 通过 ContentProvider 请求配置")
-            val reply = ActivityManagerCompat.contentProviderCall(
-                "yangfentuozi.batteryrecorder.configProvider",
-                "requestConfig",
-                null,
-                null
-            )
-            if (reply == null) throw NullPointerException("reply is null")
-            reply.classLoader = Config::class.java.classLoader
-            val config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                reply.getParcelable("config", Config::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                reply.getParcelable("config")
-            }
-            if (config == null) throw NullPointerException("config is null")
-            val coerced = coerceConfigValue(config)
-            LoggerX.d(TAG, 
-                "getConfigByContentProvider: 配置已解析, intervalMs=${coerced.recordIntervalMs} batchSize=${coerced.batchSize} writeLatencyMs=${coerced.writeLatencyMs} screenOffRecord=${coerced.screenOffRecordEnabled} polling=${coerced.alwaysPollingScreenStatusEnabled} logLevel=${coerced.logLevel}"
-            )
-            coerced
+            LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
+            val settings = ServerSettingsMapper.fromConfig(readConfigDtoByContentProvider())
+            logServerSettings("getServerSettingsByContentProvider", settings)
+            settings
         } catch (e: RemoteException) {
-            LoggerX.e(TAG, "getConfigByContentProvider: 请求配置失败", tr = e)
+            LoggerX.e(TAG, "getServerSettingsByContentProvider: 请求配置失败", tr = e)
             null
         } catch (e: NullPointerException) {
-            LoggerX.e(TAG, "getConfigByContentProvider: 请求配置失败", tr = e)
+            LoggerX.e(TAG, "getServerSettingsByContentProvider: 请求配置失败", tr = e)
             null
         }
     }
 
-    fun getConfigByReading(configFile: File): Config? {
-        return readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toConfig)
-    }
-
-    fun getConfigBySharedPreferences(prefs: SharedPreferences): Config =
-        ServerSettingsMapper.toConfig(getServerSettingsBySharedPreferences(prefs))
+    // 兼容仍依赖 Config 的服务端调用方；真正的来源解析与合法化统一先落到 ServerSettings。
+    fun getConfigByReading(configFile: File): Config? =
+        readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toConfig)
 
     fun getServerSettingsBySharedPreferences(prefs: SharedPreferences): ServerSettings {
         val settings = SharedSettings.readServerSettings(prefs)
-        LoggerX.d(
-            TAG,
-            "getServerSettingsBySharedPreferences: intervalMs=${settings.recordIntervalMs} batchSize=${settings.batchSize} writeLatencyMs=${settings.writeLatencyMs} screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled} logLevel=${settings.logLevel}"
-        )
+        logServerSettings("getServerSettingsBySharedPreferences", settings)
         return settings
     }
 
@@ -77,83 +59,62 @@ object ConfigUtil {
                 parser.setInput(fis, "UTF-8")
 
                 var eventType = parser.eventType
-                var recordIntervalMs = ConfigConstants.DEF_RECORD_INTERVAL_MS
-                var batchSize = ConfigConstants.DEF_BATCH_SIZE
-                var writeLatencyMs = ConfigConstants.DEF_WRITE_LATENCY_MS
-                var screenOffRecordEnabled = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
-                var segmentDurationMin = ConfigConstants.DEF_SEGMENT_DURATION_MIN
-                var maxHistoryDays = ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
-                var logLevel = ConfigConstants.DEF_LOG_LEVEL
-                var alwaysPollingScreenStatusEnabled =
-                    ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+                var recordIntervalMs: Long? = null
+                var batchSize: Int? = null
+                var writeLatencyMs: Long? = null
+                var screenOffRecordEnabled: Boolean? = null
+                var segmentDurationMin: Long? = null
+                var maxHistoryDays: Long? = null
+                var logLevelPriority: Int? = null
+                var alwaysPollingScreenStatusEnabled: Boolean? = null
 
                 while (eventType != XmlPullParser.END_DOCUMENT) {
                     if (eventType == XmlPullParser.START_TAG) {
                         val nameAttr = parser.getAttributeValue(null, "name")
                         val valueAttr = parser.getAttributeValue(null, "value")
+                        val trimmedValue = valueAttr?.trim()
 
                         when (nameAttr) {
                             ConfigConstants.KEY_RECORD_INTERVAL_MS ->
-                                recordIntervalMs =
-                                    valueAttr?.trim()?.toLongOrNull()
-                                        ?: ConfigConstants.DEF_RECORD_INTERVAL_MS
+                                recordIntervalMs = trimmedValue?.toLongOrNull()
 
                             ConfigConstants.KEY_BATCH_SIZE ->
-                                batchSize =
-                                    valueAttr?.trim()?.toIntOrNull()
-                                        ?: ConfigConstants.DEF_BATCH_SIZE
+                                batchSize = trimmedValue?.toIntOrNull()
 
                             ConfigConstants.KEY_WRITE_LATENCY_MS ->
-                                writeLatencyMs =
-                                    valueAttr?.trim()?.toLongOrNull()
-                                        ?: ConfigConstants.DEF_WRITE_LATENCY_MS
+                                writeLatencyMs = trimmedValue?.toLongOrNull()
 
-                            ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED -> {
-                                screenOffRecordEnabled =
-                                    valueAttr?.trim()?.toBooleanStrictOrNull()
-                                        ?: ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
-                            }
+                            ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED ->
+                                screenOffRecordEnabled = trimmedValue?.toBooleanStrictOrNull()
 
                             ConfigConstants.KEY_SEGMENT_DURATION_MIN ->
-                                segmentDurationMin =
-                                    valueAttr?.trim()?.toLongOrNull()
-                                        ?: ConfigConstants.DEF_SEGMENT_DURATION_MIN
+                                segmentDurationMin = trimmedValue?.toLongOrNull()
 
                             ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS ->
-                                maxHistoryDays = valueAttr?.trim()?.toLongOrNull()
-                                    ?: ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
+                                maxHistoryDays = trimmedValue?.toLongOrNull()
 
                             ConfigConstants.KEY_LOG_LEVEL ->
-                                logLevel = SharedSettings.decodeLogLevel(
-                                    valueAttr?.trim()?.toIntOrNull()
-                                        ?: SharedSettings.encodeLogLevel(ConfigConstants.DEF_LOG_LEVEL)
-                                )
+                                logLevelPriority = trimmedValue?.toIntOrNull()
 
                             ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
                                 alwaysPollingScreenStatusEnabled =
-                                    valueAttr?.trim()?.toBooleanStrictOrNull()
-                                        ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+                                    trimmedValue?.toBooleanStrictOrNull()
                         }
                     }
                     eventType = parser.next()
                 }
 
-                val settings = SharedSettings.readServerSettings(
-                    XmlBackedSharedPreferences(
-                        recordIntervalMs = recordIntervalMs,
-                        batchSize = batchSize,
-                        writeLatencyMs = writeLatencyMs,
-                        screenOffRecordEnabled = screenOffRecordEnabled,
-                        segmentDurationMin = segmentDurationMin,
-                        maxHistoryDays = maxHistoryDays,
-                        logLevel = logLevel,
-                        alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
-                    )
+                val settings = SharedSettings.serverSettingsFromStoredValues(
+                    recordIntervalMs = recordIntervalMs,
+                    batchSize = batchSize,
+                    writeLatencyMs = writeLatencyMs,
+                    screenOffRecordEnabled = screenOffRecordEnabled,
+                    segmentDurationMin = segmentDurationMin,
+                    maxHistoryDays = maxHistoryDays,
+                    logLevelPriority = logLevelPriority,
+                    alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
                 )
-                LoggerX.d(
-                    TAG,
-                    "readServerSettingsByReading: intervalMs=${settings.recordIntervalMs} batchSize=${settings.batchSize} writeLatencyMs=${settings.writeLatencyMs} screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled} logLevel=${settings.logLevel}"
-                )
+                logServerSettings("readServerSettingsByReading", settings)
                 settings
             }
         } catch (e: FileNotFoundException) {
@@ -168,75 +129,28 @@ object ConfigUtil {
         }
     }
 
-    fun coerceConfigValue(config: Config): Config {
-        val coercedSettings = SharedSettings.readServerSettings(
-            XmlBackedSharedPreferences(
-                recordIntervalMs = config.recordIntervalMs,
-                batchSize = config.batchSize,
-                writeLatencyMs = config.writeLatencyMs,
-                screenOffRecordEnabled = config.screenOffRecordEnabled,
-                segmentDurationMin = config.segmentDurationMin,
-                maxHistoryDays = config.maxHistoryDays,
-                logLevel = config.logLevel,
-                alwaysPollingScreenStatusEnabled = config.alwaysPollingScreenStatusEnabled
-            )
+    private fun readConfigDtoByContentProvider(): Config {
+        val reply = ActivityManagerCompat.contentProviderCall(
+            "yangfentuozi.batteryrecorder.configProvider",
+            "requestConfig",
+            null,
+            null
         )
-        val coerced = ServerSettingsMapper.toConfig(coercedSettings)
-        if (coerced != config) {
-            LoggerX.v(TAG, "coerceConfigValue: 配置值已裁剪到合法范围")
+        if (reply == null) throw NullPointerException("reply is null")
+        reply.classLoader = Config::class.java.classLoader
+        val config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            reply.getParcelable("config", Config::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            reply.getParcelable("config")
         }
-        return coerced
-    }
-}
-
-private data class XmlBackedSharedPreferences(
-    val recordIntervalMs: Long,
-    val batchSize: Int,
-    val writeLatencyMs: Long,
-    val screenOffRecordEnabled: Boolean,
-    val segmentDurationMin: Long,
-    val maxHistoryDays: Long,
-    val logLevel: LoggerX.LogLevel,
-    val alwaysPollingScreenStatusEnabled: Boolean
-) : SharedPreferences {
-    override fun getAll(): MutableMap<String, Any?> = mutableMapOf()
-
-    override fun getString(key: String?, defValue: String?): String? = defValue
-
-    override fun getStringSet(
-        key: String?,
-        defValues: MutableSet<String>?
-    ): MutableSet<String>? = defValues?.toMutableSet()
-
-    override fun getInt(key: String?, defValue: Int): Int = when (key) {
-        ConfigConstants.KEY_BATCH_SIZE -> batchSize
-        ConfigConstants.KEY_LOG_LEVEL -> logLevel.priority
-        else -> defValue
+        return config ?: throw NullPointerException("config is null")
     }
 
-    override fun getLong(key: String?, defValue: Long): Long = when (key) {
-        ConfigConstants.KEY_RECORD_INTERVAL_MS -> recordIntervalMs
-        ConfigConstants.KEY_WRITE_LATENCY_MS -> writeLatencyMs
-        ConfigConstants.KEY_SEGMENT_DURATION_MIN -> segmentDurationMin
-        ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS -> maxHistoryDays
-        else -> defValue
+    private fun logServerSettings(source: String, settings: ServerSettings) {
+        LoggerX.d(
+            TAG,
+            "$source: intervalMs=${settings.recordIntervalMs} batchSize=${settings.batchSize} writeLatencyMs=${settings.writeLatencyMs} screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled} logLevel=${settings.logLevel}"
+        )
     }
-
-    override fun getFloat(key: String?, defValue: Float): Float = defValue
-
-    override fun getBoolean(key: String?, defValue: Boolean): Boolean = when (key) {
-        ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED -> screenOffRecordEnabled
-        ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED -> alwaysPollingScreenStatusEnabled
-        else -> defValue
-    }
-
-    override fun contains(key: String?): Boolean = false
-
-    override fun edit(): SharedPreferences.Editor {
-        throw UnsupportedOperationException("XmlBackedSharedPreferences does not support edit")
-    }
-
-    override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
-
-    override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
 }

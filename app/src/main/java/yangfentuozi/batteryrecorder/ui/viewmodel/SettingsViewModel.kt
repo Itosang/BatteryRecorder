@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.shared.config.AppSettingKeys
 import yangfentuozi.batteryrecorder.shared.config.AppSettings
-import yangfentuozi.batteryrecorder.shared.config.ServerSettingKeys
+import yangfentuozi.batteryrecorder.shared.config.Config
 import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
@@ -254,66 +254,53 @@ class SettingsViewModel : ViewModel() {
 
     fun setRecordIntervalMs(value: Long) {
         val finalValue = SharedSettings.normalizeRecordIntervalMs(value)
-        viewModelScope.launch {
-            prefs.edit {
-                putLong(ServerSettingKeys.RECORD_INTERVAL_MS, finalValue)
-            }
-            _serverSettings.value = _serverSettings.value.copy(recordIntervalMs = finalValue)
-            pushServerConfig(_serverSettings.value, "[设置] 更新记录间隔并准备下发: intervalMs=$finalValue")
+        updateServerSettings(
+            message = "[设置] 更新记录间隔并准备下发: intervalMs=$finalValue"
+        ) { current ->
+            current.copy(recordIntervalMs = finalValue)
         }
     }
 
     fun setWriteLatencyMs(value: Long) {
         val finalValue = SharedSettings.normalizeWriteLatencyMs(value)
-        viewModelScope.launch {
-            prefs.edit {
-                putLong(ServerSettingKeys.WRITE_LATENCY_MS, finalValue)
-            }
-            _serverSettings.value = _serverSettings.value.copy(writeLatencyMs = finalValue)
-            pushServerConfig(_serverSettings.value, "[设置] 更新写入延迟并准备下发: writeLatencyMs=$finalValue")
+        updateServerSettings(
+            message = "[设置] 更新写入延迟并准备下发: writeLatencyMs=$finalValue"
+        ) { current ->
+            current.copy(writeLatencyMs = finalValue)
         }
     }
 
     fun setBatchSize(value: Int) {
         val finalValue = SharedSettings.normalizeBatchSize(value)
-        viewModelScope.launch {
-            prefs.edit {
-                putInt(ServerSettingKeys.BATCH_SIZE, finalValue)
-            }
-            _serverSettings.value = _serverSettings.value.copy(batchSize = finalValue)
-            pushServerConfig(_serverSettings.value, "[设置] 更新批次大小并准备下发: batchSize=$finalValue")
+        updateServerSettings(
+            message = "[设置] 更新批次大小并准备下发: batchSize=$finalValue"
+        ) { current ->
+            current.copy(batchSize = finalValue)
         }
     }
 
     fun setScreenOffRecordEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            prefs.edit {
-                putBoolean(ServerSettingKeys.SCREEN_OFF_RECORD_ENABLED, enabled)
-            }
-            _serverSettings.value = _serverSettings.value.copy(screenOffRecordEnabled = enabled)
-            pushServerConfig(_serverSettings.value, "[设置] 更新息屏记录并准备下发: enabled=$enabled")
+        updateServerSettings(
+            message = "[设置] 更新息屏记录并准备下发: enabled=$enabled"
+        ) { current ->
+            current.copy(screenOffRecordEnabled = enabled)
         }
     }
 
     fun setAlwaysPollingScreenStatusEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            prefs.edit {
-                putBoolean(ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED, enabled)
-            }
-            _serverSettings.value =
-                _serverSettings.value.copy(alwaysPollingScreenStatusEnabled = enabled)
-            pushServerConfig(_serverSettings.value, "[设置] 更新轮询亮屏状态并准备下发: enabled=$enabled")
+        updateServerSettings(
+            message = "[设置] 更新轮询亮屏状态并准备下发: enabled=$enabled"
+        ) { current ->
+            current.copy(alwaysPollingScreenStatusEnabled = enabled)
         }
     }
 
     fun setSegmentDurationMin(value: Long) {
         val finalValue = SharedSettings.normalizeSegmentDurationMin(value)
-        viewModelScope.launch {
-            prefs.edit {
-                putLong(ServerSettingKeys.SEGMENT_DURATION_MIN, finalValue)
-            }
-            _serverSettings.value = _serverSettings.value.copy(segmentDurationMin = finalValue)
-            pushServerConfig(_serverSettings.value, "[设置] 更新分段时长并准备下发: value=$finalValue")
+        updateServerSettings(
+            message = "[设置] 更新分段时长并准备下发: value=$finalValue"
+        ) { current ->
+            current.copy(segmentDurationMin = finalValue)
         }
     }
 
@@ -328,24 +315,18 @@ class SettingsViewModel : ViewModel() {
 
     fun setMaxHistoryDays(value: Long) {
         val finalValue = SharedSettings.normalizeMaxHistoryDays(value)
-        viewModelScope.launch {
-            prefs.edit {
-                putLong(ServerSettingKeys.MAX_HISTORY_DAYS, finalValue)
-            }
-            _serverSettings.value = _serverSettings.value.copy(maxHistoryDays = finalValue)
-            applyLoggerSettings(_serverSettings.value)
-            pushServerConfig(_serverSettings.value, "[设置] 更新日志保留天数并准备下发: maxHistoryDays=$finalValue")
+        updateServerSettings(
+            message = "[设置] 更新日志保留天数并准备下发: maxHistoryDays=$finalValue"
+        ) { current ->
+            current.copy(maxHistoryDays = finalValue)
         }
     }
 
     fun setLogLevel(value: LoggerX.LogLevel) {
-        viewModelScope.launch {
-            prefs.edit {
-                putInt(ServerSettingKeys.LOG_LEVEL, SharedSettings.encodeLogLevel(value))
-            }
-            _serverSettings.value = _serverSettings.value.copy(logLevel = value)
-            applyLoggerSettings(_serverSettings.value)
-            pushServerConfig(_serverSettings.value, "[设置] 更新日志级别并准备下发: logLevel=$value")
+        updateServerSettings(
+            message = "[设置] 更新日志级别并准备下发: logLevel=$value"
+        ) { current ->
+            current.copy(logLevel = value)
         }
     }
 
@@ -414,9 +395,24 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    private fun pushServerConfig(settings: ServerSettings, message: String) {
+    private fun updateServerSettings(
+        message: String,
+        transform: (ServerSettings) -> ServerSettings
+    ) {
+        viewModelScope.launch {
+            val normalizedSettings = SharedSettings.normalizeServerSettings(
+                transform(_serverSettings.value)
+            )
+            SharedSettings.writeServerSettings(prefs, normalizedSettings)
+            _serverSettings.value = normalizedSettings
+            applyLoggerSettings(normalizedSettings)
+            pushServerConfig(ServerSettingsMapper.toConfig(normalizedSettings), message)
+        }
+    }
+
+    private fun pushServerConfig(config: Config, message: String) {
         LoggerX.i(TAG, message)
-        Service.service?.updateConfig(ServerSettingsMapper.toConfig(settings))
+        Service.service?.updateConfig(config)
     }
 
     private fun applyLoggerSettings(settings: ServerSettings) {

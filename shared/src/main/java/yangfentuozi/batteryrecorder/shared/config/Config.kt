@@ -4,6 +4,10 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
+/**
+ * 仅用于现有 AIDL 和 ContentProvider 边界传输的薄 DTO。
+ * 服务端配置的默认值、裁剪与枚举解析统一先收敛到 ServerSettings，本轮保留 Config 只是为了兼容现有 IPC 接口。
+ */
 @Parcelize
 data class Config(
     val recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS,

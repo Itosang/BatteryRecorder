@@ -149,24 +149,18 @@ object SharedSettings {
         readServerSettings(getPreferences(context))
 
     fun readServerSettings(prefs: SharedPreferences): ServerSettings =
-        ServerSettings(
+        serverSettingsFromStoredValues(
             recordIntervalMs =
-                normalizeRecordIntervalMs(
-                    prefs.getLong(
-                        ServerSettingKeys.RECORD_INTERVAL_MS,
-                        ConfigConstants.DEF_RECORD_INTERVAL_MS
-                    )
+                prefs.getLong(
+                    ServerSettingKeys.RECORD_INTERVAL_MS,
+                    ConfigConstants.DEF_RECORD_INTERVAL_MS
                 ),
             batchSize =
-                normalizeBatchSize(
-                    prefs.getInt(ServerSettingKeys.BATCH_SIZE, ConfigConstants.DEF_BATCH_SIZE)
-                ),
+                prefs.getInt(ServerSettingKeys.BATCH_SIZE, ConfigConstants.DEF_BATCH_SIZE),
             writeLatencyMs =
-                normalizeWriteLatencyMs(
-                    prefs.getLong(
-                        ServerSettingKeys.WRITE_LATENCY_MS,
-                        ConfigConstants.DEF_WRITE_LATENCY_MS
-                    )
+                prefs.getLong(
+                    ServerSettingKeys.WRITE_LATENCY_MS,
+                    ConfigConstants.DEF_WRITE_LATENCY_MS
                 ),
             screenOffRecordEnabled =
                 prefs.getBoolean(
@@ -174,31 +168,89 @@ object SharedSettings {
                     ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
                 ),
             segmentDurationMin =
-                normalizeSegmentDurationMin(
-                    prefs.getLong(
-                        ServerSettingKeys.SEGMENT_DURATION_MIN,
-                        ConfigConstants.DEF_SEGMENT_DURATION_MIN
-                    )
+                prefs.getLong(
+                    ServerSettingKeys.SEGMENT_DURATION_MIN,
+                    ConfigConstants.DEF_SEGMENT_DURATION_MIN
                 ),
             maxHistoryDays =
-                normalizeMaxHistoryDays(
-                    prefs.getLong(
-                        ServerSettingKeys.MAX_HISTORY_DAYS,
-                        ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
-                    )
+                prefs.getLong(
+                    ServerSettingKeys.MAX_HISTORY_DAYS,
+                    ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
                 ),
-            logLevel =
-                decodeLogLevel(
-                    prefs.getInt(
-                        ServerSettingKeys.LOG_LEVEL,
-                        encodeLogLevel(ConfigConstants.DEF_LOG_LEVEL)
-                    )
+            logLevelPriority =
+                prefs.getInt(
+                    ServerSettingKeys.LOG_LEVEL,
+                    encodeLogLevel(ConfigConstants.DEF_LOG_LEVEL)
                 ),
             alwaysPollingScreenStatusEnabled =
                 prefs.getBoolean(
                     ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
                     ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
                 )
+        )
+
+    /** 核心规范化入口，显式字段最终都走这里。 */
+    fun normalizeServerSettings(
+        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS,
+        batchSize: Int = ConfigConstants.DEF_BATCH_SIZE,
+        writeLatencyMs: Long = ConfigConstants.DEF_WRITE_LATENCY_MS,
+        screenOffRecordEnabled: Boolean = ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
+        segmentDurationMin: Long = ConfigConstants.DEF_SEGMENT_DURATION_MIN,
+        maxHistoryDays: Long = ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS,
+        logLevel: LoggerX.LogLevel = ConfigConstants.DEF_LOG_LEVEL,
+        alwaysPollingScreenStatusEnabled: Boolean =
+            ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+    ): ServerSettings =
+        ServerSettings(
+            recordIntervalMs = normalizeRecordIntervalMs(recordIntervalMs),
+            batchSize = normalizeBatchSize(batchSize),
+            writeLatencyMs = normalizeWriteLatencyMs(writeLatencyMs),
+            screenOffRecordEnabled = screenOffRecordEnabled,
+            segmentDurationMin = normalizeSegmentDurationMin(segmentDurationMin),
+            maxHistoryDays = normalizeMaxHistoryDays(maxHistoryDays),
+            logLevel = logLevel,
+            alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
+        )
+
+    /** 存储层原始值适配入口，负责把 SharedPreferences、XML 读出的值接到核心规范化入口。 */
+    fun serverSettingsFromStoredValues(
+        recordIntervalMs: Long? = null,
+        batchSize: Int? = null,
+        writeLatencyMs: Long? = null,
+        screenOffRecordEnabled: Boolean? = null,
+        segmentDurationMin: Long? = null,
+        maxHistoryDays: Long? = null,
+        logLevelPriority: Int? = null,
+        alwaysPollingScreenStatusEnabled: Boolean? = null
+    ): ServerSettings =
+        normalizeServerSettings(
+            recordIntervalMs = recordIntervalMs ?: ConfigConstants.DEF_RECORD_INTERVAL_MS,
+            batchSize = batchSize ?: ConfigConstants.DEF_BATCH_SIZE,
+            writeLatencyMs = writeLatencyMs ?: ConfigConstants.DEF_WRITE_LATENCY_MS,
+            screenOffRecordEnabled =
+                screenOffRecordEnabled ?: ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED,
+            segmentDurationMin = segmentDurationMin ?: ConfigConstants.DEF_SEGMENT_DURATION_MIN,
+            maxHistoryDays = maxHistoryDays ?: ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS,
+            logLevel =
+                decodeLogLevel(
+                    logLevelPriority ?: encodeLogLevel(ConfigConstants.DEF_LOG_LEVEL)
+                ),
+            alwaysPollingScreenStatusEnabled =
+                alwaysPollingScreenStatusEnabled
+                    ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+        )
+
+    /** 对象重载仅用于已有 ServerSettings 重新套用同一套规则，避免调用方手动拆字段。 */
+    fun normalizeServerSettings(settings: ServerSettings): ServerSettings =
+        normalizeServerSettings(
+            recordIntervalMs = settings.recordIntervalMs,
+            batchSize = settings.batchSize,
+            writeLatencyMs = settings.writeLatencyMs,
+            screenOffRecordEnabled = settings.screenOffRecordEnabled,
+            segmentDurationMin = settings.segmentDurationMin,
+            maxHistoryDays = settings.maxHistoryDays,
+            logLevel = settings.logLevel,
+            alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
         )
 
     fun writeAppSettings(prefs: SharedPreferences, settings: AppSettings) {
@@ -231,31 +283,32 @@ object SharedSettings {
     }
 
     fun Editor.writeServerSettings(settings: ServerSettings) {
+        val normalized = normalizeServerSettings(settings)
         putLong(
             ServerSettingKeys.RECORD_INTERVAL_MS,
-            normalizeRecordIntervalMs(settings.recordIntervalMs)
+            normalized.recordIntervalMs
         )
-        putInt(ServerSettingKeys.BATCH_SIZE, normalizeBatchSize(settings.batchSize))
+        putInt(ServerSettingKeys.BATCH_SIZE, normalized.batchSize)
         putLong(
             ServerSettingKeys.WRITE_LATENCY_MS,
-            normalizeWriteLatencyMs(settings.writeLatencyMs)
+            normalized.writeLatencyMs
         )
         putBoolean(
             ServerSettingKeys.SCREEN_OFF_RECORD_ENABLED,
-            settings.screenOffRecordEnabled
+            normalized.screenOffRecordEnabled
         )
         putLong(
             ServerSettingKeys.SEGMENT_DURATION_MIN,
-            normalizeSegmentDurationMin(settings.segmentDurationMin)
+            normalized.segmentDurationMin
         )
         putLong(
             ServerSettingKeys.MAX_HISTORY_DAYS,
-            normalizeMaxHistoryDays(settings.maxHistoryDays)
+            normalized.maxHistoryDays
         )
-        putInt(ServerSettingKeys.LOG_LEVEL, encodeLogLevel(settings.logLevel))
+        putInt(ServerSettingKeys.LOG_LEVEL, encodeLogLevel(normalized.logLevel))
         putBoolean(
             ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
-            settings.alwaysPollingScreenStatusEnabled
+            normalized.alwaysPollingScreenStatusEnabled
         )
     }
 
@@ -326,7 +379,7 @@ object ServerSettingsMapper {
         )
 
     fun fromConfig(config: Config): ServerSettings =
-        ServerSettings(
+        SharedSettings.normalizeServerSettings(
             recordIntervalMs = config.recordIntervalMs,
             batchSize = config.batchSize,
             writeLatencyMs = config.writeLatencyMs,

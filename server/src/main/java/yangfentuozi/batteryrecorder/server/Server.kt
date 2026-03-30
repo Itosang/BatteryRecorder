@@ -18,6 +18,7 @@ import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.Config
 import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
+import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
@@ -314,13 +315,14 @@ class Server internal constructor() : IService.Stub() {
         )
         LoggerX.d(TAG, "init: Monitor 初始化完成")
 
-        if (Os.getuid() == 0) {
+        val serverSettings = if (Os.getuid() == 0) {
             LoggerX.i(TAG, "init: 通过 SharedPreferences XML 读取配置, path=${appConfigFile.absolutePath}")
-            ConfigUtil.getConfigByReading(appConfigFile)
+            ConfigUtil.readServerSettingsByReading(appConfigFile)
         } else {
             LoggerX.i(TAG, "init: 通过 ConfigProvider 读取配置")
-            ConfigUtil.getConfigByContentProvider()
-        }?.let(::updateConfig)
+            ConfigUtil.getServerSettingsByContentProvider()
+        }
+        serverSettings?.let(ServerSettingsMapper::toConfig)?.let(::updateConfig)
             ?: LoggerX.w(TAG, "init: 未读取到配置, 使用当前默认值")
 
         monitor.start()

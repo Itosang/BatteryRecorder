@@ -2,11 +2,9 @@ package yangfentuozi.batteryrecorder.ipc
 
 import android.content.ContentProvider
 import android.content.ContentValues
-import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
 import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -21,16 +19,11 @@ class ConfigProvider : ContentProvider() {
         if (method == "requestConfig") {
             LoggerX.i(TAG, "[配置] 收到 requestConfig 请求")
 
-            val prefs = requireContext().getSharedPreferences(
-                ConfigConstants.PREFS_NAME,
-                Context.MODE_PRIVATE
+            val serverSettings = SharedSettings.readServerSettings(
+                SharedSettings.getPreferences(requireContext())
             )
             return Bundle().apply {
-                // 这里或许后续可以继续优化实现
-                putParcelable(
-                    "config",
-                    ServerSettingsMapper.toConfig(SharedSettings.readServerSettings(prefs))
-                )
+                putParcelable("config", ServerSettingsMapper.toConfig(serverSettings))
             }
         }
         return null
