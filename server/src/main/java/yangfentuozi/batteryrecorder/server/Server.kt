@@ -16,8 +16,8 @@ import yangfentuozi.batteryrecorder.server.recorder.sampler.SysfsSampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
-import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile

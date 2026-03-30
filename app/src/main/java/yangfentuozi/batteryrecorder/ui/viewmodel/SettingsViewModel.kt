@@ -13,11 +13,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
-import yangfentuozi.batteryrecorder.shared.config.AppSettings
-import yangfentuozi.batteryrecorder.shared.config.ServerSettings
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
-import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.AppSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 private const val TAG = "SettingsViewModel"
@@ -397,8 +397,16 @@ class SettingsViewModel : ViewModel() {
         transform: (ServerSettings) -> ServerSettings
     ) {
         viewModelScope.launch {
+            val updatedSettings = transform(_serverSettings.value)
             val normalizedSettings = SharedSettings.normalizeServerSettings(
-                transform(_serverSettings.value)
+                recordIntervalMs = updatedSettings.recordIntervalMs,
+                batchSize = updatedSettings.batchSize,
+                writeLatencyMs = updatedSettings.writeLatencyMs,
+                screenOffRecordEnabled = updatedSettings.screenOffRecordEnabled,
+                segmentDurationMin = updatedSettings.segmentDurationMin,
+                maxHistoryDays = updatedSettings.maxHistoryDays,
+                logLevel = updatedSettings.logLevel,
+                alwaysPollingScreenStatusEnabled = updatedSettings.alwaysPollingScreenStatusEnabled
             )
             SharedSettings.writeServerSettings(prefs, normalizedSettings)
             _serverSettings.value = normalizedSettings

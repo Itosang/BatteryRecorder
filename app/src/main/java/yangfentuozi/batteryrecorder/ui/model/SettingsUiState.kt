@@ -1,8 +1,8 @@
 package yangfentuozi.batteryrecorder.ui.model
 
-import yangfentuozi.batteryrecorder.shared.config.AppSettings
-import yangfentuozi.batteryrecorder.shared.config.ServerSettings
-import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.AppSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 /**

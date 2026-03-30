@@ -15,7 +15,7 @@ import yangfentuozi.batteryrecorder.data.history.AppStatsComputer
 import yangfentuozi.batteryrecorder.data.history.BatteryPredictor
 import yangfentuozi.batteryrecorder.data.history.HistoryRepository
 import yangfentuozi.batteryrecorder.data.history.SyncUtil
-import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 

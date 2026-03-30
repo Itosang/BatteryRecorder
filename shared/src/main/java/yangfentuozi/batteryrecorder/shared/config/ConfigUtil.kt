@@ -5,6 +5,7 @@ import android.os.RemoteException
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.hiddenapi.compat.ActivityManagerCompat
 import java.io.File
@@ -90,15 +91,22 @@ object ConfigUtil {
                     eventType = parser.next()
                 }
 
-                val settings = SharedSettings.serverSettingsFromStoredValues(
-                    recordIntervalMs = recordIntervalMs,
-                    batchSize = batchSize,
-                    writeLatencyMs = writeLatencyMs,
-                    screenOffRecordEnabled = screenOffRecordEnabled,
-                    segmentDurationMin = segmentDurationMin,
-                    maxHistoryDays = maxHistoryDays,
-                    logLevelPriority = logLevelPriority,
-                    alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
+                val settings = SharedSettings.normalizeServerSettings(
+                    recordIntervalMs = recordIntervalMs ?: SettingsConstants.recordIntervalMs.def,
+                    batchSize = batchSize ?: SettingsConstants.batchSize.def,
+                    writeLatencyMs = writeLatencyMs ?: SettingsConstants.writeLatencyMs.def,
+                    screenOffRecordEnabled =
+                        screenOffRecordEnabled ?: SettingsConstants.screenOffRecordEnabled.def,
+                    segmentDurationMin =
+                        segmentDurationMin ?: SettingsConstants.segmentDurationMin.def,
+                    maxHistoryDays = maxHistoryDays ?: SettingsConstants.logMaxHistoryDays.def,
+                    logLevel = SharedSettings.decodeLogLevel(
+                        logLevelPriority
+                            ?: SharedSettings.encodeLogLevel(SettingsConstants.logLevel.def)
+                    ),
+                    alwaysPollingScreenStatusEnabled =
+                        alwaysPollingScreenStatusEnabled
+                            ?: SettingsConstants.alwaysPollingScreenStatusEnabled.def
                 )
                 logServerSettings("readServerSettingsByReading", settings)
                 settings

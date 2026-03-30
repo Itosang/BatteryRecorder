@@ -3,42 +3,10 @@ package yangfentuozi.batteryrecorder.shared.config
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import yangfentuozi.batteryrecorder.shared.config.dataclass.AppSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
-
-data class AppSettings(
-    val checkUpdateOnStartup: Boolean = SettingsConstants.checkUpdateOnStartup.def,
-    val dualCellEnabled: Boolean = SettingsConstants.dualCellEnabled.def,
-    val dischargeDisplayPositive: Boolean = SettingsConstants.dischargeDisplayPositive.def,
-    val calibrationValue: Int = SettingsConstants.calibrationValue.def,
-    val rootBootAutoStartEnabled: Boolean = SettingsConstants.rootBootAutoStartEnabled.def
-)
-
-data class StatisticsSettings(
-    val gamePackages: Set<String> = emptySet(),
-    val gameBlacklist: Set<String> = emptySet(),
-    val sceneStatsRecentFileCount: Int = SettingsConstants.sceneStatsRecentFileCount.def,
-    val predCurrentSessionWeightEnabled: Boolean =
-        SettingsConstants.predCurrentSessionWeightEnabled.def,
-    val predCurrentSessionWeightMaxX100: Int =
-        SettingsConstants.predCurrentSessionWeightMaxX100.def,
-    val predCurrentSessionWeightHalfLifeMin: Long =
-        SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
-)
-
-@Parcelize
-data class ServerSettings(
-    val recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
-    val batchSize: Int = SettingsConstants.batchSize.def,
-    val writeLatencyMs: Long = SettingsConstants.writeLatencyMs.def,
-    val screenOffRecordEnabled: Boolean = SettingsConstants.screenOffRecordEnabled.def,
-    val segmentDurationMin: Long = SettingsConstants.segmentDurationMin.def,
-    val maxHistoryDays: Long = SettingsConstants.logMaxHistoryDays.def,
-    val logLevel: LoggerX.LogLevel = SettingsConstants.logLevel.def,
-    val alwaysPollingScreenStatusEnabled: Boolean =
-        SettingsConstants.alwaysPollingScreenStatusEnabled.def
-): Parcelable
 
 object SharedSettings {
     fun getPreferences(context: Context): SharedPreferences =
@@ -75,19 +43,22 @@ object SharedSettings {
         readServerSettings(getPreferences(context))
 
     fun readServerSettings(prefs: SharedPreferences): ServerSettings =
-        serverSettingsFromStoredValues(
+        normalizeServerSettings(
             recordIntervalMs = SettingsConstants.recordIntervalMs.readFromSP(prefs),
             batchSize = SettingsConstants.batchSize.readFromSP(prefs),
             writeLatencyMs = SettingsConstants.writeLatencyMs.readFromSP(prefs),
             screenOffRecordEnabled = SettingsConstants.screenOffRecordEnabled.readFromSP(prefs),
             segmentDurationMin = SettingsConstants.segmentDurationMin.readFromSP(prefs),
             maxHistoryDays = SettingsConstants.logMaxHistoryDays.readFromSP(prefs),
-            logLevelPriority = encodeLogLevel(SettingsConstants.logLevel.readFromSP(prefs)),
+            logLevel = SettingsConstants.logLevel.readFromSP(prefs),
             alwaysPollingScreenStatusEnabled =
                 SettingsConstants.alwaysPollingScreenStatusEnabled.readFromSP(prefs)
         )
 
-    /** 核心规范化入口，显式字段最终都走这里。 */
+    /**
+     * 核心规范化入口，显式字段最终都走这里。
+     * 用coerce，防止超出范围
+     * */
     fun normalizeServerSettings(
         recordIntervalMs: Long = SettingsConstants.recordIntervalMs.def,
         batchSize: Int = SettingsConstants.batchSize.def,
@@ -108,45 +79,6 @@ object SharedSettings {
             maxHistoryDays = SettingsConstants.logMaxHistoryDays.coerce(maxHistoryDays),
             logLevel = logLevel,
             alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
-        )
-
-    /** 存储层原始值适配入口，负责把 SharedPreferences、XML 读出的值接到核心规范化入口。 */
-    fun serverSettingsFromStoredValues(
-        recordIntervalMs: Long? = null,
-        batchSize: Int? = null,
-        writeLatencyMs: Long? = null,
-        screenOffRecordEnabled: Boolean? = null,
-        segmentDurationMin: Long? = null,
-        maxHistoryDays: Long? = null,
-        logLevelPriority: Int? = null,
-        alwaysPollingScreenStatusEnabled: Boolean? = null
-    ): ServerSettings =
-        normalizeServerSettings(
-            recordIntervalMs = recordIntervalMs ?: SettingsConstants.recordIntervalMs.def,
-            batchSize = batchSize ?: SettingsConstants.batchSize.def,
-            writeLatencyMs = writeLatencyMs ?: SettingsConstants.writeLatencyMs.def,
-            screenOffRecordEnabled =
-                screenOffRecordEnabled ?: SettingsConstants.screenOffRecordEnabled.def,
-            segmentDurationMin = segmentDurationMin ?: SettingsConstants.segmentDurationMin.def,
-            maxHistoryDays = maxHistoryDays ?: SettingsConstants.logMaxHistoryDays.def,
-            logLevel =
-                decodeLogLevel(logLevelPriority ?: encodeLogLevel(SettingsConstants.logLevel.def)),
-            alwaysPollingScreenStatusEnabled =
-                alwaysPollingScreenStatusEnabled
-                    ?: SettingsConstants.alwaysPollingScreenStatusEnabled.def
-        )
-
-    /** 对象重载仅用于已有 ServerSettings 重新套用同一套规则，避免调用方手动拆字段。 */
-    fun normalizeServerSettings(settings: ServerSettings): ServerSettings =
-        normalizeServerSettings(
-            recordIntervalMs = settings.recordIntervalMs,
-            batchSize = settings.batchSize,
-            writeLatencyMs = settings.writeLatencyMs,
-            screenOffRecordEnabled = settings.screenOffRecordEnabled,
-            segmentDurationMin = settings.segmentDurationMin,
-            maxHistoryDays = settings.maxHistoryDays,
-            logLevel = settings.logLevel,
-            alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
         )
 
     fun writeAppSettings(prefs: SharedPreferences, settings: AppSettings) {
@@ -170,7 +102,16 @@ object SharedSettings {
     }
 
     fun Editor.writeServerSettings(settings: ServerSettings) {
-        val normalized = normalizeServerSettings(settings)
+        val normalized = normalizeServerSettings(
+            recordIntervalMs = settings.recordIntervalMs,
+            batchSize = settings.batchSize,
+            writeLatencyMs = settings.writeLatencyMs,
+            screenOffRecordEnabled = settings.screenOffRecordEnabled,
+            segmentDurationMin = settings.segmentDurationMin,
+            maxHistoryDays = settings.maxHistoryDays,
+            logLevel = settings.logLevel,
+            alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
+        )
         SettingsConstants.recordIntervalMs.writeToSP(this, normalized.recordIntervalMs)
         SettingsConstants.batchSize.writeToSP(this, normalized.batchSize)
         SettingsConstants.writeLatencyMs.writeToSP(this, normalized.writeLatencyMs)

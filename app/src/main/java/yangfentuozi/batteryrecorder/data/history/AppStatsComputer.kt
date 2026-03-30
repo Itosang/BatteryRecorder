@@ -1,7 +1,7 @@
 package yangfentuozi.batteryrecorder.data.history
 
 import android.content.Context
-import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
+import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import java.io.File
 
 /**
