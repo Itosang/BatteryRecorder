@@ -77,15 +77,17 @@ fun HomeScreen(
     val dischargeSummary by viewModel.dischargeSummary.collectAsState()
     val currentRecordUiState by viewModel.currentRecordUiState.collectAsState()
 
-    val settingsState by settingsViewModel.settingsUiState.collectAsState()
+    val appSettings by settingsViewModel.appSettings.collectAsState()
     val settingsInitialized by settingsViewModel.initialized.collectAsState()
-    val statisticsRequest by settingsViewModel.statisticsRequest.collectAsState()
+    val statisticsSettings by settingsViewModel.statisticsSettings.collectAsState()
+    val recordIntervalMs by settingsViewModel.recordIntervalMs.collectAsState()
     val latestSettingsInitialized by rememberUpdatedState(settingsInitialized)
-    val latestStatisticsRequest by rememberUpdatedState(statisticsRequest)
+    val latestStatisticsSettings by rememberUpdatedState(statisticsSettings)
+    val latestRecordIntervalMs by rememberUpdatedState(recordIntervalMs)
     var prevServiceConnected by remember { mutableStateOf(false) }
-    val dualCellEnabled = settingsState.dualCellEnabled
-    val calibrationValue = settingsState.calibrationValue
-    val dischargeDisplayPositive = settingsState.dischargeDisplayPositive
+    val dualCellEnabled = appSettings.dualCellEnabled
+    val calibrationValue = appSettings.calibrationValue
+    val dischargeDisplayPositive = appSettings.dischargeDisplayPositive
 
     // 首页续航卡片与场景卡片共用同一批统计结果。
     val sceneStats by viewModel.sceneStats.collectAsState()
@@ -108,7 +110,8 @@ fun HomeScreen(
             override fun onRecord(timestamp: Long, power: Long, status: BatteryStatus, temp: Int) {
                 viewModel.onRecordSample(
                     context = context,
-                    request = latestStatisticsRequest,
+                    request = latestStatisticsSettings,
+                    recordIntervalMs = latestRecordIntervalMs,
                     sample = LiveRecordSample(
                         power = power,
                         status = status,
@@ -121,7 +124,8 @@ fun HomeScreen(
                 // 当前记录文件切段后，立即切到新分段语义；统计未就绪时显示等待状态。
                 viewModel.onCurrentRecordsFileChanged(
                     context = context,
-                    request = latestStatisticsRequest,
+                    request = latestStatisticsSettings,
+                    recordIntervalMs = latestRecordIntervalMs,
                     recordsFile = recordsFile
                 )
             }
@@ -142,7 +146,8 @@ fun HomeScreen(
             delay(1500)
             viewModel.refreshStatisticsTrackingCurrentRecord(
                 context = context,
-                request = statisticsRequest
+                request = statisticsSettings,
+                recordIntervalMs = recordIntervalMs
             )
         }
     }
@@ -156,7 +161,8 @@ fun HomeScreen(
         // 避免返回首页时走 ClearAndReload 先清空卡片与统计。
         viewModel.refreshStatisticsTrackingCurrentRecord(
             context = context,
-            request = statisticsRequest
+            request = statisticsSettings,
+            recordIntervalMs = recordIntervalMs
         )
     }
 
@@ -174,7 +180,8 @@ fun HomeScreen(
                     if (latestSettingsInitialized) {
                         viewModel.refreshStatisticsTrackingCurrentRecord(
                             context = context,
-                            request = latestStatisticsRequest
+                            request = latestStatisticsSettings,
+                            recordIntervalMs = latestRecordIntervalMs
                         )
                     }
                     Service.service?.registerRecordListener(listener)
@@ -212,7 +219,8 @@ fun HomeScreen(
                     onRefreshClick = {
                         viewModel.forceRefreshStatistics(
                             context = context,
-                            request = statisticsRequest
+                            request = statisticsSettings,
+                            recordIntervalMs = recordIntervalMs
                         )
                     },
                     showStopServer = serviceConnected

@@ -4,6 +4,7 @@ import android.content.Context
 import yangfentuozi.batteryrecorder.BuildConfig
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
@@ -126,7 +127,8 @@ object DischargeRecordScanner {
      */
     fun scan(
         context: Context,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
+        recordIntervalMs: Long,
         currentDischargeFileName: String? = null,
         onAcceptedFile: (AcceptedDischargeFile) -> Unit
     ): DischargeScanSummary? {
@@ -136,7 +138,7 @@ object DischargeRecordScanner {
             return null
         }
 
-        val maxGapMs = computeMaxGapMs(request.recordIntervalMs)
+        val maxGapMs = computeMaxGapMs(recordIntervalMs)
         val maxMultiplier = (request.predCurrentSessionWeightMaxX100 / 100.0).coerceIn(1.0, 5.0)
         val halfLifeMs = request.predCurrentSessionWeightHalfLifeMin
             .coerceIn(1L, 24 * 60L) * 60_000.0

@@ -22,10 +22,11 @@ import yangfentuozi.batteryrecorder.data.history.HistorySummary
 import yangfentuozi.batteryrecorder.data.history.PredictionResult
 import yangfentuozi.batteryrecorder.data.history.SceneStats
 import yangfentuozi.batteryrecorder.data.history.SceneStatsComputer
-import yangfentuozi.batteryrecorder.data.history.StatisticsRequest
 import yangfentuozi.batteryrecorder.data.history.SyncUtil
 import yangfentuozi.batteryrecorder.data.log.LogRepository
 import yangfentuozi.batteryrecorder.ipc.Service
+import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -242,7 +243,8 @@ class MainViewModel : ViewModel() {
 
     fun loadStatistics(
         context: Context,
-        request: StatisticsRequest = StatisticsRequest()
+        request: StatisticsSettings = StatisticsSettings(),
+        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
     ) {
         if (_isLoadingStats.value) {
             LoggerX.v(TAG, "[首页] loadStatistics 已在进行，跳过重复请求")
@@ -251,13 +253,15 @@ class MainViewModel : ViewModel() {
         startLoadStatistics(
             context = context,
             request = request,
+            recordIntervalMs = recordIntervalMs,
             mode = StatisticsRefreshMode.ClearAndReload
         )
     }
 
     fun refreshStatistics(
         context: Context,
-        request: StatisticsRequest = StatisticsRequest()
+        request: StatisticsSettings = StatisticsSettings(),
+        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
     ) {
         if (_isLoadingStats.value) {
             LoggerX.v(TAG, "[首页] refreshStatistics 已在进行，跳过")
@@ -266,18 +270,21 @@ class MainViewModel : ViewModel() {
         startLoadStatistics(
             context = context,
             request = request,
+            recordIntervalMs = recordIntervalMs,
             mode = StatisticsRefreshMode.ClearAndReload
         )
     }
 
     fun forceRefreshStatistics(
         context: Context,
-        request: StatisticsRequest = StatisticsRequest()
+        request: StatisticsSettings = StatisticsSettings(),
+        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS
     ) {
         statisticsJob?.cancel()
         startLoadStatistics(
             context = context,
             request = request,
+            recordIntervalMs = recordIntervalMs,
             mode = StatisticsRefreshMode.ClearAndReload
         )
     }
@@ -292,13 +299,15 @@ class MainViewModel : ViewModel() {
      */
     fun refreshStatisticsTrackingCurrentRecord(
         context: Context,
-        request: StatisticsRequest = StatisticsRequest(),
+        request: StatisticsSettings = StatisticsSettings(),
+        recordIntervalMs: Long = ConfigConstants.DEF_RECORD_INTERVAL_MS,
         expectedCurrentRecordsFile: RecordsFile? = null
     ) {
         statisticsJob?.cancel()
         startLoadStatistics(
             context = context,
             request = request,
+            recordIntervalMs = recordIntervalMs,
             mode = StatisticsRefreshMode.TrackCurrentRecord,
             expectedCurrentRecordsFile = expectedCurrentRecordsFile
         )
@@ -314,7 +323,8 @@ class MainViewModel : ViewModel() {
      */
     fun onCurrentRecordsFileChanged(
         context: Context,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
+        recordIntervalMs: Long,
         recordsFile: RecordsFile
     ) {
         runOnMainThread {
@@ -335,6 +345,7 @@ class MainViewModel : ViewModel() {
             refreshStatisticsTrackingCurrentRecord(
                 context = context.applicationContext,
                 request = request,
+                recordIntervalMs = recordIntervalMs,
                 expectedCurrentRecordsFile = recordsFile
             )
         }
@@ -350,7 +361,8 @@ class MainViewModel : ViewModel() {
      */
     fun onRecordSample(
         context: Context,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
+        recordIntervalMs: Long,
         sample: LiveRecordSample
     ) {
         runOnMainThread {
@@ -377,6 +389,7 @@ class MainViewModel : ViewModel() {
                 refreshStatisticsTrackingCurrentRecord(
                     context = context.applicationContext,
                     request = request,
+                    recordIntervalMs = recordIntervalMs,
                     expectedCurrentRecordsFile = pendingFile
                 )
             }
@@ -444,7 +457,8 @@ class MainViewModel : ViewModel() {
 
     private fun startLoadStatistics(
         context: Context,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
+        recordIntervalMs: Long,
         mode: StatisticsRefreshMode,
         expectedCurrentRecordsFile: RecordsFile? = null
     ) {
@@ -454,7 +468,7 @@ class MainViewModel : ViewModel() {
 
         val generation = (++statisticsGeneration)
         LoggerX.i(TAG, 
-            "[首页] 开始加载统计: generation=$generation mode=$mode recentFileCount=${request.sceneStatsRecentFileCount} intervalMs=${request.recordIntervalMs}"
+            "[首页] 开始加载统计: generation=$generation mode=$mode recentFileCount=${request.sceneStatsRecentFileCount} intervalMs=$recordIntervalMs"
         )
         _isLoadingStats.value = true
         val job = viewModelScope.launch {
@@ -559,6 +573,7 @@ class MainViewModel : ViewModel() {
                     SceneStatsComputer.compute(
                         context = context,
                         request = request,
+                        recordIntervalMs = recordIntervalMs,
                         currentDischargeFileName = currentSceneDischargeFileName
                     )
                 }

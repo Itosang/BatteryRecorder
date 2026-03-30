@@ -53,14 +53,15 @@ fun PredictionDetailScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val statisticsRequest by settingsViewModel.statisticsRequest.collectAsState()
+    val statisticsSettings by settingsViewModel.statisticsSettings.collectAsState()
+    val recordIntervalMs by settingsViewModel.recordIntervalMs.collectAsState()
     val dualCellEnabled by settingsViewModel.dualCellEnabled.collectAsState()
     val calibrationValue by settingsViewModel.calibrationValue.collectAsState()
     val dischargeDisplayPositive by settingsViewModel.dischargeDisplayPositive.collectAsState()
 
     // 统计请求变化时重新加载；显示正负值配置只影响 UI 映射，不触发重算。
-    LaunchedEffect(statisticsRequest) {
-        viewModel.load(context, statisticsRequest)
+    LaunchedEffect(statisticsSettings, recordIntervalMs) {
+        viewModel.load(context, statisticsSettings, recordIntervalMs)
     }
 
     Scaffold(

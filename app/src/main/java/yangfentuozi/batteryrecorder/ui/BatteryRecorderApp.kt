@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,8 @@ fun BatteryRecorderApp(
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val appSettings by settingsViewModel.appSettings.collectAsState()
+    val initialized by settingsViewModel.initialized.collectAsState()
     var hasCheckedUpdateOnStartup by rememberSaveable { mutableStateOf(false) }
     var pendingUpdate by remember { mutableStateOf<AppUpdate?>(null) }
     var showDocsIntro by rememberSaveable { mutableStateOf(false) }
@@ -47,12 +50,15 @@ fun BatteryRecorderApp(
             showDocsIntro = true
         }
 
-        if (hasCheckedUpdateOnStartup) return@LaunchedEffect
-        if (!settingsViewModel.settingsUiState.value.checkUpdateOnStartup) {
+    }
+
+    LaunchedEffect(initialized, appSettings.checkUpdateOnStartup, hasCheckedUpdateOnStartup, context) {
+        if (!initialized || hasCheckedUpdateOnStartup) return@LaunchedEffect
+        hasCheckedUpdateOnStartup = true
+        if (!appSettings.checkUpdateOnStartup) {
             LoggerX.d(TAG, "启动更新检测已关闭，跳过检查")
             return@LaunchedEffect
         }
-        hasCheckedUpdateOnStartup = true
         LoggerX.d(TAG, "启动更新检测开始，请求最新 release")
 
         val update = UpdateUtils.fetchUpdate() ?: run {

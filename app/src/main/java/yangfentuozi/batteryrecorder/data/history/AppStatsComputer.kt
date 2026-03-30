@@ -1,6 +1,7 @@
 package yangfentuozi.batteryrecorder.data.history
 
 import android.content.Context
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import java.io.File
 
 /**
@@ -67,7 +68,8 @@ object AppStatsComputer {
      */
     fun compute(
         context: Context,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
+        recordIntervalMs: Long,
         currentDischargeFileName: String? = null
     ): AppStatsComputeResult {
         val files = DischargeRecordScanner.listRecentDischargeFiles(
@@ -79,7 +81,7 @@ object AppStatsComputer {
         }
 
         val recentFileCount = request.sceneStatsRecentFileCount
-        val maxGapMs = DischargeRecordScanner.computeMaxGapMs(request.recordIntervalMs)
+        val maxGapMs = DischargeRecordScanner.computeMaxGapMs(recordIntervalMs)
         val cacheKey = buildCacheKey(
             files = files,
             recentFileCount = recentFileCount,
@@ -109,6 +111,7 @@ object AppStatsComputer {
         DischargeRecordScanner.scan(
             context = context,
             request = request,
+            recordIntervalMs = recordIntervalMs,
             currentDischargeFileName = currentDischargeFileName
         ) { acceptedFile ->
             // 应用维度展示仍保留有符号能量，避免丢失放电方向；预测耗时另走 effective 时长/掉电口径。
@@ -158,7 +161,7 @@ object AppStatsComputer {
         files: List<File>,
         recentFileCount: Int,
         maxGapMs: Long,
-        request: StatisticsRequest,
+        request: StatisticsSettings,
         currentDischargeFileName: String?
     ): String {
         val filesHash = files.joinToString(",") { "${it.name}:${it.lastModified()}:${it.length()}" }.hashCode()

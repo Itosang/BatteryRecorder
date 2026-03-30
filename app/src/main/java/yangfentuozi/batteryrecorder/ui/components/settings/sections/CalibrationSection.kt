@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
@@ -19,13 +20,22 @@ fun CalibrationSection(
     props: SettingsUiProps
 ) {
     val state = props.state
+    val rootActions = props.actions
     val actions = props.actions.calibration
     var showDialog by remember { mutableStateOf(false) }
 
     SplicedColumnGroup(
-        title = "校准",
+        title = "常规",
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
+        item {
+            M3ESwitchWidget(
+                text = "启动时检测更新",
+                checked = state.checkUpdateOnStartup,
+                onCheckedChange = rootActions.setCheckUpdateOnStartup
+            )
+        }
+
         item {
             M3ESwitchWidget(
                 text = "串联双电芯",
@@ -61,7 +71,7 @@ fun CalibrationSection(
                 showDialog = false
             },
             onReset = {
-                actions.setCalibrationValue(-1)
+                actions.setCalibrationValue(ConfigConstants.DEF_CALIBRATION_VALUE)
                 showDialog = false
             }
         )

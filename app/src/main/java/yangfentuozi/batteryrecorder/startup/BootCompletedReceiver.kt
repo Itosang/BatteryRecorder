@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.core.content.edit
 import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 private const val TAG = "BootCompletedReceiver"
@@ -24,10 +25,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                         ConfigConstants.PREFS_NAME,
                         Context.MODE_PRIVATE
                     )
-                    val autoStartEnabled = prefs.getBoolean(
-                        ConfigConstants.KEY_ROOT_BOOT_AUTO_START_ENABLED,
-                        ConfigConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED
-                    )
+                    val autoStartEnabled = SharedSettings.readAppSettings(prefs).rootBootAutoStartEnabled
                     if (!autoStartEnabled) {
                         LoggerX.i(TAG, "[BOOT] 开机 ROOT 自启动未开启")
                         return@Thread

@@ -49,6 +49,22 @@ object ConfigUtil {
     }
 
     fun getConfigByReading(configFile: File): Config? {
+        return readServerSettingsByReading(configFile)?.let(ServerSettingsMapper::toConfig)
+    }
+
+    fun getConfigBySharedPreferences(prefs: SharedPreferences): Config =
+        ServerSettingsMapper.toConfig(getServerSettingsBySharedPreferences(prefs))
+
+    fun getServerSettingsBySharedPreferences(prefs: SharedPreferences): ServerSettings {
+        val settings = SharedSettings.readServerSettings(prefs)
+        LoggerX.d(
+            TAG,
+            "getServerSettingsBySharedPreferences: intervalMs=${settings.recordIntervalMs} batchSize=${settings.batchSize} writeLatencyMs=${settings.writeLatencyMs} screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled} logLevel=${settings.logLevel}"
+        )
+        return settings
+    }
+
+    fun readServerSettingsByReading(configFile: File): ServerSettings? {
         if (!configFile.exists()) {
             LoggerX.e(TAG, "getConfigByReading: 配置文件不存在, path=${configFile.absolutePath}")
             return null
@@ -68,7 +84,8 @@ object ConfigUtil {
                 var segmentDurationMin = ConfigConstants.DEF_SEGMENT_DURATION_MIN
                 var maxHistoryDays = ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
                 var logLevel = ConfigConstants.DEF_LOG_LEVEL
-                var alwaysPollingScreenStatusEnabled = ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+                var alwaysPollingScreenStatusEnabled =
+                    ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
 
                 while (eventType != XmlPullParser.END_DOCUMENT) {
                     if (eventType == XmlPullParser.START_TAG) {
@@ -77,49 +94,67 @@ object ConfigUtil {
 
                         when (nameAttr) {
                             ConfigConstants.KEY_RECORD_INTERVAL_MS ->
-                                recordIntervalMs = valueAttr.toLongOrNull() ?: ConfigConstants.DEF_RECORD_INTERVAL_MS
+                                recordIntervalMs =
+                                    valueAttr.toLongOrNull()
+                                        ?: ConfigConstants.DEF_RECORD_INTERVAL_MS
 
                             ConfigConstants.KEY_BATCH_SIZE ->
-                                batchSize = valueAttr.toIntOrNull() ?: ConfigConstants.DEF_BATCH_SIZE
+                                batchSize =
+                                    valueAttr.toIntOrNull()
+                                        ?: ConfigConstants.DEF_BATCH_SIZE
 
                             ConfigConstants.KEY_WRITE_LATENCY_MS ->
-                                writeLatencyMs = valueAttr.toLongOrNull() ?: ConfigConstants.DEF_WRITE_LATENCY_MS
+                                writeLatencyMs =
+                                    valueAttr.toLongOrNull()
+                                        ?: ConfigConstants.DEF_WRITE_LATENCY_MS
 
                             ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED -> {
-                                screenOffRecordEnabled = valueAttr.toBooleanStrictOrNull() ?: ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
+                                screenOffRecordEnabled =
+                                    valueAttr.toBooleanStrictOrNull()
+                                        ?: ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
                             }
 
                             ConfigConstants.KEY_SEGMENT_DURATION_MIN ->
-                                segmentDurationMin = valueAttr.toLongOrNull() ?: ConfigConstants.DEF_SEGMENT_DURATION_MIN
+                                segmentDurationMin =
+                                    valueAttr.toLongOrNull()
+                                        ?: ConfigConstants.DEF_SEGMENT_DURATION_MIN
 
                             ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS ->
                                 maxHistoryDays = valueAttr.toLongOrNull()
                                     ?: ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
 
                             ConfigConstants.KEY_LOG_LEVEL ->
-                                logLevel = LoggerX.LogLevel.fromPriority(valueAttr.trim().toIntOrNull() ?: Int.MIN_VALUE)
+                                logLevel = SharedSettings.decodeLogLevel(
+                                    valueAttr?.trim()?.toIntOrNull()
+                                        ?: SharedSettings.encodeLogLevel(ConfigConstants.DEF_LOG_LEVEL)
+                                )
 
                             ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED ->
-                                alwaysPollingScreenStatusEnabled = valueAttr.toBooleanStrictOrNull() ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
+                                alwaysPollingScreenStatusEnabled =
+                                    valueAttr.toBooleanStrictOrNull()
+                                        ?: ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
                         }
                     }
                     eventType = parser.next()
                 }
 
-                val coerced = coerceConfigValue(Config(
-                    recordIntervalMs = recordIntervalMs,
-                    writeLatencyMs = writeLatencyMs,
-                    batchSize = batchSize,
-                    screenOffRecordEnabled = screenOffRecordEnabled,
-                    segmentDurationMin = segmentDurationMin,
-                    maxHistoryDays = maxHistoryDays,
-                    logLevel = logLevel,
-                    alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
-                ))
-                LoggerX.d(TAG, 
-                    "getConfigByReading: 配置已解析, intervalMs=${coerced.recordIntervalMs} batchSize=${coerced.batchSize} writeLatencyMs=${coerced.writeLatencyMs} screenOffRecord=${coerced.screenOffRecordEnabled} polling=${coerced.alwaysPollingScreenStatusEnabled} logLevel=${coerced.logLevel}"
+                val settings = SharedSettings.readServerSettings(
+                    XmlBackedSharedPreferences(
+                        recordIntervalMs = recordIntervalMs,
+                        batchSize = batchSize,
+                        writeLatencyMs = writeLatencyMs,
+                        screenOffRecordEnabled = screenOffRecordEnabled,
+                        segmentDurationMin = segmentDurationMin,
+                        maxHistoryDays = maxHistoryDays,
+                        logLevel = logLevel,
+                        alwaysPollingScreenStatusEnabled = alwaysPollingScreenStatusEnabled
+                    )
                 )
-                coerced
+                LoggerX.d(
+                    TAG,
+                    "readServerSettingsByReading: intervalMs=${settings.recordIntervalMs} batchSize=${settings.batchSize} writeLatencyMs=${settings.writeLatencyMs} screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled} logLevel=${settings.logLevel}"
+                )
+                settings
             }
         } catch (e: FileNotFoundException) {
             LoggerX.e(TAG, "getConfigByReading: 配置文件不存在", tr = e)
@@ -133,54 +168,75 @@ object ConfigUtil {
         }
     }
 
-    fun getConfigBySharedPreferences(prefs: SharedPreferences): Config {
-        val coerced = coerceConfigValue(Config(
-            recordIntervalMs = prefs.getLong(ConfigConstants.KEY_RECORD_INTERVAL_MS, ConfigConstants.DEF_RECORD_INTERVAL_MS),
-            writeLatencyMs = prefs.getLong(ConfigConstants.KEY_WRITE_LATENCY_MS, ConfigConstants.DEF_WRITE_LATENCY_MS),
-            batchSize = prefs.getInt(ConfigConstants.KEY_BATCH_SIZE, ConfigConstants.DEF_BATCH_SIZE),
-            screenOffRecordEnabled = prefs.getBoolean(
-                ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED,
-                ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
-            ),
-            segmentDurationMin = prefs.getLong(ConfigConstants.KEY_SEGMENT_DURATION_MIN, ConfigConstants.DEF_SEGMENT_DURATION_MIN),
-            maxHistoryDays = prefs.getLong(
-                ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS,
-                ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
-            ),
-            logLevel = LoggerX.LogLevel.fromPriority(prefs.getInt(ConfigConstants.KEY_LOG_LEVEL, ConfigConstants.DEF_LOG_LEVEL.priority)),
-            alwaysPollingScreenStatusEnabled = prefs.getBoolean(ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED, ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED)
-        ))
-        LoggerX.d(TAG, 
-            "getConfigBySharedPreferences: 配置已解析, intervalMs=${coerced.recordIntervalMs} batchSize=${coerced.batchSize} writeLatencyMs=${coerced.writeLatencyMs} screenOffRecord=${coerced.screenOffRecordEnabled} polling=${coerced.alwaysPollingScreenStatusEnabled} logLevel=${coerced.logLevel}"
-        )
-        return coerced
-    }
-
     fun coerceConfigValue(config: Config): Config {
-        val coerced = config.copy(
-            recordIntervalMs = config.recordIntervalMs.coerceIn(
-                ConfigConstants.MIN_RECORD_INTERVAL_MS,
-                ConfigConstants.MAX_RECORD_INTERVAL_MS
-            ),
-            batchSize = config.batchSize.coerceIn(
-                ConfigConstants.MIN_BATCH_SIZE,
-                ConfigConstants.MAX_BATCH_SIZE
-            ),
-            writeLatencyMs = config.writeLatencyMs.coerceIn(
-                ConfigConstants.MIN_WRITE_LATENCY_MS,
-                ConfigConstants.MAX_WRITE_LATENCY_MS
-            ),
-            segmentDurationMin = config.segmentDurationMin.coerceIn(
-                ConfigConstants.MIN_SEGMENT_DURATION_MIN,
-                ConfigConstants.MAX_SEGMENT_DURATION_MIN
-            ),
-            maxHistoryDays = config.maxHistoryDays.coerceAtLeast(
-                ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS
+        val coercedSettings = SharedSettings.readServerSettings(
+            XmlBackedSharedPreferences(
+                recordIntervalMs = config.recordIntervalMs,
+                batchSize = config.batchSize,
+                writeLatencyMs = config.writeLatencyMs,
+                screenOffRecordEnabled = config.screenOffRecordEnabled,
+                segmentDurationMin = config.segmentDurationMin,
+                maxHistoryDays = config.maxHistoryDays,
+                logLevel = config.logLevel,
+                alwaysPollingScreenStatusEnabled = config.alwaysPollingScreenStatusEnabled
             )
         )
+        val coerced = ServerSettingsMapper.toConfig(coercedSettings)
         if (coerced != config) {
             LoggerX.v(TAG, "coerceConfigValue: 配置值已裁剪到合法范围")
         }
         return coerced
     }
+}
+
+private data class XmlBackedSharedPreferences(
+    val recordIntervalMs: Long,
+    val batchSize: Int,
+    val writeLatencyMs: Long,
+    val screenOffRecordEnabled: Boolean,
+    val segmentDurationMin: Long,
+    val maxHistoryDays: Long,
+    val logLevel: LoggerX.LogLevel,
+    val alwaysPollingScreenStatusEnabled: Boolean
+) : SharedPreferences {
+    override fun getAll(): MutableMap<String, Any?> = mutableMapOf()
+
+    override fun getString(key: String?, defValue: String?): String? = defValue
+
+    override fun getStringSet(
+        key: String?,
+        defValues: MutableSet<String>?
+    ): MutableSet<String>? = defValues?.toMutableSet()
+
+    override fun getInt(key: String?, defValue: Int): Int = when (key) {
+        ConfigConstants.KEY_BATCH_SIZE -> batchSize
+        ConfigConstants.KEY_LOG_LEVEL -> logLevel.priority
+        else -> defValue
+    }
+
+    override fun getLong(key: String?, defValue: Long): Long = when (key) {
+        ConfigConstants.KEY_RECORD_INTERVAL_MS -> recordIntervalMs
+        ConfigConstants.KEY_WRITE_LATENCY_MS -> writeLatencyMs
+        ConfigConstants.KEY_SEGMENT_DURATION_MIN -> segmentDurationMin
+        ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS -> maxHistoryDays
+        else -> defValue
+    }
+
+    override fun getFloat(key: String?, defValue: Float): Float = defValue
+
+    override fun getBoolean(key: String?, defValue: Boolean): Boolean = when (key) {
+        ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED -> screenOffRecordEnabled
+        ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED -> alwaysPollingScreenStatusEnabled
+        else -> defValue
+    }
+
+    override fun contains(key: String?): Boolean = false
+
+    override fun edit(): SharedPreferences.Editor {
+        throw UnsupportedOperationException("XmlBackedSharedPreferences does not support edit")
+    }
+
+    override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
+
+    override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
 }

@@ -6,592 +6,421 @@ import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import yangfentuozi.batteryrecorder.data.history.StatisticsRequest
 import yangfentuozi.batteryrecorder.ipc.Service
-import yangfentuozi.batteryrecorder.shared.config.Config
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.AppSettingKeys
+import yangfentuozi.batteryrecorder.shared.config.AppSettings
+import yangfentuozi.batteryrecorder.shared.config.ServerSettingKeys
+import yangfentuozi.batteryrecorder.shared.config.ServerSettings
+import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
+import yangfentuozi.batteryrecorder.shared.config.SharedSettings
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettingKeys
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
-import yangfentuozi.batteryrecorder.ui.model.SettingsUiState
 
 private const val TAG = "SettingsViewModel"
 
 class SettingsViewModel : ViewModel() {
     private lateinit var prefs: SharedPreferences
 
-    private val _checkUpdateOnStartup =
-        MutableStateFlow(ConfigConstants.DEF_CHECK_UPDATE_ON_STARTUP)
+    private val _appSettings = MutableStateFlow(AppSettings())
+    val appSettings: StateFlow<AppSettings> = _appSettings.asStateFlow()
 
-    // 双电芯设置
-    private val _dualCellEnabled = MutableStateFlow(ConfigConstants.DEF_DUAL_CELL_ENABLED)
-    val dualCellEnabled: StateFlow<Boolean> = _dualCellEnabled.asStateFlow()
+    private val _statisticsSettings = MutableStateFlow(StatisticsSettings())
+    val statisticsSettings: StateFlow<StatisticsSettings> = _statisticsSettings.asStateFlow()
 
-    // 放电电流显示为正值
-    private val _dischargeDisplayPositive =
-        MutableStateFlow(ConfigConstants.DEF_DISCHARGE_DISPLAY_POSITIVE)
-    val dischargeDisplayPositive: StateFlow<Boolean> = _dischargeDisplayPositive.asStateFlow()
-
-    // 校准值
-    private val _calibrationValue = MutableStateFlow(ConfigConstants.DEF_CALIBRATION_VALUE)
-    val calibrationValue: StateFlow<Int> = _calibrationValue.asStateFlow()
-
-    // 采样间隔 (ms)
-    private val _recordIntervalMs = MutableStateFlow(ConfigConstants.DEF_RECORD_INTERVAL_MS)
-    val recordIntervalMs: StateFlow<Long> = _recordIntervalMs.asStateFlow()
-
-    // 写入延迟 (ms)
-    private val _writeLatencyMs = MutableStateFlow(ConfigConstants.DEF_WRITE_LATENCY_MS)
-    val writeLatencyMs: StateFlow<Long> = _writeLatencyMs.asStateFlow()
-
-    // 批次大小
-    private val _batchSize = MutableStateFlow(ConfigConstants.DEF_BATCH_SIZE)
-    val batchSize: StateFlow<Int> = _batchSize.asStateFlow()
-
-    // 息屏时继续记录
-    private val _screenOffRecord = MutableStateFlow(ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED)
-    val screenOffRecord: StateFlow<Boolean> = _screenOffRecord.asStateFlow()
-
-    // 轮询检查息屏状态
-    private val _alwaysPollingScreenStatusEnabled = MutableStateFlow(ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED)
-    val alwaysPollingScreenStatusEnabled: StateFlow<Boolean> = _alwaysPollingScreenStatusEnabled.asStateFlow()
-
-    // 分段时间 (分钟)
-    private val _segmentDurationMin = MutableStateFlow(ConfigConstants.DEF_SEGMENT_DURATION_MIN)
-    val segmentDurationMin: StateFlow<Long> = _segmentDurationMin.asStateFlow()
-
-    // 开机 ROOT 自启动
-    private val _rootBootAutoStartEnabled =
-        MutableStateFlow(ConfigConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED)
-    val rootBootAutoStartEnabled: StateFlow<Boolean> = _rootBootAutoStartEnabled.asStateFlow()
-
-    private val _maxHistoryDays =
-        MutableStateFlow(ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS)
-    val maxHistoryDays: StateFlow<Long> = _maxHistoryDays.asStateFlow()
-
-    private val _logLevel =
-        MutableStateFlow(ConfigConstants.DEF_LOG_LEVEL)
-    val logLevel: StateFlow<LoggerX.LogLevel> = _logLevel.asStateFlow()
-
-    // 游戏 App 包名列表
-    private val _gamePackages = MutableStateFlow<Set<String>>(emptySet())
-    val gamePackages: StateFlow<Set<String>> = _gamePackages.asStateFlow()
-
-    // 用户主动排除的非游戏包名（自动检测时跳过）
-    private val _gameBlacklist = MutableStateFlow<Set<String>>(emptySet())
-    val gameBlacklist: StateFlow<Set<String>> = _gameBlacklist.asStateFlow()
-
-    // 场景统计与预测样本数量
-    private val _sceneStatsRecentFileCount =
-        MutableStateFlow(ConfigConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT)
-    val sceneStatsRecentFileCount: StateFlow<Int> = _sceneStatsRecentFileCount.asStateFlow()
-
-    // 当次记录加权预测
-    private val _predCurrentSessionWeightEnabled =
-        MutableStateFlow(ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_ENABLED)
-    val predCurrentSessionWeightEnabled: StateFlow<Boolean> =
-        _predCurrentSessionWeightEnabled.asStateFlow()
-
-    private val _predCurrentSessionWeightMaxX100 =
-        MutableStateFlow(ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100)
-    val predCurrentSessionWeightMaxX100: StateFlow<Int> =
-        _predCurrentSessionWeightMaxX100.asStateFlow()
-
-    private val _predCurrentSessionWeightHalfLifeMin =
-        MutableStateFlow(ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN)
-    val predCurrentSessionWeightHalfLifeMin: StateFlow<Long> =
-        _predCurrentSessionWeightHalfLifeMin.asStateFlow()
-
-    private val _settingsUiState = MutableStateFlow(SettingsUiState())
-    val settingsUiState: StateFlow<SettingsUiState> = _settingsUiState.asStateFlow()
-
-    private val _statisticsRequest = MutableStateFlow(StatisticsRequest())
-    val statisticsRequest: StateFlow<StatisticsRequest> = _statisticsRequest.asStateFlow()
+    private val _serverSettings = MutableStateFlow(ServerSettings())
+    val serverSettings: StateFlow<ServerSettings> = _serverSettings.asStateFlow()
 
     private val _initialized = MutableStateFlow(false)
     val initialized: StateFlow<Boolean> = _initialized.asStateFlow()
 
-    private lateinit var serverConfig: Config
+    val checkUpdateOnStartup: StateFlow<Boolean> =
+        appSettings.map { it.checkUpdateOnStartup }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = AppSettings().checkUpdateOnStartup
+            )
 
-    /**
-     * 初始化 SharedPreferences
-     */
+    val dualCellEnabled: StateFlow<Boolean> =
+        appSettings.map { it.dualCellEnabled }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = AppSettings().dualCellEnabled
+            )
+
+    val dischargeDisplayPositive: StateFlow<Boolean> =
+        appSettings.map { it.dischargeDisplayPositive }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = AppSettings().dischargeDisplayPositive
+            )
+
+    val calibrationValue: StateFlow<Int> =
+        appSettings.map { it.calibrationValue }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = AppSettings().calibrationValue
+            )
+
+    val rootBootAutoStartEnabled: StateFlow<Boolean> =
+        appSettings.map { it.rootBootAutoStartEnabled }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = AppSettings().rootBootAutoStartEnabled
+            )
+
+    val recordIntervalMs: StateFlow<Long> =
+        serverSettings.map { it.recordIntervalMs }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().recordIntervalMs
+            )
+
+    val writeLatencyMs: StateFlow<Long> =
+        serverSettings.map { it.writeLatencyMs }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().writeLatencyMs
+            )
+
+    val batchSize: StateFlow<Int> =
+        serverSettings.map { it.batchSize }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().batchSize
+            )
+
+    val screenOffRecord: StateFlow<Boolean> =
+        serverSettings.map { it.screenOffRecordEnabled }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().screenOffRecordEnabled
+            )
+
+    val alwaysPollingScreenStatusEnabled: StateFlow<Boolean> =
+        serverSettings.map { it.alwaysPollingScreenStatusEnabled }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().alwaysPollingScreenStatusEnabled
+            )
+
+    val segmentDurationMin: StateFlow<Long> =
+        serverSettings.map { it.segmentDurationMin }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().segmentDurationMin
+            )
+
+    val maxHistoryDays: StateFlow<Long> =
+        serverSettings.map { it.maxHistoryDays }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().maxHistoryDays
+            )
+
+    val logLevel: StateFlow<LoggerX.LogLevel> =
+        serverSettings.map { it.logLevel }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = ServerSettings().logLevel
+            )
+
+    val gamePackages: StateFlow<Set<String>> =
+        statisticsSettings.map { it.gamePackages }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().gamePackages
+            )
+
+    val gameBlacklist: StateFlow<Set<String>> =
+        statisticsSettings.map { it.gameBlacklist }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().gameBlacklist
+            )
+
+    val sceneStatsRecentFileCount: StateFlow<Int> =
+        statisticsSettings.map { it.sceneStatsRecentFileCount }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().sceneStatsRecentFileCount
+            )
+
+    val predCurrentSessionWeightEnabled: StateFlow<Boolean> =
+        statisticsSettings.map { it.predCurrentSessionWeightEnabled }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().predCurrentSessionWeightEnabled
+            )
+
+    val predCurrentSessionWeightMaxX100: StateFlow<Int> =
+        statisticsSettings.map { it.predCurrentSessionWeightMaxX100 }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().predCurrentSessionWeightMaxX100
+            )
+
+    val predCurrentSessionWeightHalfLifeMin: StateFlow<Long> =
+        statisticsSettings.map { it.predCurrentSessionWeightHalfLifeMin }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = StatisticsSettings().predCurrentSessionWeightHalfLifeMin
+            )
+
     fun init(context: Context) {
-        if (!::prefs.isInitialized) {
-            prefs = context.getSharedPreferences(
-                ConfigConstants.PREFS_NAME,
-                Context.MODE_PRIVATE
-            )
-            loadSettings()
-        }
+        if (::prefs.isInitialized) return
+        prefs = SharedSettings.getPreferences(context)
+        loadSettings()
     }
 
-    /**
-     * 从 SharedPreferences 加载设置
-     */
     private fun loadSettings() {
-        _checkUpdateOnStartup.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_CHECK_UPDATE_ON_STARTUP,
-                ConfigConstants.DEF_CHECK_UPDATE_ON_STARTUP
-            )
+        val currentAppSettings = SharedSettings.readAppSettings(prefs)
+        val currentStatisticsSettings = SharedSettings.readStatisticsSettings(prefs)
+        val currentServerSettings = SharedSettings.readServerSettings(prefs)
 
-        _dualCellEnabled.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_DUAL_CELL_ENABLED,
-                ConfigConstants.DEF_DUAL_CELL_ENABLED
-            )
-
-        _dischargeDisplayPositive.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_DISCHARGE_DISPLAY_POSITIVE,
-                ConfigConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
-            )
-
-        _calibrationValue.value =
-            prefs.getInt(
-                ConfigConstants.KEY_CALIBRATION_VALUE,
-                ConfigConstants.DEF_CALIBRATION_VALUE
-            ).coerceIn(
-                ConfigConstants.MIN_CALIBRATION_VALUE,
-                ConfigConstants.MAX_CALIBRATION_VALUE
-            )
-
-        _recordIntervalMs.value =
-            prefs.getLong(
-                ConfigConstants.KEY_RECORD_INTERVAL_MS,
-                ConfigConstants.DEF_RECORD_INTERVAL_MS
-            ).coerceIn(
-                ConfigConstants.MIN_RECORD_INTERVAL_MS,
-                ConfigConstants.MAX_RECORD_INTERVAL_MS
-            )
-
-        _writeLatencyMs.value =
-            prefs.getLong(
-                ConfigConstants.KEY_WRITE_LATENCY_MS,
-                ConfigConstants.DEF_WRITE_LATENCY_MS
-            ).coerceIn(
-                ConfigConstants.MIN_WRITE_LATENCY_MS,
-                ConfigConstants.MAX_WRITE_LATENCY_MS
-            )
-
-        _batchSize.value =
-            prefs.getInt(
-                ConfigConstants.KEY_BATCH_SIZE,
-                ConfigConstants.DEF_BATCH_SIZE
-            ).coerceIn(
-                ConfigConstants.MIN_BATCH_SIZE,
-                ConfigConstants.MAX_BATCH_SIZE
-            )
-
-        _screenOffRecord.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED,
-                ConfigConstants.DEF_SCREEN_OFF_RECORD_ENABLED
-            )
-
-        _alwaysPollingScreenStatusEnabled.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED,
-                ConfigConstants.DEF_ALWAYS_POLLING_SCREEN_STATUS_ENABLED
-            )
-
-        _segmentDurationMin.value =
-            prefs.getLong(
-                ConfigConstants.KEY_SEGMENT_DURATION_MIN,
-                ConfigConstants.DEF_SEGMENT_DURATION_MIN
-            ).coerceIn(
-                ConfigConstants.MIN_SEGMENT_DURATION_MIN,
-                ConfigConstants.MAX_SEGMENT_DURATION_MIN
-            )
-
-        _rootBootAutoStartEnabled.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_ROOT_BOOT_AUTO_START_ENABLED,
-                ConfigConstants.DEF_ROOT_BOOT_AUTO_START_ENABLED
-            )
-
-        _maxHistoryDays.value =
-            prefs.getLong(
-                ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS,
-                ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS
-            ).coerceAtLeast(
-                ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS
-            )
-
-        _logLevel.value =
-            LoggerX.LogLevel.fromPriority(
-                prefs.getInt(
-                    ConfigConstants.KEY_LOG_LEVEL,
-                    ConfigConstants.DEF_LOG_LEVEL.priority
-                )
-            )
-
-        serverConfig = Config(
-            recordIntervalMs = _recordIntervalMs.value,
-            writeLatencyMs = _writeLatencyMs.value,
-            batchSize = _batchSize.value,
-            screenOffRecordEnabled = _screenOffRecord.value,
-            segmentDurationMin = _segmentDurationMin.value,
-            maxHistoryDays = _maxHistoryDays.value,
-            logLevel = _logLevel.value,
-            alwaysPollingScreenStatusEnabled = _alwaysPollingScreenStatusEnabled.value
-        )
-        LoggerX.d(TAG, 
-            "[设置] loadSettings 完成: intervalMs=${serverConfig.recordIntervalMs} writeLatencyMs=${serverConfig.writeLatencyMs} " +
-                "batchSize=${serverConfig.batchSize} screenOffRecord=${serverConfig.screenOffRecordEnabled} " +
-                "polling=${serverConfig.alwaysPollingScreenStatusEnabled} logLevel=${serverConfig.logLevel}"
-        )
-        LoggerX.maxHistoryDays = _maxHistoryDays.value
-        LoggerX.logLevel = _logLevel.value
-
-        _gamePackages.value =
-            prefs.getStringSet(ConfigConstants.KEY_GAME_PACKAGES, emptySet()) ?: emptySet()
-
-        _gameBlacklist.value =
-            prefs.getStringSet(ConfigConstants.KEY_GAME_BLACKLIST, emptySet()) ?: emptySet()
-
-        _sceneStatsRecentFileCount.value =
-            prefs.getInt(
-                ConfigConstants.KEY_SCENE_STATS_RECENT_FILE_COUNT,
-                ConfigConstants.DEF_SCENE_STATS_RECENT_FILE_COUNT
-            ).coerceIn(
-                ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
-                ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
-            )
-
-        _predCurrentSessionWeightEnabled.value =
-            prefs.getBoolean(
-                ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_ENABLED,
-                ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_ENABLED
-            )
-
-        _predCurrentSessionWeightMaxX100.value =
-            prefs.getInt(
-                ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-            ).coerceIn(
-                ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-            )
-
-        _predCurrentSessionWeightHalfLifeMin.value =
-            prefs.getLong(
-                ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-                ConfigConstants.DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-            ).coerceIn(
-                ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-                ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-            )
-
-        refreshCombinedState()
+        _appSettings.value = currentAppSettings
+        _statisticsSettings.value = currentStatisticsSettings
+        _serverSettings.value = currentServerSettings
+        applyLoggerSettings(currentServerSettings)
         _initialized.value = true
+
+        LoggerX.d(
+            TAG,
+            "[设置] loadSettings 完成: intervalMs=${currentServerSettings.recordIntervalMs} writeLatencyMs=${currentServerSettings.writeLatencyMs} batchSize=${currentServerSettings.batchSize} screenOffRecord=${currentServerSettings.screenOffRecordEnabled} polling=${currentServerSettings.alwaysPollingScreenStatusEnabled} logLevel=${currentServerSettings.logLevel}"
+        )
     }
 
-    /**
-     * 更新双电芯设置
-     */
     fun setCheckUpdateOnStartup(enabled: Boolean) {
         viewModelScope.launch {
-            prefs.edit { putBoolean(ConfigConstants.KEY_CHECK_UPDATE_ON_STARTUP, enabled) }
-            _checkUpdateOnStartup.value = enabled
-            refreshCombinedState()
+            prefs.edit {
+                putBoolean(AppSettingKeys.CHECK_UPDATE_ON_STARTUP, enabled)
+            }
+            _appSettings.value = _appSettings.value.copy(checkUpdateOnStartup = enabled)
         }
     }
 
     fun setDualCellEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            prefs.edit { putBoolean(ConfigConstants.KEY_DUAL_CELL_ENABLED, enabled) }
-            _dualCellEnabled.value = enabled
-            refreshCombinedState()
+            prefs.edit {
+                putBoolean(AppSettingKeys.DUAL_CELL_ENABLED, enabled)
+            }
+            _appSettings.value = _appSettings.value.copy(dualCellEnabled = enabled)
         }
     }
 
-    /**
-     * 更新校准值
-     */
     fun setDischargeDisplayPositiveEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            prefs.edit { putBoolean(ConfigConstants.KEY_DISCHARGE_DISPLAY_POSITIVE, enabled) }
-            _dischargeDisplayPositive.value = enabled
-            refreshCombinedState()
+            prefs.edit {
+                putBoolean(AppSettingKeys.DISCHARGE_DISPLAY_POSITIVE, enabled)
+            }
+            _appSettings.value = _appSettings.value.copy(dischargeDisplayPositive = enabled)
         }
     }
 
     fun setCalibrationValue(value: Int) {
-        val finalValue =
-            value.coerceIn(
-                ConfigConstants.MIN_CALIBRATION_VALUE,
-                ConfigConstants.MAX_CALIBRATION_VALUE
-            )
+        val finalValue = SharedSettings.normalizeCalibrationValue(value)
         viewModelScope.launch {
-            prefs.edit { putInt(ConfigConstants.KEY_CALIBRATION_VALUE, finalValue) }
-            _calibrationValue.value = finalValue
-            refreshCombinedState()
+            prefs.edit {
+                putInt(AppSettingKeys.CALIBRATION_VALUE, finalValue)
+            }
+            _appSettings.value = _appSettings.value.copy(calibrationValue = finalValue)
         }
     }
 
-    /**
-     * 更新采样间隔
-     */
     fun setRecordIntervalMs(value: Long) {
-        val finalValue =
-            value.coerceIn(
-                ConfigConstants.MIN_RECORD_INTERVAL_MS,
-                ConfigConstants.MAX_RECORD_INTERVAL_MS
-            )
+        val finalValue = SharedSettings.normalizeRecordIntervalMs(value)
         viewModelScope.launch {
-            prefs.edit { putLong(ConfigConstants.KEY_RECORD_INTERVAL_MS, finalValue) }
-            _recordIntervalMs.value = finalValue
-            serverConfig = serverConfig.copy(recordIntervalMs = finalValue)
-            LoggerX.i(TAG, "[设置] 更新记录间隔并准备下发: intervalMs=$finalValue")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putLong(ServerSettingKeys.RECORD_INTERVAL_MS, finalValue)
+            }
+            _serverSettings.value = _serverSettings.value.copy(recordIntervalMs = finalValue)
+            pushServerConfig(_serverSettings.value, "[设置] 更新记录间隔并准备下发: intervalMs=$finalValue")
         }
     }
 
-    /**
-     * 更新写入延迟
-     */
     fun setWriteLatencyMs(value: Long) {
-        val finalValue =
-            value.coerceIn(
-                ConfigConstants.MIN_WRITE_LATENCY_MS,
-                ConfigConstants.MAX_WRITE_LATENCY_MS
-            )
+        val finalValue = SharedSettings.normalizeWriteLatencyMs(value)
         viewModelScope.launch {
-            prefs.edit { putLong(ConfigConstants.KEY_WRITE_LATENCY_MS, finalValue) }
-            _writeLatencyMs.value = finalValue
-            serverConfig = serverConfig.copy(writeLatencyMs = finalValue)
-            LoggerX.i(TAG, "[设置] 更新写入延迟并准备下发: writeLatencyMs=$finalValue")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putLong(ServerSettingKeys.WRITE_LATENCY_MS, finalValue)
+            }
+            _serverSettings.value = _serverSettings.value.copy(writeLatencyMs = finalValue)
+            pushServerConfig(_serverSettings.value, "[设置] 更新写入延迟并准备下发: writeLatencyMs=$finalValue")
         }
     }
 
-    /**
-     * 更新批次大小
-     */
     fun setBatchSize(value: Int) {
-        val finalValue =
-            value.coerceIn(ConfigConstants.MIN_BATCH_SIZE, ConfigConstants.MAX_BATCH_SIZE)
+        val finalValue = SharedSettings.normalizeBatchSize(value)
         viewModelScope.launch {
-            prefs.edit { putInt(ConfigConstants.KEY_BATCH_SIZE, finalValue) }
-            _batchSize.value = finalValue
-            serverConfig = serverConfig.copy(batchSize = finalValue)
-            LoggerX.i(TAG, "[设置] 更新批次大小并准备下发: batchSize=$finalValue")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putInt(ServerSettingKeys.BATCH_SIZE, finalValue)
+            }
+            _serverSettings.value = _serverSettings.value.copy(batchSize = finalValue)
+            pushServerConfig(_serverSettings.value, "[设置] 更新批次大小并准备下发: batchSize=$finalValue")
         }
     }
 
     fun setScreenOffRecordEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            prefs.edit { putBoolean(ConfigConstants.KEY_SCREEN_OFF_RECORD_ENABLED, enabled) }
-            _screenOffRecord.value = enabled
-            serverConfig = serverConfig.copy(screenOffRecordEnabled = enabled)
-            LoggerX.i(TAG, "[设置] 更新息屏记录并准备下发: enabled=$enabled")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putBoolean(ServerSettingKeys.SCREEN_OFF_RECORD_ENABLED, enabled)
+            }
+            _serverSettings.value = _serverSettings.value.copy(screenOffRecordEnabled = enabled)
+            pushServerConfig(_serverSettings.value, "[设置] 更新息屏记录并准备下发: enabled=$enabled")
         }
     }
 
     fun setAlwaysPollingScreenStatusEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            prefs.edit { putBoolean(ConfigConstants.KEY_ALWAYS_POLLING_SCREEN_STATUS_ENABLED, enabled) }
-            _alwaysPollingScreenStatusEnabled.value = enabled
-            serverConfig = serverConfig.copy(alwaysPollingScreenStatusEnabled = enabled)
-            LoggerX.i(TAG, "[设置] 更新轮询亮屏状态并准备下发: enabled=$enabled")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putBoolean(ServerSettingKeys.ALWAYS_POLLING_SCREEN_STATUS_ENABLED, enabled)
+            }
+            _serverSettings.value =
+                _serverSettings.value.copy(alwaysPollingScreenStatusEnabled = enabled)
+            pushServerConfig(_serverSettings.value, "[设置] 更新轮询亮屏状态并准备下发: enabled=$enabled")
         }
     }
 
     fun setSegmentDurationMin(value: Long) {
-        val finalValue =
-            value.coerceIn(
-                ConfigConstants.MIN_SEGMENT_DURATION_MIN,
-                ConfigConstants.MAX_SEGMENT_DURATION_MIN
-            )
+        val finalValue = SharedSettings.normalizeSegmentDurationMin(value)
         viewModelScope.launch {
-            prefs.edit { putLong(ConfigConstants.KEY_SEGMENT_DURATION_MIN, finalValue) }
-            _segmentDurationMin.value = finalValue
-            serverConfig = serverConfig.copy(segmentDurationMin = finalValue)
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            prefs.edit {
+                putLong(ServerSettingKeys.SEGMENT_DURATION_MIN, finalValue)
+            }
+            _serverSettings.value = _serverSettings.value.copy(segmentDurationMin = finalValue)
+            pushServerConfig(_serverSettings.value, "[设置] 更新分段时长并准备下发: value=$finalValue")
         }
     }
 
     fun setRootBootAutoStartEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(ConfigConstants.KEY_ROOT_BOOT_AUTO_START_ENABLED, enabled)
+                putBoolean(AppSettingKeys.ROOT_BOOT_AUTO_START_ENABLED, enabled)
             }
-            _rootBootAutoStartEnabled.value = enabled
-            refreshCombinedState()
+            _appSettings.value = _appSettings.value.copy(rootBootAutoStartEnabled = enabled)
         }
     }
 
-    /**
-     * 更新日志文件保留天数。
-     *
-     * @param value 用户输入的目标天数，最小为 1。
-     * @return 无返回值。
-     */
     fun setMaxHistoryDays(value: Long) {
-        val finalValue = value.coerceAtLeast(ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS)
+        val finalValue = SharedSettings.normalizeMaxHistoryDays(value)
         viewModelScope.launch {
             prefs.edit {
-                putLong(ConfigConstants.KEY_LOG_MAX_HISTORY_DAYS, finalValue)
+                putLong(ServerSettingKeys.MAX_HISTORY_DAYS, finalValue)
             }
-            _maxHistoryDays.value = finalValue
-            LoggerX.maxHistoryDays = finalValue
-            serverConfig = serverConfig.copy(maxHistoryDays = finalValue)
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            _serverSettings.value = _serverSettings.value.copy(maxHistoryDays = finalValue)
+            applyLoggerSettings(_serverSettings.value)
+            pushServerConfig(_serverSettings.value, "[设置] 更新日志保留天数并准备下发: maxHistoryDays=$finalValue")
         }
     }
 
-    /**
-     * 更新日志输出级别。
-     *
-     * @param value 新的日志级别。
-     * @return 无返回值。
-     */
     fun setLogLevel(value: LoggerX.LogLevel) {
         viewModelScope.launch {
             prefs.edit {
-                putInt(ConfigConstants.KEY_LOG_LEVEL, value.priority)
+                putInt(ServerSettingKeys.LOG_LEVEL, SharedSettings.encodeLogLevel(value))
             }
-            _logLevel.value = value
-            LoggerX.logLevel = value
-            serverConfig = serverConfig.copy(logLevel = value)
-            LoggerX.i(TAG, "[设置] 更新日志级别并准备下发: logLevel=$value")
-            Service.service?.updateConfig(serverConfig)
-            refreshCombinedState()
+            _serverSettings.value = _serverSettings.value.copy(logLevel = value)
+            applyLoggerSettings(_serverSettings.value)
+            pushServerConfig(_serverSettings.value, "[设置] 更新日志级别并准备下发: logLevel=$value")
         }
     }
 
     fun setGamePackages(packages: Set<String>, detectedGamePkgs: Set<String>) {
         viewModelScope.launch {
-            // 用户取消勾选的自动检测游戏 → 加入 blacklist
-            val newBlacklist = _gameBlacklist.value + (detectedGamePkgs - packages)
+            val current = _statisticsSettings.value
+            val newBlacklist = current.gameBlacklist + (detectedGamePkgs - packages)
+            val updated = current.copy(
+                gamePackages = packages,
+                gameBlacklist = newBlacklist
+            )
             prefs.edit {
-                putStringSet(ConfigConstants.KEY_GAME_PACKAGES, packages)
-                putStringSet(ConfigConstants.KEY_GAME_BLACKLIST, newBlacklist)
+                putStringSet(StatisticsSettingKeys.GAME_PACKAGES, packages)
+                putStringSet(StatisticsSettingKeys.GAME_BLACKLIST, newBlacklist)
             }
-            _gamePackages.value = packages
-            _gameBlacklist.value = newBlacklist
-            refreshCombinedState()
+            _statisticsSettings.value = updated
         }
     }
 
     fun setSceneStatsRecentFileCount(value: Int) {
-        val finalValue = value.coerceIn(
-            ConfigConstants.MIN_SCENE_STATS_RECENT_FILE_COUNT,
-            ConfigConstants.MAX_SCENE_STATS_RECENT_FILE_COUNT
-        )
+        val finalValue = SharedSettings.normalizeSceneStatsRecentFileCount(value)
         viewModelScope.launch {
-            prefs.edit { putInt(ConfigConstants.KEY_SCENE_STATS_RECENT_FILE_COUNT, finalValue) }
-            _sceneStatsRecentFileCount.value = finalValue
-            refreshCombinedState()
+            prefs.edit {
+                putInt(StatisticsSettingKeys.SCENE_STATS_RECENT_FILE_COUNT, finalValue)
+            }
+            _statisticsSettings.value =
+                _statisticsSettings.value.copy(sceneStatsRecentFileCount = finalValue)
         }
     }
 
     fun setPredCurrentSessionWeightEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                putBoolean(
-                    ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_ENABLED,
-                    enabled
-                )
+                putBoolean(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_ENABLED, enabled)
             }
-            _predCurrentSessionWeightEnabled.value = enabled
-            refreshCombinedState()
+            _statisticsSettings.value =
+                _statisticsSettings.value.copy(predCurrentSessionWeightEnabled = enabled)
         }
     }
 
     fun setPredCurrentSessionWeightMaxX100(value: Int) {
-        val finalValue = value.coerceIn(
-            ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-            ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_MAX_X100
-        )
+        val finalValue = SharedSettings.normalizePredCurrentSessionWeightMaxX100(value)
         viewModelScope.launch {
             prefs.edit {
-                putInt(
-                    ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_MAX_X100,
-                    finalValue
-                )
+                putInt(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_MAX_X100, finalValue)
             }
-            _predCurrentSessionWeightMaxX100.value = finalValue
-            refreshCombinedState()
+            _statisticsSettings.value =
+                _statisticsSettings.value.copy(predCurrentSessionWeightMaxX100 = finalValue)
         }
     }
 
     fun setPredCurrentSessionWeightHalfLifeMin(value: Long) {
-        val finalValue = value.coerceIn(
-            ConfigConstants.MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-            ConfigConstants.MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN
-        )
+        val finalValue = SharedSettings.normalizePredCurrentSessionWeightHalfLifeMin(value)
         viewModelScope.launch {
             prefs.edit {
-                putLong(
-                    ConfigConstants.KEY_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN,
-                    finalValue
-                )
+                putLong(StatisticsSettingKeys.PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN, finalValue)
             }
-            _predCurrentSessionWeightHalfLifeMin.value = finalValue
-            refreshCombinedState()
+            _statisticsSettings.value =
+                _statisticsSettings.value.copy(predCurrentSessionWeightHalfLifeMin = finalValue)
         }
     }
 
-    private fun buildSettingsUiState(): SettingsUiState {
-        return SettingsUiState(
-            checkUpdateOnStartup = _checkUpdateOnStartup.value,
-            dualCellEnabled = _dualCellEnabled.value,
-            dischargeDisplayPositive = _dischargeDisplayPositive.value,
-            calibrationValue = _calibrationValue.value,
-            recordIntervalMs = _recordIntervalMs.value,
-            writeLatencyMs = _writeLatencyMs.value,
-            batchSize = _batchSize.value,
-            recordScreenOffEnabled = _screenOffRecord.value,
-            alwaysPollingScreenStatusEnabled = _alwaysPollingScreenStatusEnabled.value,
-            segmentDurationMin = _segmentDurationMin.value,
-            rootBootAutoStartEnabled = _rootBootAutoStartEnabled.value,
-            maxHistoryDays = _maxHistoryDays.value,
-            logLevel = _logLevel.value,
-            gamePackages = _gamePackages.value,
-            gameBlacklist = _gameBlacklist.value,
-            sceneStatsRecentFileCount = _sceneStatsRecentFileCount.value,
-            predCurrentSessionWeightEnabled = _predCurrentSessionWeightEnabled.value,
-            predCurrentSessionWeightMaxX100 = _predCurrentSessionWeightMaxX100.value,
-            predCurrentSessionWeightHalfLifeMin = _predCurrentSessionWeightHalfLifeMin.value
-        )
-    }
-
-    private fun buildStatisticsRequest(): StatisticsRequest {
-        return StatisticsRequest(
-            gamePackages = _gamePackages.value,
-            sceneStatsRecentFileCount = _sceneStatsRecentFileCount.value,
-            recordIntervalMs = _recordIntervalMs.value,
-            predCurrentSessionWeightEnabled = _predCurrentSessionWeightEnabled.value,
-            predCurrentSessionWeightMaxX100 = _predCurrentSessionWeightMaxX100.value,
-            predCurrentSessionWeightHalfLifeMin = _predCurrentSessionWeightHalfLifeMin.value
-        )
-    }
-
-    private fun refreshCombinedState() {
-        _settingsUiState.value = buildSettingsUiState()
-        _statisticsRequest.value = buildStatisticsRequest()
-    }
-
-    /**
-     * 重新加载设置（从 SharedPreferences）
-     */
     fun reloadSettings() {
         if (::prefs.isInitialized) {
             loadSettings()
         }
+    }
+
+    private fun pushServerConfig(settings: ServerSettings, message: String) {
+        LoggerX.i(TAG, message)
+        Service.service?.updateConfig(ServerSettingsMapper.toConfig(settings))
+    }
+
+    private fun applyLoggerSettings(settings: ServerSettings) {
+        LoggerX.maxHistoryDays = settings.maxHistoryDays
+        LoggerX.logLevel = settings.logLevel
     }
 }

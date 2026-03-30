@@ -3,16 +3,12 @@ package yangfentuozi.batteryrecorder.ui.viewmodel
 import android.content.Context
 import yangfentuozi.batteryrecorder.data.history.HistoryRecord
 import yangfentuozi.batteryrecorder.data.history.HistorySummary
-import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.data.model.ChartPoint
-import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
+import yangfentuozi.batteryrecorder.shared.config.SharedSettings
+import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 
 internal fun getDischargeDisplayPositive(context: Context): Boolean {
-    return context.getSharedPreferences(ConfigConstants.PREFS_NAME, Context.MODE_PRIVATE)
-        .getBoolean(
-            ConfigConstants.KEY_DISCHARGE_DISPLAY_POSITIVE,
-            ConfigConstants.DEF_DISCHARGE_DISPLAY_POSITIVE
-        )
+    return SharedSettings.readAppSettings(context).dischargeDisplayPositive
 }
 
 internal fun mapHistoryRecordForDisplay(

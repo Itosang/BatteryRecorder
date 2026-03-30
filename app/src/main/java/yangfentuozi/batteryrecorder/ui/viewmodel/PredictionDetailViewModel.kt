@@ -14,8 +14,8 @@ import kotlinx.coroutines.withContext
 import yangfentuozi.batteryrecorder.data.history.AppStatsComputer
 import yangfentuozi.batteryrecorder.data.history.BatteryPredictor
 import yangfentuozi.batteryrecorder.data.history.HistoryRepository
-import yangfentuozi.batteryrecorder.data.history.StatisticsRequest
 import yangfentuozi.batteryrecorder.data.history.SyncUtil
+import yangfentuozi.batteryrecorder.shared.config.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
@@ -55,7 +55,8 @@ class PredictionDetailViewModel : ViewModel() {
      */
     fun load(
         context: Context,
-        request: StatisticsRequest
+        request: StatisticsSettings,
+        recordIntervalMs: Long
     ) {
         val generation = ++loadGeneration
         loadJob?.cancel()
@@ -76,6 +77,7 @@ class PredictionDetailViewModel : ViewModel() {
                     val appStats = AppStatsComputer.compute(
                         context = context,
                         request = request,
+                        recordIntervalMs = recordIntervalMs,
                         currentDischargeFileName = latestDischargeRecord?.name
                     )
                     appStats.entries.mapNotNull { entry ->

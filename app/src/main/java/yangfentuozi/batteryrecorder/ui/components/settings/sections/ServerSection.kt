@@ -16,15 +16,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
 import yangfentuozi.batteryrecorder.startup.BootAutoStartNotification
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
 import yangfentuozi.batteryrecorder.ui.dialog.settings.BatchSizeDialog
+import yangfentuozi.batteryrecorder.ui.dialog.settings.LogLevelDialog
+import yangfentuozi.batteryrecorder.ui.dialog.settings.LogLevelDialogConfig
+import yangfentuozi.batteryrecorder.ui.dialog.settings.LogValueDialog
+import yangfentuozi.batteryrecorder.ui.dialog.settings.LogValueDialogConfig
 import yangfentuozi.batteryrecorder.ui.dialog.settings.RecordIntervalDialog
 import yangfentuozi.batteryrecorder.ui.dialog.settings.SegmentDurationDialog
 import yangfentuozi.batteryrecorder.ui.dialog.settings.WriteLatencyDialog
 import yangfentuozi.batteryrecorder.ui.model.SettingsUiProps
+import yangfentuozi.batteryrecorder.ui.model.displayName
 import kotlin.math.round
 
 @Composable
@@ -34,16 +40,19 @@ fun ServerSection(
     val context = LocalContext.current
     val state = props.state
     val actions = props.actions.server
+    val logActions = props.actions.log
     var showRecordIntervalDialog by remember { mutableStateOf(false) }
     var showWriteLatencyDialog by remember { mutableStateOf(false) }
     var showBatchSizeDialog by remember { mutableStateOf(false) }
     var showSegmentDurationDialog by remember { mutableStateOf(false) }
+    var showHistoryDaysDialog by remember { mutableStateOf(false) }
+    var showLogLevelDialog by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
     SplicedColumnGroup(
-        title = "服务端",
+        title = "服务端与采样",
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {
@@ -119,6 +128,20 @@ fun ServerSection(
                 summary = summary
             ) { showSegmentDurationDialog = true }
         }
+
+        item {
+            SettingsItem(
+                title = "日志保留天数",
+                summary = "${state.maxHistoryDays} 天"
+            ) { showHistoryDaysDialog = true }
+        }
+
+        item {
+            SettingsItem(
+                title = "日志级别",
+                summary = state.logLevel.displayName
+            ) { showLogLevelDialog = true }
+        }
     }
 
     // 采样间隔对话框
@@ -132,7 +155,7 @@ fun ServerSection(
                 showRecordIntervalDialog = false
             },
             onReset = {
-                actions.setRecordIntervalMs(1000)
+                actions.setRecordIntervalMs(ConfigConstants.DEF_RECORD_INTERVAL_MS)
                 showRecordIntervalDialog = false
             }
         )
@@ -149,7 +172,7 @@ fun ServerSection(
                 showWriteLatencyDialog = false
             },
             onReset = {
-                actions.setWriteLatencyMs(30000)
+                actions.setWriteLatencyMs(ConfigConstants.DEF_WRITE_LATENCY_MS)
                 showWriteLatencyDialog = false
             }
         )
@@ -165,7 +188,7 @@ fun ServerSection(
                 showBatchSizeDialog = false
             },
             onReset = {
-                actions.setBatchSize(200)
+                actions.setBatchSize(ConfigConstants.DEF_BATCH_SIZE)
                 showBatchSizeDialog = false
             }
         )
@@ -181,9 +204,50 @@ fun ServerSection(
                 showSegmentDurationDialog = false
             },
             onReset = {
-                actions.setSegmentDurationMin(1440)
+                actions.setSegmentDurationMin(ConfigConstants.DEF_SEGMENT_DURATION_MIN)
                 showSegmentDurationDialog = false
             }
+        )
+    }
+
+    if (showHistoryDaysDialog) {
+        LogValueDialog(
+            config = LogValueDialogConfig(
+                title = "日志保留天数",
+                label = "保留天数",
+                currentValue = state.maxHistoryDays.toString(),
+                errorMessage = "请输入大于等于 ${ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS} 的整数",
+                parser = { rawValue ->
+                    rawValue.toLongOrNull()
+                        ?.takeIf { it >= ConfigConstants.MIN_LOG_MAX_HISTORY_DAYS }
+                },
+                onDismiss = { showHistoryDaysDialog = false },
+                onSave = { parsedValue ->
+                    logActions.setMaxHistoryDays(parsedValue)
+                    showHistoryDaysDialog = false
+                },
+                onReset = {
+                    logActions.setMaxHistoryDays(ConfigConstants.DEF_LOG_MAX_HISTORY_DAYS)
+                    showHistoryDaysDialog = false
+                }
+            )
+        )
+    }
+
+    if (showLogLevelDialog) {
+        LogLevelDialog(
+            config = LogLevelDialogConfig(
+                currentValue = state.logLevel,
+                onDismiss = { showLogLevelDialog = false },
+                onSave = { level ->
+                    logActions.setLogLevel(level)
+                    showLogLevelDialog = false
+                },
+                onReset = {
+                    logActions.setLogLevel(ConfigConstants.DEF_LOG_LEVEL)
+                    showLogLevelDialog = false
+                }
+            )
         )
     }
 }

@@ -4,6 +4,7 @@ import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 object ConfigConstants {
     const val PREFS_NAME = "app_settings"
+
     // server
     /** 记录间隔（毫秒） */
     const val KEY_RECORD_INTERVAL_MS = "record_interval_ms"
@@ -42,7 +43,6 @@ object ConfigConstants {
     const val DEF_ROOT_BOOT_AUTO_START_ENABLED = false
     const val KEY_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT = "root_boot_auto_start_last_boot_count"
     const val DEF_ROOT_BOOT_AUTO_START_LAST_BOOT_COUNT = -1
-
 
     // app
     /** 是否启用双电芯模式 */
@@ -86,7 +86,8 @@ object ConfigConstants {
     const val DEF_PRED_CURRENT_SESSION_WEIGHT_MAX_X100 = 300
 
     /** 当次记录加权半衰期（分钟） */
-    const val KEY_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = "pred_current_session_weight_half_life_min"
+    const val KEY_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN =
+        "pred_current_session_weight_half_life_min"
     const val MIN_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = 5L
     const val MAX_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = 60L
     const val DEF_PRED_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = 30L

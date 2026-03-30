@@ -7,7 +7,8 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import yangfentuozi.batteryrecorder.shared.config.ConfigConstants
-import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
+import yangfentuozi.batteryrecorder.shared.config.ServerSettingsMapper
+import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 private const val TAG = "ConfigProvider"
@@ -25,8 +26,10 @@ class ConfigProvider : ContentProvider() {
                 Context.MODE_PRIVATE
             )
             return Bundle().apply {
+                val serverSettings = SharedSettings.readServerSettings(prefs)
                 putParcelable(
-                    "config", ConfigUtil.getConfigBySharedPreferences(prefs)
+                    "config",
+                    ServerSettingsMapper.toConfig(serverSettings)
                 )
             }
         }

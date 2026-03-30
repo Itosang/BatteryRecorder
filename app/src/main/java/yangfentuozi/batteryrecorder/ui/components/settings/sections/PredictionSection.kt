@@ -26,7 +26,7 @@ fun PredictionSection(
     var showRecentCountDialog by remember { mutableStateOf(false) }
 
     SplicedColumnGroup(
-        title = "预测",
+        title = "统计与预测",
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {
