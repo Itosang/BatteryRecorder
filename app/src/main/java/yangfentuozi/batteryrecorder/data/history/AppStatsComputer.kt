@@ -64,7 +64,7 @@ object AppStatsComputer {
      * 基于放电文件聚合应用前台统计。
      *
      * 展示功率使用原始时长口径，预测时长使用 effective 时长/掉电口径，
-     * 这样开启加权算法后不会污染“应用平均功率”的展示含义。
+     * 这样当前文件时间衰减不会污染“应用平均功率”的展示含义。
      */
     fun compute(
         context: Context,

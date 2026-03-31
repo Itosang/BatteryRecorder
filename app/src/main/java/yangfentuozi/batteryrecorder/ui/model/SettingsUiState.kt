@@ -57,7 +57,7 @@ data class SettingsUiState(
     val gameBlacklist: Set<String> = StatisticsSettings().gameBlacklist,
     /** 样本次数 */
     val sceneStatsRecentFileCount: Int = StatisticsSettings().sceneStatsRecentFileCount,
-    /** 启用加权算法 */
+    /** 启用首页加权算法 */
     val predWeightedAlgorithmEnabled: Boolean = StatisticsSettings().predWeightedAlgorithmEnabled,
     /** 加权强度 */
     val predWeightedAlgorithmAlphaMaxX100: Int = StatisticsSettings().predWeightedAlgorithmAlphaMaxX100

@@ -145,9 +145,7 @@ object DischargeRecordScanner {
         val maxMultiplier = DEFAULT_CURRENT_SESSION_WEIGHT_MAX_MULTIPLIER
         val halfLifeMs = DEFAULT_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN * 60_000.0
         val enableTimeDecayWeight =
-                currentDischargeFileName != null &&
-                maxMultiplier > 1.0 &&
-                halfLifeMs > 0.0
+            currentDischargeFileName != null
         LoggerX.d(TAG, 
             "[预测] 开始扫描放电文件: selected=${files.size} maxGapMs=$maxGapMs enableWeight=$enableTimeDecayWeight current=$currentDischargeFileName"
         )
@@ -201,6 +199,24 @@ object DischargeRecordScanner {
         return summary
     }
 
+    /**
+     * 扫描单个放电文件，并在通过文件级异常校验后生成区间列表。
+     *
+     * 实现分成两阶段：
+     * 1. 首轮遍历只解析原始区间并提前算好时间衰减权重，不立即决定 effective 口径。
+     * 2. 整文件完成后，再根据当前文件门槛决定是否把时间衰减真正应用到
+     *    `effectiveDurationMs / effectiveEnergyMagnitudeRawMs / effectiveCapDrop`。
+     *
+     * 这样可以保证“是否启用当前文件时间衰减”始终由整文件 raw 时长和 raw 掉电统一决定。
+     *
+     * @param file 待扫描的放电记录文件。
+     * @param maxGapMs 允许的最大采样间隔；超过该值的点间隔直接丢弃。
+     * @param currentDischargeFileName 当前活动放电文件名。
+     * @param enableTimeDecayWeight 是否允许当前活动文件启用时间衰减。
+     * @param maxMultiplier 当前文件时间衰减的最大倍率。
+     * @param halfLifeMs 当前文件时间衰减的半衰期，单位毫秒。
+     * @return 单文件扫描结果；失败时只返回拒绝原因，不产出伪造结果。
+     */
     private fun scanFile(
         file: File,
         maxGapMs: Long,

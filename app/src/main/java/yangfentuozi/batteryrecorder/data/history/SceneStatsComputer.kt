@@ -83,6 +83,36 @@ object SceneStatsComputer {
         val effectiveCapDrop: Double
     )
 
+    private data class HomePredictionContributionResult(
+        val contributedToTotals: Boolean = false,
+        val totalDurationMs: Long = 0L,
+        val totalEnergy: Double = 0.0,
+        val totalSocDrop: Double = 0.0,
+        val currentEffectiveMs: Double? = null,
+        val currentK: Double? = null,
+        val historicalKEntry: FileKInput? = null
+    )
+
+    /**
+     * 计算首页场景统计和首页预测输入。
+     *
+     * 该方法同时负责：
+     * 1. 选择最近的放电文件并读取/写入缓存。
+     * 2. 聚合首页展示使用的原始 scene 平均功率。
+     * 3. 聚合首页预测使用的 scene 平均功率。
+     * 4. 统计首页统一非游戏 K 所需的 `kBase / kCurrent / kFallback` 输入。
+     * 5. 生成首页预测失败原因。
+     *
+     * `displayStats` 面向首页场景展示，保留原始口径；
+     * `predictionStats` 只承载首页预测要用的 scene 平均功率；
+     * `homePredictionInputs` 承载首页统一非游戏 K 与置信度相关输入。
+     *
+     * @param context 应用上下文。
+     * @param request 当前统计设置。
+     * @param recordIntervalMs 服务端记录间隔，用于推导采样断档阈值。
+     * @param currentDischargeFileName 当前活动放电文件名；为空时表示不存在当前文件。
+     * @return 同时包含展示统计、预测统计和首页预测输入的聚合结果。
+     */
     fun compute(
         context: Context,
         request: StatisticsSettings,
@@ -268,19 +298,23 @@ object SceneStatsComputer {
                 effectiveEnergy = fileHomeEffectiveOffEnergy + fileHomeEffectiveDailyEnergy,
                 effectiveCapDrop = fileHomeEffectiveNonGameCapDrop
             )
-            collectHomePredictionContribution(
+            val homeContribution = collectHomePredictionContribution(
                 contribution = fileNonGameContribution,
                 currentDischargeFileName = currentDischargeFileName,
-                historicalKEntries = historicalKEntries,
-                onCurrentEffectiveMs = { currentNonGameEffectiveMs = it },
-                onCurrentK = { kCurrent = it },
-                onTotals = { durationMs, energy, socDrop ->
-                    kSampleFileCount += 1
-                    kTotalDurationMs += durationMs
-                    kTotalEnergy += energy
-                    kTotalSocDrop += socDrop
-                }
             )
+            if (homeContribution.contributedToTotals) {
+                kSampleFileCount += 1
+                kTotalDurationMs += homeContribution.totalDurationMs
+                kTotalEnergy += homeContribution.totalEnergy
+                kTotalSocDrop += homeContribution.totalSocDrop
+            }
+            if (homeContribution.currentEffectiveMs != null) {
+                currentNonGameEffectiveMs = homeContribution.currentEffectiveMs
+                kCurrent = homeContribution.currentK
+            }
+            if (homeContribution.historicalKEntry != null) {
+                historicalKEntries += homeContribution.historicalKEntry
+            }
         }
 
         if (usedFileCount <= 0) {
@@ -378,7 +412,7 @@ object SceneStatsComputer {
         val homePredictionInputs = HomePredictionInputs(
             sceneStats = predictionStats,
             weightingEnabled = request.predWeightedAlgorithmEnabled,
-            alphaMax = (request.predWeightedAlgorithmAlphaMaxX100 / 100.0).coerceIn(0.0, 0.8),
+            alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
             kBase = kBase,
             kCurrent = kCurrent,
             kFallback = kFallback,
@@ -412,28 +446,33 @@ object SceneStatsComputer {
         )
     }
 
+    /**
+     * 将单个文件的非游戏贡献转换为首页预测输入增量。
+     *
+     * 当前文件和历史文件在这里分流：
+     * - 所有有贡献的文件都会进入首页统一非游戏 totals。
+     * - 当前文件只产出 `currentEffectiveMs` 和 `currentK`，不进入历史 `kBase` 样本。
+     * - 历史文件只有在掉电达到 3% 且 K 可计算时，才进入 `kBase` 的文件级样本。
+     *
+     * @param contribution 单个文件的非游戏聚合结果。
+     * @param currentDischargeFileName 当前活动放电文件名。
+     * @return 当前文件或历史文件对首页预测输入产生的增量结果。
+     */
     private fun collectHomePredictionContribution(
         contribution: FileNonGameContribution,
         currentDischargeFileName: String?,
-        historicalKEntries: MutableList<FileKInput>,
-        onCurrentEffectiveMs: (Double) -> Unit,
-        onCurrentK: (Double?) -> Unit,
-        onTotals: (durationMs: Long, energy: Double, socDrop: Double) -> Unit
-    ) {
+    ): HomePredictionContributionResult {
         val hasContribution = contribution.rawDurationMs > 0L && contribution.effectiveEnergy > 0.0
         if (!hasContribution) {
-            if (contribution.fileName == currentDischargeFileName) {
-                onCurrentEffectiveMs(0.0)
-                onCurrentK(null)
+            return if (contribution.fileName == currentDischargeFileName) {
+                HomePredictionContributionResult(
+                    currentEffectiveMs = 0.0,
+                    currentK = null
+                )
+            } else {
+                HomePredictionContributionResult()
             }
-            return
         }
-
-        onTotals(
-            contribution.rawDurationMs,
-            contribution.effectiveEnergy,
-            contribution.effectiveCapDrop
-        )
 
         val fileK = if (contribution.effectiveCapDrop > 0.0) {
             contribution.effectiveCapDrop / contribution.effectiveEnergy
@@ -441,18 +480,38 @@ object SceneStatsComputer {
             null
         }
         if (contribution.fileName == currentDischargeFileName) {
-            onCurrentEffectiveMs(contribution.effectiveDurationMs)
-            onCurrentK(fileK)
-            return
-        }
-        if (fileK != null && contribution.effectiveCapDrop >= 3.0) {
-            historicalKEntries += FileKInput(
-                k = fileK,
-                weight = contribution.effectiveCapDrop
+            return HomePredictionContributionResult(
+                contributedToTotals = true,
+                totalDurationMs = contribution.rawDurationMs,
+                totalEnergy = contribution.effectiveEnergy,
+                totalSocDrop = contribution.effectiveCapDrop,
+                currentEffectiveMs = contribution.effectiveDurationMs,
+                currentK = fileK
             )
         }
+        return HomePredictionContributionResult(
+            contributedToTotals = true,
+            totalDurationMs = contribution.rawDurationMs,
+            totalEnergy = contribution.effectiveEnergy,
+            totalSocDrop = contribution.effectiveCapDrop,
+            historicalKEntry = if (fileK != null && contribution.effectiveCapDrop >= 3.0) {
+                FileKInput(
+                    k = fileK,
+                    weight = contribution.effectiveCapDrop
+                )
+            } else {
+                null
+            }
+        )
     }
 
+    /**
+     * 生成扫描阶段失败时的首页预测原因文案。
+     *
+     * @param summary 放电扫描摘要；为空表示没有任何最近放电文件。
+     * @param recordIntervalMs 当前服务端记录间隔。
+     * @return 展示给首页预测卡片的失败原因。
+     */
     private fun buildScanFailureReason(
         summary: DischargeScanSummary?,
         recordIntervalMs: Long
@@ -480,6 +539,22 @@ object SceneStatsComputer {
         return "最近${selected}个放电文件中仅 ${summary.acceptedFileCount} 个通过校验，${rejected} 个被过滤"
     }
 
+    /**
+     * 构造场景统计缓存 key。
+     *
+     * key 需要同时反映：
+     * - 参与统计的文件快照
+     * - 首页高负载排除列表
+     * - 首页样本次数与采样断档阈值
+     * - 首页加权算法相关设置
+     * - 当前活动放电文件
+     *
+     * @param files 当前参与统计的文件列表。
+     * @param request 当前统计设置。
+     * @param recordIntervalMs 服务端记录间隔。
+     * @param currentDischargeFileName 当前活动放电文件名。
+     * @return 场景统计缓存 key。
+     */
     private fun buildCacheKey(
         files: List<File>,
         request: StatisticsSettings,

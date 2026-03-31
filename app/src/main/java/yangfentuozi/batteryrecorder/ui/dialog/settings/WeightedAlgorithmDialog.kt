@@ -44,36 +44,33 @@ fun WeightedAlgorithmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("加权强度") },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("加权强度")
+                Box(
+                    modifier = Modifier
+                        .clip(AppShape.small)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${alphaPercent.roundToInt()}%",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "最大影响",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(AppShape.small)
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${alphaPercent.roundToInt()}%",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
                 Slider(
                     value = alphaPercent,
                     onValueChange = { v ->
@@ -82,11 +79,6 @@ fun WeightedAlgorithmDialog(
                     valueRange = minAlpha..maxAlpha,
                     steps = alphaSteps,
                     modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "控制当前文件最多能影响首页续航预测多少",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },

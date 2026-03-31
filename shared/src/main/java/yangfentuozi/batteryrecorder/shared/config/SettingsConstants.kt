@@ -131,7 +131,7 @@ object SettingsConstants {
             def = true
         )
 
-    /** 是否启用首页/应用预测使用的加权算法 */
+    /** 是否启用首页预测使用的加权算法 */
     val predWeightedAlgorithmEnabled =
         BooleanConfigItem(
             key = "pred_weighted_algorithm_enabled",

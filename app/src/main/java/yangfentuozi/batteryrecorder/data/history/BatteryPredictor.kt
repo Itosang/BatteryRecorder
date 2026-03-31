@@ -93,6 +93,15 @@ object BatteryPredictor {
 
     /**
      * 根据首页专用输入计算“息屏/亮屏日常”预测。
+     *
+     * scene 平均功率只来自 `inputs.sceneStats`，首页统一 K 只来自
+     * `kBase / kCurrent / kFallback` 这三组非游戏口径输入。
+     * 当加权算法开启时，当前文件通过 `alpha = alphaMax * progress`
+     * 决定对最终 K 的影响比例；否则首页只使用历史侧 K。
+     *
+     * @param inputs 首页预测所需的完整输入；为 `null` 或内部字段不足时直接返回数据不足。
+     * @param currentSoc 当前电量百分比。
+     * @return 首页场景预测结果；若输入不足或异常则返回带原因的不足结果。
      */
     fun predict(
         inputs: HomePredictionInputs?,
@@ -120,16 +129,23 @@ object BatteryPredictor {
 
         val currentProgress = computeCurrentProgress(validInputs.currentNonGameEffectiveMs)
         val alpha = if (validInputs.weightingEnabled) {
-            (validInputs.alphaMax * currentProgress).coerceIn(0.0, 0.8)
+            validInputs.alphaMax * currentProgress
         } else {
             0.0
         }
         val baseK = validInputs.kBase
         val currentK = validInputs.kCurrent
-        val finalK = when {
-            alpha <= 0.0 || currentK == null -> baseK ?: validInputs.kFallback
-            baseK != null -> (1.0 - alpha) * baseK + alpha * currentK
-            else -> validInputs.kFallback
+        val (finalK, finalKSource) = when {
+            alpha <= 0.0 || currentK == null -> {
+                if (baseK != null) {
+                    baseK to "kBase"
+                } else {
+                    validInputs.kFallback to "kFallback"
+                }
+            }
+
+            baseK != null -> ((1.0 - alpha) * baseK + alpha * currentK) to "mixed(kBase,kCurrent)"
+            else -> validInputs.kFallback to "kFallback"
         }
         if (finalK == null || finalK <= 0.0 || !finalK.isFinite()) {
             LoggerX.w(TAG, "[预测] 首页预测缺少有效 K 值")
@@ -143,6 +159,10 @@ object BatteryPredictor {
                 insufficientReason = "历史记录未形成有效功耗数据"
             )
         }
+        LoggerX.d(
+            TAG,
+            "[预测] 首页 K 回退: source=$finalKSource alpha=$alpha kBase=$baseK kCurrent=$currentK kFallback=${validInputs.kFallback} finalK=$finalK"
+        )
 
         val overallDrainPerHour =
             validInputs.kTotalSocDrop / validInputs.kTotalDurationMs * 3_600_000.0
@@ -210,6 +230,16 @@ object BatteryPredictor {
         return result
     }
 
+    /**
+     * 将当前文件的非游戏有效时长映射为 0~1 的进度值。
+     *
+     * 10 分钟以内视为当前文件样本尚未形成，进度固定为 0；
+     * 60 分钟及以上视为当前文件信息已经足够，进度固定为 1；
+     * 中间区间按线性比例插值。
+     *
+     * @param currentNonGameEffectiveMs 当前文件非游戏 effective 时长，单位毫秒。
+     * @return 位于 `0.0..1.0` 的当前样本进度。
+     */
     private fun computeCurrentProgress(currentNonGameEffectiveMs: Double): Double {
         if (currentNonGameEffectiveMs <= CURRENT_PROGRESS_START_MS) {
             return 0.0
