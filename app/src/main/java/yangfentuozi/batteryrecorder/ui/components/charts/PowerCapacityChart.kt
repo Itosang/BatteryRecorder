@@ -92,8 +92,8 @@ private val SCREEN_OFF_COLOR = Color(0xFFD32F2F)
 private val LINE_STROKE_WIDTH = 1.3.dp
 private const val APP_ICON_ALPHA = 0.55f
 private const val TEMP_EXPAND_STEP_TENTHS = 100.0    // 10℃
-private const val VOLTAGE_MIN_EXPAND_STEP_UV = 100_000.0 // 0.1V
-private const val VOLTAGE_MAX_EXPAND_STEP_UV = 500_000.0 // 0.5V
+private const val VOLTAGE_AXIS_MIN_UV = 2_500_000.0 // 2.5V
+private const val VOLTAGE_AXIS_MAX_UV = 5_000_000.0 // 5.0V
 // 横屏全屏下记录详情通常会查看长时间段数据，双指平移稍微提速以减少来回拖动次数。
 private const val FULLSCREEN_TWO_FINGER_PAN_SPEED_MULTIPLIER = 2.0f
 
@@ -1667,7 +1667,7 @@ private fun prepareChartState(request: ChartPreparationRequest): ChartPreparatio
             .coerceIn(minPower, maxPower)
     }
     val (minTemp, maxTemp) = computeTempAxisRange(renderFilteredPoints)
-    val (minVoltage, maxVoltage) = computeVoltageAxisRange(renderFilteredPoints)
+    val (minVoltage, maxVoltage) = computeVoltageAxisRange()
     val capacityMarkerPoints = if (isStaticFullscreen) filteredPoints else renderFilteredPoints
     val capacityMarkers = if (request.curveVisibility.showCapacity) {
         computeCapacityMarkers(capacityMarkerPoints)
@@ -2833,26 +2833,9 @@ private fun computeTempAxisRange(points: List<RecordDetailChartPoint>): Pair<Dou
     }
 }
 
-/** 电压轴范围：按数据自动扩展，0.1V 步进，无默认范围与硬限制。 */
-private fun computeVoltageAxisRange(points: List<RecordDetailChartPoint>): Pair<Double, Double> {
-    val validVoltages = points.asSequence()
-        .map { it.voltage.toDouble() }
-        .filter { it > 0.0 }
-        .toList()
-    if (validVoltages.isEmpty()) return 0.0 to VOLTAGE_MAX_EXPAND_STEP_UV
-
-    val observedMin = validVoltages.min()
-    val observedMax = validVoltages.max()
-    val minVoltage =
-        kotlin.math.floor(observedMin / VOLTAGE_MIN_EXPAND_STEP_UV) * VOLTAGE_MIN_EXPAND_STEP_UV
-    val maxVoltage =
-        kotlin.math.ceil(observedMax / VOLTAGE_MAX_EXPAND_STEP_UV) * VOLTAGE_MAX_EXPAND_STEP_UV
-
-    return if (maxVoltage - minVoltage < 1.0) {
-        minVoltage to (minVoltage + VOLTAGE_MAX_EXPAND_STEP_UV)
-    } else {
-        minVoltage to maxVoltage
-    }
+/** 电压轴固定为 2.5V ~ 5.0V，保证所有记录详情图的纵轴一致。 */
+private fun computeVoltageAxisRange(): Pair<Double, Double> {
+    return VOLTAGE_AXIS_MIN_UV to VOLTAGE_AXIS_MAX_UV
 }
 
 /**
