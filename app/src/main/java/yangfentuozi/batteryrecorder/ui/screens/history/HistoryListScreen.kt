@@ -333,7 +333,7 @@ private fun ChargeHistoryFilterBar(
                     start = 16.dp,
                     top = 12.dp,
                     end = 16.dp,
-                    bottom = navigationBarBottomPadding()
+                    bottom = navigationBarBottomPadding() +12.dp
                 ),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {

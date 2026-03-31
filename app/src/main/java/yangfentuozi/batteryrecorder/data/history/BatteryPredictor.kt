@@ -180,9 +180,7 @@ object BatteryPredictor {
         }
 
         val historyConfidence = computeHistoryConfidence(validInputs.kCV, validInputs.kEffectiveN)
-        val confidenceScore = (
-            100 * ((1.0 - alpha) * historyConfidence + alpha * currentProgress)
-            ).roundToInt()
+        val confidenceScore = (100 * historyConfidence).roundToInt()
 
         val screenOffCurrentHours =
             if (sceneStats.screenOffTotalMs >= MIN_SCENE_MS && abs(sceneStats.screenOffAvgPowerRaw) > 0) {
