@@ -145,6 +145,7 @@ object DischargeRecordScanner {
         val maxMultiplier = DEFAULT_CURRENT_SESSION_WEIGHT_MAX_MULTIPLIER
         val halfLifeMs = DEFAULT_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN * 60_000.0
         val enableTimeDecayWeight =
+            request.predWeightedAlgorithmEnabled &&
             currentDischargeFileName != null
         LoggerX.d(TAG, 
             "[预测] 开始扫描放电文件: selected=${files.size} maxGapMs=$maxGapMs enableWeight=$enableTimeDecayWeight current=$currentDischargeFileName"

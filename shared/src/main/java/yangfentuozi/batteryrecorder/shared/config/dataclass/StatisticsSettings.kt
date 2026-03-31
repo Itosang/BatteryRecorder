@@ -14,7 +14,7 @@ data class StatisticsSettings(
     val gameBlacklist: Set<String> = emptySet(),
     /** 统计与预测使用的最近放电文件数量。 */
     val sceneStatsRecentFileCount: Int = SettingsConstants.sceneStatsRecentFileCount.def,
-    /** 是否启用首页预测使用的加权算法。 */
+    /** 是否启用首页/应用预测使用的加权算法。 */
     val predWeightedAlgorithmEnabled: Boolean =
         SettingsConstants.predWeightedAlgorithmEnabled.def,
     /** 首页预测里当前文件可影响结果的最大比例，按百分比整数存储。 */

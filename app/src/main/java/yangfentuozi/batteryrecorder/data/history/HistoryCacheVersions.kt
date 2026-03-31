@@ -5,4 +5,4 @@ package yangfentuozi.batteryrecorder.data.history
  *
  * 只要 AppStats / SceneStats / powerStats 的缓存格式或 cache key 组成发生变化，就统一提升这个版本。
  */
-internal const val HISTORY_STATS_CACHE_VERSION = 12
+internal const val HISTORY_STATS_CACHE_VERSION = 13

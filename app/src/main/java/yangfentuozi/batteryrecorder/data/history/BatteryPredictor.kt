@@ -32,6 +32,7 @@ data class HomePredictionInputs(
     val kSampleFileCount: Int,
     val kTotalEnergy: Double,
     val kTotalSocDrop: Double,
+    val kRawTotalSocDrop: Double,
     val kTotalDurationMs: Long,
     val kCV: Double?,
     val kEffectiveN: Double,
@@ -48,6 +49,7 @@ data class HomePredictionInputs(
             kSampleFileCount.toString(),
             kTotalEnergy.toString(),
             kTotalSocDrop.toString(),
+            kRawTotalSocDrop.toString(),
             kTotalDurationMs.toString(),
             kCV?.toString().orEmpty(),
             kEffectiveN.toString()
@@ -56,7 +58,7 @@ data class HomePredictionInputs(
     companion object {
         fun fromString(sceneStats: SceneStats?, value: String): HomePredictionInputs? {
             val parts = value.split(",")
-            if (parts.size != 12) return null
+            if (parts.size != 13) return null
             return HomePredictionInputs(
                 sceneStats = sceneStats,
                 weightingEnabled = parts[0] == "1",
@@ -68,9 +70,10 @@ data class HomePredictionInputs(
                 kSampleFileCount = parts[6].toIntOrNull() ?: return null,
                 kTotalEnergy = parts[7].toDoubleOrNull() ?: return null,
                 kTotalSocDrop = parts[8].toDoubleOrNull() ?: return null,
-                kTotalDurationMs = parts[9].toLongOrNull() ?: return null,
-                kCV = parts[10].toDoubleOrNull(),
-                kEffectiveN = parts[11].toDoubleOrNull() ?: return null
+                kRawTotalSocDrop = parts[9].toDoubleOrNull() ?: return null,
+                kTotalDurationMs = parts[10].toLongOrNull() ?: return null,
+                kCV = parts[11].toDoubleOrNull(),
+                kEffectiveN = parts[12].toDoubleOrNull() ?: return null
             )
         }
     }
@@ -165,7 +168,7 @@ object BatteryPredictor {
         )
 
         val overallDrainPerHour =
-            validInputs.kTotalSocDrop / validInputs.kTotalDurationMs * 3_600_000.0
+            validInputs.kRawTotalSocDrop / validInputs.kTotalDurationMs * 3_600_000.0
         if (overallDrainPerHour > MAX_DRAIN_RATE_PER_HOUR) {
             LoggerX.w(TAG, "[预测] 首页预测异常掉电: drainPerHour=$overallDrainPerHour")
             return PredictionResult(

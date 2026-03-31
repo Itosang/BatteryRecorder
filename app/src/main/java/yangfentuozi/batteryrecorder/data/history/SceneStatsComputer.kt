@@ -78,6 +78,7 @@ object SceneStatsComputer {
     private data class FileNonGameContribution(
         val fileName: String,
         val rawDurationMs: Long,
+        val rawCapDrop: Double,
         val effectiveDurationMs: Double,
         val effectiveEnergy: Double,
         val effectiveCapDrop: Double
@@ -88,6 +89,7 @@ object SceneStatsComputer {
         val totalDurationMs: Long = 0L,
         val totalEnergy: Double = 0.0,
         val totalSocDrop: Double = 0.0,
+        val rawTotalSocDrop: Double = 0.0,
         val currentEffectiveMs: Double? = null,
         val currentK: Double? = null,
         val historicalKEntry: FileKInput? = null
@@ -139,6 +141,7 @@ object SceneStatsComputer {
                     kSampleFileCount = 0,
                     kTotalEnergy = 0.0,
                     kTotalSocDrop = 0.0,
+                    kRawTotalSocDrop = 0.0,
                     kTotalDurationMs = 0L,
                     kCV = null,
                     kEffectiveN = 0.0,
@@ -197,6 +200,7 @@ object SceneStatsComputer {
         var kSampleFileCount = 0
         var kTotalEnergy = 0.0
         var kTotalSocDrop = 0.0
+        var kRawTotalSocDrop = 0.0
         var kTotalDurationMs = 0L
         var kCurrent: Double? = null
 
@@ -219,6 +223,7 @@ object SceneStatsComputer {
             var fileHomeEffectiveDailyTime = 0.0
             var fileHomeEffectiveGameEnergy = 0.0
             var fileHomeEffectiveGameTime = 0.0
+            var fileHomeEffectiveGameCapDrop = 0.0
             var fileNonGameRawCapDrop = 0.0
 
             acceptedFile.intervals.forEach { interval ->
@@ -271,6 +276,7 @@ object SceneStatsComputer {
                     else -> {
                         fileHomeEffectiveGameEnergy += homeEffectiveEnergy
                         fileHomeEffectiveGameTime += homeEffectiveDuration
+                        fileHomeEffectiveGameCapDrop += homeEffectiveCapDrop
                     }
                 }
             }
@@ -289,11 +295,12 @@ object SceneStatsComputer {
             effectiveDailyTimeWeighted += fileHomeEffectiveDailyTime
             effectiveGameEnergy += fileHomeEffectiveGameEnergy
             effectiveGameTimeWeighted += fileHomeEffectiveGameTime
-            effectiveTotalCapDrop += acceptedFile.effectiveTotalCapDrop
+            effectiveTotalCapDrop += fileHomeEffectiveNonGameCapDrop + fileHomeEffectiveGameCapDrop
 
             val fileNonGameContribution = FileNonGameContribution(
                 fileName = acceptedFile.file.name,
                 rawDurationMs = fileOffTime + fileDailyTime,
+                rawCapDrop = fileNonGameRawCapDrop,
                 effectiveDurationMs = fileHomeEffectiveOffTime + fileHomeEffectiveDailyTime,
                 effectiveEnergy = fileHomeEffectiveOffEnergy + fileHomeEffectiveDailyEnergy,
                 effectiveCapDrop = fileHomeEffectiveNonGameCapDrop
@@ -307,6 +314,7 @@ object SceneStatsComputer {
                 kTotalDurationMs += homeContribution.totalDurationMs
                 kTotalEnergy += homeContribution.totalEnergy
                 kTotalSocDrop += homeContribution.totalSocDrop
+                kRawTotalSocDrop += homeContribution.rawTotalSocDrop
             }
             if (homeContribution.currentEffectiveMs != null) {
                 currentNonGameEffectiveMs = homeContribution.currentEffectiveMs
@@ -333,6 +341,7 @@ object SceneStatsComputer {
                     kSampleFileCount = 0,
                     kTotalEnergy = 0.0,
                     kTotalSocDrop = 0.0,
+                    kRawTotalSocDrop = 0.0,
                     kTotalDurationMs = 0L,
                     kCV = null,
                     kEffectiveN = 0.0,
@@ -358,6 +367,7 @@ object SceneStatsComputer {
                     kSampleFileCount = kSampleFileCount,
                     kTotalEnergy = kTotalEnergy,
                     kTotalSocDrop = kTotalSocDrop,
+                    kRawTotalSocDrop = kRawTotalSocDrop,
                     kTotalDurationMs = kTotalDurationMs,
                     kCV = null,
                     kEffectiveN = 0.0,
@@ -420,6 +430,7 @@ object SceneStatsComputer {
             kSampleFileCount = kSampleFileCount,
             kTotalEnergy = kTotalEnergy,
             kTotalSocDrop = kTotalSocDrop,
+            kRawTotalSocDrop = kRawTotalSocDrop,
             kTotalDurationMs = kTotalDurationMs,
             kCV = kCV,
             kEffectiveN = kEffectiveN,
@@ -485,6 +496,7 @@ object SceneStatsComputer {
                 totalDurationMs = contribution.rawDurationMs,
                 totalEnergy = contribution.effectiveEnergy,
                 totalSocDrop = contribution.effectiveCapDrop,
+                rawTotalSocDrop = contribution.rawCapDrop,
                 currentEffectiveMs = contribution.effectiveDurationMs,
                 currentK = fileK
             )
@@ -494,6 +506,7 @@ object SceneStatsComputer {
             totalDurationMs = contribution.rawDurationMs,
             totalEnergy = contribution.effectiveEnergy,
             totalSocDrop = contribution.effectiveCapDrop,
+            rawTotalSocDrop = contribution.rawCapDrop,
             historicalKEntry = if (fileK != null && contribution.effectiveCapDrop >= 3.0) {
                 FileKInput(
                     k = fileK,
