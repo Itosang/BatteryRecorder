@@ -104,7 +104,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - 首页当前记录链路已收敛到 `MainViewModel`，`HomeScreen` 不再局部创建 `LiveRecordViewModel`
 - `CurrentRecordCard` 直接消费 `MainViewModel.currentRecordUiState`
 - 首页的“续航预测卡片”和“场景统计卡片”都定义在 `ui/components/home/PredictionCard.kt`
-- 首页统计刷新参数统一来自 `SettingsViewModel.statisticsRequest`
+- 首页统计刷新参数统一来自 `SettingsViewModel.statisticsSettings`，服务端采样间隔单独来自 `SettingsViewModel.recordIntervalMs`
 - 首页支持 Root 启动卡片、ADB 引导、日志导出、关于弹窗、首次文档引导与启动更新检查
 
 ### 记录详情链路
@@ -310,10 +310,11 @@ shared/src/main/
 ├── aidl/
 └── java/yangfentuozi/batteryrecorder/shared/
     ├── config/
-    │   ├── ServerConfigDto.kt
+    │   ├── ConfigItems.kt
     │   ├── SettingsConstants.kt
     │   ├── ConfigUtil.kt
-    │   └── SharedSettings.kt
+    │   ├── SharedSettings.kt
+    │   └── dataclass/
     ├── data/
     │   ├── BatteryStatus.kt
     │   ├── LineRecord.kt
@@ -399,12 +400,13 @@ shared/src/main/
 - 图表本地展示偏好不写入业务配置
 - 应用图标请求只基于当前视口包名集合触发
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
-- 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 是设置分层、读写、规范化、映射核心
-- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；来源读取后优先回到 `ServerSettings` / `SharedSettings.serverSettingsFromStoredValues(...)`，而不是在 `ConfigUtil` 内继续维护独立合法化规则
-- `ServerConfigDto` 只是现有 AIDL / `ConfigProvider` 边界 DTO，不是设置真值；DTO 进入领域后统一经 `ServerSettingsMapper.fromServerConfigDto(...) -> SharedSettings.normalizeServerSettings(...)` 收敛
-- Server 设置同步链路为：`SettingsConstants -> SharedSettings(ServerSettings) -> ServerSettingsMapper -> ServerConfigDto -> Service.updateConfig(...)`
-- 新增 Server 设置项时，最容易漏的是：`ServerSettings`、`SharedSettings` 读写与 normalize、`ServerSettingsMapper`、`ServerConfigDto`、`ConfigProvider`、`ConfigUtil`、`Server.updateConfig()`
-- 不要再沿用旧 `coerceConfigValue` 或已删除薄包装方法的心智模型；当前推荐入口是 `SharedSettings.normalizeServerSettings(...)` 与 `SharedSettings.serverSettingsFromStoredValues(...)`
+- 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 负责三类设置的 SharedPreferences 读写，以及 `logLevel` 编解码
+- `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；root 直接解析 SharedPreferences XML，shell 通过 `ConfigProvider` 读取 `ServerSettings`
+- `ConfigProvider` 与 `IService.aidl` 当前直接使用 `ServerSettings` 作为 IPC 边界对象，不再经过 `ServerConfigDto` / `ServerSettingsMapper`
+- Server 设置同步链路为：`SettingsConstants -> SharedSettings(ServerSettings) -> SettingsViewModel.updateServerSettings(...) -> Service.updateConfig(ServerSettings)`
+- Server 启动读取链路为：`SharedPreferences XML / ConfigProvider -> ConfigUtil -> ServerSettings -> Server.updateConfig(ServerSettings)`
+- 当前规则是：UI 限制非法输入，数值 setter 用 `SettingsConstants.xxx.coerce(...)` 做轻量收口，`writeServerSettings(...)` 纯写入，读取侧只保留缺字段默认值回退
+- 新增 Server 设置项时，最容易漏的是：`ServerSettings` 数据类、`SharedSettings` 读写、`SettingsViewModel` setter/下发、`ConfigProvider`、`ConfigUtil`、`IService.aidl`、`Server.updateConfig()`
 
 ## 编码约定
 
