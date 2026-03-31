@@ -14,13 +14,10 @@ data class StatisticsSettings(
     val gameBlacklist: Set<String> = emptySet(),
     /** 统计与预测使用的最近放电文件数量。 */
     val sceneStatsRecentFileCount: Int = SettingsConstants.sceneStatsRecentFileCount.def,
-    /** 是否启用“当次记录加权”。 */
-    val predCurrentSessionWeightEnabled: Boolean =
-        SettingsConstants.predCurrentSessionWeightEnabled.def,
-    /** 当次记录加权的最大倍率，使用 x100 整数存储。 */
-    val predCurrentSessionWeightMaxX100: Int =
-        SettingsConstants.predCurrentSessionWeightMaxX100.def,
-    /** 当次记录加权的半衰期，单位为分钟。 */
-    val predCurrentSessionWeightHalfLifeMin: Long =
-        SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
+    /** 是否启用首页/应用预测使用的加权算法。 */
+    val predWeightedAlgorithmEnabled: Boolean =
+        SettingsConstants.predWeightedAlgorithmEnabled.def,
+    /** 首页预测里当前文件可影响结果的最大比例，按百分比整数存储。 */
+    val predWeightedAlgorithmAlphaMaxX100: Int =
+        SettingsConstants.predWeightedAlgorithmAlphaMaxX100.def
 )

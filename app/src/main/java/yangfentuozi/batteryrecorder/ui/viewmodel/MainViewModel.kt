@@ -652,16 +652,12 @@ class MainViewModel : ViewModel() {
                             livePoints = snapshotLivePoints()
                         )
 
-                    _sceneStats.value = stats?.displayStats
+                    _sceneStats.value = stats.displayStats
                     if (shouldRefreshPrediction) {
                         _prediction.value =
                             BatteryPredictor.predict(
-                                stats?.predictionStats,
-                                resolvedCurrentRecord.stats.endCapacity,
-                                stats?.medianK,
-                                kCV = stats?.kCV,
-                                kEffectiveN = stats?.kEffectiveN ?: 0.0,
-                                upstreamInsufficientReason = stats?.insufficientReason
+                                stats.homePredictionInputs,
+                                resolvedCurrentRecord.stats.endCapacity
                             )
                         _predictionDisplay.value = buildPredictionDisplay(_prediction.value)
                     }

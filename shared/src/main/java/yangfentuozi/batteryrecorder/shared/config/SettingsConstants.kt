@@ -131,29 +131,20 @@ object SettingsConstants {
             def = true
         )
 
-    /** 是否启用“当次记录加权”续航预测 */
-    val predCurrentSessionWeightEnabled =
+    /** 是否启用首页/应用预测使用的加权算法 */
+    val predWeightedAlgorithmEnabled =
         BooleanConfigItem(
-            key = "pred_current_session_weight_enabled",
+            key = "pred_weighted_algorithm_enabled",
             def = true
         )
 
-    /** 当次记录加权最大倍率（x100 存储，例如 300 表示 3.00x） */
-    val predCurrentSessionWeightMaxX100 =
+    /** 首页预测里当前文件可影响结果的最大比例（百分比） */
+    val predWeightedAlgorithmAlphaMaxX100 =
         IntConfigItem(
-            key = "pred_current_session_weight_max_x100",
-            def = 300,
-            min = 100,
-            max = 500
-        )
-
-    /** 当次记录加权半衰期（分钟） */
-    val predCurrentSessionWeightHalfLifeMin =
-        LongConfigItem(
-            key = "pred_current_session_weight_half_life_min",
-            def = 30L,
-            min = 5L,
-            max = 60L
+            key = "pred_weighted_algorithm_alpha_max_x100",
+            def = 40,
+            min = 0,
+            max = 80
         )
 
     // common

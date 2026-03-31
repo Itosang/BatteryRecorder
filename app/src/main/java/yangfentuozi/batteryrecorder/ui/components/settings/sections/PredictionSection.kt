@@ -12,8 +12,8 @@ import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
-import yangfentuozi.batteryrecorder.ui.dialog.settings.CurrentSessionWeightDialog
 import yangfentuozi.batteryrecorder.ui.dialog.settings.SceneStatsRecentFileCountDialog
+import yangfentuozi.batteryrecorder.ui.dialog.settings.WeightedAlgorithmDialog
 import yangfentuozi.batteryrecorder.ui.model.SettingsUiProps
 
 @Composable
@@ -46,21 +46,16 @@ fun PredictionSection(
 
         item {
             M3ESwitchWidget(
-                text = "当次记录加权",
-                checked = state.predCurrentSessionWeightEnabled,
-                onCheckedChange = actions.setPredCurrentSessionWeightEnabled
+                text = "启用加权算法",
+                checked = state.predWeightedAlgorithmEnabled,
+                onCheckedChange = actions.setPredWeightedAlgorithmEnabled
             )
         }
 
         item {
-            val maxX = state.predCurrentSessionWeightMaxX100 / 100.0
-            val summary = "最大 %.2fx / 半衰期 %d 分钟".format(
-                maxX,
-                state.predCurrentSessionWeightHalfLifeMin
-            )
             SettingsItem(
                 title = "加权强度",
-                summary = summary
+                summary = "最大影响 ${state.predWeightedAlgorithmAlphaMaxX100}%"
             ) { showWeightDialog = true }
         }
     }
@@ -81,21 +76,16 @@ fun PredictionSection(
     }
 
     if (showWeightDialog) {
-        CurrentSessionWeightDialog(
-            currentMaxX100 = state.predCurrentSessionWeightMaxX100,
-            currentHalfLifeMin = state.predCurrentSessionWeightHalfLifeMin,
+        WeightedAlgorithmDialog(
+            currentAlphaMaxX100 = state.predWeightedAlgorithmAlphaMaxX100,
             onDismiss = { showWeightDialog = false },
-            onSave = { maxX100, halfLifeMin ->
-                actions.setPredCurrentSessionWeightMaxX100(maxX100)
-                actions.setPredCurrentSessionWeightHalfLifeMin(halfLifeMin)
+            onSave = { alphaMaxX100 ->
+                actions.setPredWeightedAlgorithmAlphaMaxX100(alphaMaxX100)
                 showWeightDialog = false
             },
             onReset = {
-                actions.setPredCurrentSessionWeightMaxX100(
-                    SettingsConstants.predCurrentSessionWeightMaxX100.def
-                )
-                actions.setPredCurrentSessionWeightHalfLifeMin(
-                    SettingsConstants.predCurrentSessionWeightHalfLifeMin.def
+                actions.setPredWeightedAlgorithmAlphaMaxX100(
+                    SettingsConstants.predWeightedAlgorithmAlphaMaxX100.def
                 )
                 showWeightDialog = false
             }

@@ -213,7 +213,7 @@ private fun PredictionGameFilterDialog(
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
-                    text = "已选 App 不参与续航预测统计",
+                    text = "已选 App 不参与首页续航预测统计",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

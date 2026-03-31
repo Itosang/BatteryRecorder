@@ -26,6 +26,7 @@ data class DischargeInterval(
     val packageName: String?,
     val isDisplayOn: Boolean,
     val durationMs: Long,
+    val timeDecayWeight: Double,
     val effectiveDurationMs: Double,
     val signedEnergyRawMs: Double,
     val effectiveEnergyMagnitudeRawMs: Double,
@@ -65,6 +66,8 @@ object DischargeRecordScanner {
     private const val MAX_DRAIN_RATE_PER_HOUR = 50.0
     private const val MIN_CURRENT_SESSION_MS = 10 * 60 * 1000L
     private const val MIN_CURRENT_SESSION_SOC_DROP = 1.0
+    private const val DEFAULT_CURRENT_SESSION_WEIGHT_MAX_MULTIPLIER = 3.0
+    private const val DEFAULT_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = 30L
 
     private enum class RejectedReason {
         NoValidDuration,
@@ -139,10 +142,9 @@ object DischargeRecordScanner {
         }
 
         val maxGapMs = computeMaxGapMs(recordIntervalMs)
-        val maxMultiplier = (request.predCurrentSessionWeightMaxX100 / 100.0).coerceIn(1.0, 5.0)
-        val halfLifeMs = request.predCurrentSessionWeightHalfLifeMin
-            .coerceIn(1L, 24 * 60L) * 60_000.0
-        val enableTimeDecayWeight = request.predCurrentSessionWeightEnabled &&
+        val maxMultiplier = DEFAULT_CURRENT_SESSION_WEIGHT_MAX_MULTIPLIER
+        val halfLifeMs = DEFAULT_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN * 60_000.0
+        val enableTimeDecayWeight =
                 currentDischargeFileName != null &&
                 maxMultiplier > 1.0 &&
                 halfLifeMs > 0.0
@@ -301,7 +303,7 @@ object DischargeRecordScanner {
                 (BuildConfig.DEBUG || rawTotalCapDrop >= MIN_CURRENT_SESSION_SOC_DROP)
         if (useWeightedCurrentSession) {
             LoggerX.d(TAG, 
-                "[预测] 启用当次记录加权: file=${file.name} endTs=$fileEndTs rawDurationMs=$rawTotalDurationMs rawSocDrop=$rawTotalCapDrop"
+                "[预测] 启用加权算法: file=${file.name} endTs=$fileEndTs rawDurationMs=$rawTotalDurationMs rawSocDrop=$rawTotalCapDrop"
             )
         }
 
@@ -332,6 +334,7 @@ object DischargeRecordScanner {
                 packageName = interval.packageName,
                 isDisplayOn = interval.isDisplayOn,
                 durationMs = interval.durationMs,
+                timeDecayWeight = interval.weight,
                 effectiveDurationMs = effectiveDurationMs,
                 signedEnergyRawMs = interval.signedEnergyRawMs,
                 effectiveEnergyMagnitudeRawMs = effectiveEnergyMagnitudeRawMs,

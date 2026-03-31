@@ -26,9 +26,8 @@ data class LogActions(
 data class PredictionActions(
     val setGamePackages: (Set<String>, Set<String>) -> Unit,
     val setSceneStatsRecentFileCount: (Int) -> Unit,
-    val setPredCurrentSessionWeightEnabled: (Boolean) -> Unit,
-    val setPredCurrentSessionWeightMaxX100: (Int) -> Unit,
-    val setPredCurrentSessionWeightHalfLifeMin: (Long) -> Unit
+    val setPredWeightedAlgorithmEnabled: (Boolean) -> Unit,
+    val setPredWeightedAlgorithmAlphaMaxX100: (Int) -> Unit
 )
 
 data class SettingsActions(

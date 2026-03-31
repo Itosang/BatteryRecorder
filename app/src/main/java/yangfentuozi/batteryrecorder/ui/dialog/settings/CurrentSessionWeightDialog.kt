@@ -15,7 +15,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,37 +26,25 @@ import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 import kotlin.math.roundToInt
 
-// 加权权重设置Dialog
 @Composable
-fun CurrentSessionWeightDialog(
-    currentMaxX100: Int,
-    currentHalfLifeMin: Long,
+fun WeightedAlgorithmDialog(
+    currentAlphaMaxX100: Int,
     onDismiss: () -> Unit,
-    onSave: (maxX100: Int, halfLifeMin: Long) -> Unit,
+    onSave: (alphaMaxX100: Int) -> Unit,
     onReset: () -> Unit
 ) {
-    val maxXConfig = SettingsConstants.predCurrentSessionWeightMaxX100
-    val halfLifeConfig = SettingsConstants.predCurrentSessionWeightHalfLifeMin
-    val minMaxX = maxXConfig.min / 100f
-    val maxMaxX = maxXConfig.max / 100f
-    val maxXSteps = ((maxXConfig.max - maxXConfig.min) / 10 - 1).coerceAtLeast(0)
-    var maxX by remember {
-        val initial = ((currentMaxX100 / 100f) * 10).roundToInt() / 10f
-        val normalized = maxXConfig.coerce((initial * 100).roundToInt()) / 100f
-        val snapped = (normalized * 10).roundToInt() / 10f
-        mutableFloatStateOf(snapped)
-    }
-
-    val minHalfLife = halfLifeConfig.min
-    val maxHalfLife = halfLifeConfig.max
-    var halfLifeMin by remember {
-        val initial = halfLifeConfig.coerce(currentHalfLifeMin)
-        mutableLongStateOf(initial)
+    val alphaConfig = SettingsConstants.predWeightedAlgorithmAlphaMaxX100
+    val minAlpha = alphaConfig.min.toFloat()
+    val maxAlpha = alphaConfig.max.toFloat()
+    val alphaSteps = (alphaConfig.max - alphaConfig.min - 1).coerceAtLeast(0)
+    var alphaPercent by remember {
+        val initial = alphaConfig.coerce(currentAlphaMaxX100).toFloat()
+        mutableFloatStateOf(initial)
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("当次记录加权") },
+        title = { Text("加权强度") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -68,9 +55,8 @@ fun CurrentSessionWeightDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val shown = (maxX * 10).roundToInt() / 10.0
                     Text(
-                        text = "最大倍率",
+                        text = "最大影响",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -82,58 +68,23 @@ fun CurrentSessionWeightDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${shown}x",
+                            text = "${alphaPercent.roundToInt()}%",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
                 Slider(
-                    value = maxX,
+                    value = alphaPercent,
                     onValueChange = { v ->
-                        maxX = maxXConfig.coerce((v * 100).roundToInt()) / 100f
+                        alphaPercent = alphaConfig.coerce(v.roundToInt()).toFloat()
                     },
-                    valueRange = minMaxX..maxMaxX,
-                    steps = maxXSteps,
+                    valueRange = minAlpha..maxAlpha,
+                    steps = alphaSteps,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "半衰期",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(AppShape.small)
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${halfLifeMin}m",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
-                Slider(
-                    value = halfLifeMin.toFloat(),
-                    onValueChange = { v -> halfLifeMin = v.roundToInt().toLong() },
-                    valueRange = minHalfLife.toFloat()..maxHalfLife.toFloat(),
-                    steps = (maxHalfLife - minHalfLife - 1).toInt().coerceAtLeast(0),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
                 Text(
-                    text = "越接近当前的记录权重越高",
+                    text = "控制当前文件最多能影响首页续航预测多少",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -142,9 +93,7 @@ fun CurrentSessionWeightDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val maxX100 = maxXConfig.coerce((maxX * 100).roundToInt())
-                    val halfLife = halfLifeConfig.coerce(halfLifeMin)
-                    onSave(maxX100, halfLife)
+                    onSave(alphaConfig.coerce(alphaPercent.roundToInt()))
                 }
             ) {
                 Text("确定")

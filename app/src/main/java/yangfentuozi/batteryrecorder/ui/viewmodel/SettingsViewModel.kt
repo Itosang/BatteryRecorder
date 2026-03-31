@@ -266,35 +266,24 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun setPredCurrentSessionWeightEnabled(enabled: Boolean) {
+    fun setPredWeightedAlgorithmEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.edit {
-                SettingsConstants.predCurrentSessionWeightEnabled.writeToSP(this, enabled)
+                SettingsConstants.predWeightedAlgorithmEnabled.writeToSP(this, enabled)
             }
             _statisticsSettings.value =
-                _statisticsSettings.value.copy(predCurrentSessionWeightEnabled = enabled)
+                _statisticsSettings.value.copy(predWeightedAlgorithmEnabled = enabled)
         }
     }
 
-    fun setPredCurrentSessionWeightMaxX100(value: Int) {
-        val finalValue = SettingsConstants.predCurrentSessionWeightMaxX100.coerce(value)
+    fun setPredWeightedAlgorithmAlphaMaxX100(value: Int) {
+        val finalValue = SettingsConstants.predWeightedAlgorithmAlphaMaxX100.coerce(value)
         viewModelScope.launch {
             prefs.edit {
-                SettingsConstants.predCurrentSessionWeightMaxX100.writeToSP(this, finalValue)
+                SettingsConstants.predWeightedAlgorithmAlphaMaxX100.writeToSP(this, finalValue)
             }
             _statisticsSettings.value =
-                _statisticsSettings.value.copy(predCurrentSessionWeightMaxX100 = finalValue)
-        }
-    }
-
-    fun setPredCurrentSessionWeightHalfLifeMin(value: Long) {
-        val finalValue = SettingsConstants.predCurrentSessionWeightHalfLifeMin.coerce(value)
-        viewModelScope.launch {
-            prefs.edit {
-                SettingsConstants.predCurrentSessionWeightHalfLifeMin.writeToSP(this, finalValue)
-            }
-            _statisticsSettings.value =
-                _statisticsSettings.value.copy(predCurrentSessionWeightHalfLifeMin = finalValue)
+                _statisticsSettings.value.copy(predWeightedAlgorithmAlphaMaxX100 = finalValue)
         }
     }
 

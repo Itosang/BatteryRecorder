@@ -57,10 +57,8 @@ data class SettingsUiState(
     val gameBlacklist: Set<String> = StatisticsSettings().gameBlacklist,
     /** 样本次数 */
     val sceneStatsRecentFileCount: Int = StatisticsSettings().sceneStatsRecentFileCount,
-    /** 当此记录加权 */
-    val predCurrentSessionWeightEnabled: Boolean = StatisticsSettings().predCurrentSessionWeightEnabled,
+    /** 启用加权算法 */
+    val predWeightedAlgorithmEnabled: Boolean = StatisticsSettings().predWeightedAlgorithmEnabled,
     /** 加权强度 */
-    val predCurrentSessionWeightMaxX100: Int = StatisticsSettings().predCurrentSessionWeightMaxX100,
-    /** 加权半衰期 */
-    val predCurrentSessionWeightHalfLifeMin: Long = StatisticsSettings().predCurrentSessionWeightHalfLifeMin
+    val predWeightedAlgorithmAlphaMaxX100: Int = StatisticsSettings().predWeightedAlgorithmAlphaMaxX100
 )

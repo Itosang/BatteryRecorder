@@ -71,9 +71,8 @@ fun SettingsScreen(
             prediction = PredictionActions(
                 setGamePackages = settingsViewModel::setGamePackages,
                 setSceneStatsRecentFileCount = settingsViewModel::setSceneStatsRecentFileCount,
-                setPredCurrentSessionWeightEnabled = settingsViewModel::setPredCurrentSessionWeightEnabled,
-                setPredCurrentSessionWeightMaxX100 = settingsViewModel::setPredCurrentSessionWeightMaxX100,
-                setPredCurrentSessionWeightHalfLifeMin = settingsViewModel::setPredCurrentSessionWeightHalfLifeMin
+                setPredWeightedAlgorithmEnabled = settingsViewModel::setPredWeightedAlgorithmEnabled,
+                setPredWeightedAlgorithmAlphaMaxX100 = settingsViewModel::setPredWeightedAlgorithmAlphaMaxX100
             )
         )
     }
@@ -99,9 +98,8 @@ fun SettingsScreen(
             gamePackages = statisticsSettings.gamePackages,
             gameBlacklist = statisticsSettings.gameBlacklist,
             sceneStatsRecentFileCount = statisticsSettings.sceneStatsRecentFileCount,
-            predCurrentSessionWeightEnabled = statisticsSettings.predCurrentSessionWeightEnabled,
-            predCurrentSessionWeightMaxX100 = statisticsSettings.predCurrentSessionWeightMaxX100,
-            predCurrentSessionWeightHalfLifeMin = statisticsSettings.predCurrentSessionWeightHalfLifeMin
+            predWeightedAlgorithmEnabled = statisticsSettings.predWeightedAlgorithmEnabled,
+            predWeightedAlgorithmAlphaMaxX100 = statisticsSettings.predWeightedAlgorithmAlphaMaxX100
         )
     }
     val props = SettingsUiProps(
