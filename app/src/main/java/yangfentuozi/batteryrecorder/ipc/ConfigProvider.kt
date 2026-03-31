@@ -18,9 +18,7 @@ class ConfigProvider : ContentProvider() {
         if (method == "requestConfig") {
             LoggerX.i(TAG, "[配置] 收到 requestConfig 请求")
 
-            val serverSettings = SharedSettings.readServerSettings(
-                SharedSettings.getPreferences(requireContext())
-            )
+            val serverSettings = SharedSettings.readServerSettings(context!!)
             return Bundle().apply {
                 putParcelable("config", serverSettings)
             }

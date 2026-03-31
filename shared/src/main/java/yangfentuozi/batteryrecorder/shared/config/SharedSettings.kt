@@ -92,7 +92,7 @@ object SharedSettings {
         editor.apply()
     }
 
-    fun Editor.writeAppSettings(settings: AppSettings) {
+    private fun Editor.writeAppSettings(settings: AppSettings) {
         SettingsConstants.checkUpdateOnStartup.writeToSP(this, settings.checkUpdateOnStartup)
         SettingsConstants.dualCellEnabled.writeToSP(this, settings.dualCellEnabled)
         SettingsConstants.dischargeDisplayPositive.writeToSP(this, settings.dischargeDisplayPositive)
@@ -100,7 +100,7 @@ object SharedSettings {
         SettingsConstants.rootBootAutoStartEnabled.writeToSP(this, settings.rootBootAutoStartEnabled)
     }
 
-    fun Editor.writeServerSettings(settings: ServerSettings) {
+    private fun Editor.writeServerSettings(settings: ServerSettings) {
         putLong(SettingsConstants.recordIntervalMs.key, settings.recordIntervalMs)
         putInt(SettingsConstants.batchSize.key, settings.batchSize)
         putLong(SettingsConstants.writeLatencyMs.key, settings.writeLatencyMs)

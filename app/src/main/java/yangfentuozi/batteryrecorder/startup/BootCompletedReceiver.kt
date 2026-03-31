@@ -25,7 +25,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                         SettingsConstants.PREFS_NAME,
                         Context.MODE_PRIVATE
                     )
-                    val autoStartEnabled = SharedSettings.readAppSettings(prefs).rootBootAutoStartEnabled
+                    val autoStartEnabled =
+                        SharedSettings.readAppSettings(appContext).rootBootAutoStartEnabled
                     if (!autoStartEnabled) {
                         LoggerX.i(TAG, "[BOOT] 开机 ROOT 自启动未开启")
                         return@Thread

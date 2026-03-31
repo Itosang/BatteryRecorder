@@ -37,14 +37,6 @@ class SettingsViewModel : ViewModel() {
     private val _initialized = MutableStateFlow(false)
     val initialized: StateFlow<Boolean> = _initialized.asStateFlow()
 
-    val checkUpdateOnStartup: StateFlow<Boolean> =
-        appSettings.map { it.checkUpdateOnStartup }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = AppSettings().checkUpdateOnStartup
-            )
-
     val dualCellEnabled: StateFlow<Boolean> =
         appSettings.map { it.dualCellEnabled }
             .stateIn(
@@ -69,14 +61,6 @@ class SettingsViewModel : ViewModel() {
                 initialValue = AppSettings().calibrationValue
             )
 
-    val rootBootAutoStartEnabled: StateFlow<Boolean> =
-        appSettings.map { it.rootBootAutoStartEnabled }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = AppSettings().rootBootAutoStartEnabled
-            )
-
     val recordIntervalMs: StateFlow<Long> =
         serverSettings.map { it.recordIntervalMs }
             .stateIn(
@@ -85,108 +69,12 @@ class SettingsViewModel : ViewModel() {
                 initialValue = ServerSettings().recordIntervalMs
             )
 
-    val writeLatencyMs: StateFlow<Long> =
-        serverSettings.map { it.writeLatencyMs }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().writeLatencyMs
-            )
-
-    val batchSize: StateFlow<Int> =
-        serverSettings.map { it.batchSize }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().batchSize
-            )
-
     val screenOffRecord: StateFlow<Boolean> =
         serverSettings.map { it.screenOffRecordEnabled }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = ServerSettings().screenOffRecordEnabled
-            )
-
-    val alwaysPollingScreenStatusEnabled: StateFlow<Boolean> =
-        serverSettings.map { it.alwaysPollingScreenStatusEnabled }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().alwaysPollingScreenStatusEnabled
-            )
-
-    val segmentDurationMin: StateFlow<Long> =
-        serverSettings.map { it.segmentDurationMin }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().segmentDurationMin
-            )
-
-    val maxHistoryDays: StateFlow<Long> =
-        serverSettings.map { it.maxHistoryDays }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().maxHistoryDays
-            )
-
-    val logLevel: StateFlow<LoggerX.LogLevel> =
-        serverSettings.map { it.logLevel }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = ServerSettings().logLevel
-            )
-
-    val gamePackages: StateFlow<Set<String>> =
-        statisticsSettings.map { it.gamePackages }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().gamePackages
-            )
-
-    val gameBlacklist: StateFlow<Set<String>> =
-        statisticsSettings.map { it.gameBlacklist }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().gameBlacklist
-            )
-
-    val sceneStatsRecentFileCount: StateFlow<Int> =
-        statisticsSettings.map { it.sceneStatsRecentFileCount }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().sceneStatsRecentFileCount
-            )
-
-    val predCurrentSessionWeightEnabled: StateFlow<Boolean> =
-        statisticsSettings.map { it.predCurrentSessionWeightEnabled }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().predCurrentSessionWeightEnabled
-            )
-
-    val predCurrentSessionWeightMaxX100: StateFlow<Int> =
-        statisticsSettings.map { it.predCurrentSessionWeightMaxX100 }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().predCurrentSessionWeightMaxX100
-            )
-
-    val predCurrentSessionWeightHalfLifeMin: StateFlow<Long> =
-        statisticsSettings.map { it.predCurrentSessionWeightHalfLifeMin }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = StatisticsSettings().predCurrentSessionWeightHalfLifeMin
             )
 
     fun init(context: Context) {
@@ -383,12 +271,6 @@ class SettingsViewModel : ViewModel() {
             }
             _statisticsSettings.value =
                 _statisticsSettings.value.copy(predCurrentSessionWeightHalfLifeMin = finalValue)
-        }
-    }
-
-    fun reloadSettings() {
-        if (::prefs.isInitialized) {
-            loadSettings()
         }
     }
 

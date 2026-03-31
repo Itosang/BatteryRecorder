@@ -1,7 +1,7 @@
 package yangfentuozi.batteryrecorder.server;
 
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener;
-import yangfentuozi.batteryrecorder.shared.config.ServerSettings;
+import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings;
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile;
 
 interface IService {
