@@ -92,7 +92,8 @@ private val SCREEN_OFF_COLOR = Color(0xFFD32F2F)
 private val LINE_STROKE_WIDTH = 1.3.dp
 private const val APP_ICON_ALPHA = 0.55f
 private const val TEMP_EXPAND_STEP_TENTHS = 100.0    // 10℃
-private const val VOLTAGE_EXPAND_STEP_UV = 100_000.0 // 0.1V
+private const val VOLTAGE_MIN_EXPAND_STEP_UV = 100_000.0 // 0.1V
+private const val VOLTAGE_MAX_EXPAND_STEP_UV = 500_000.0 // 0.5V
 // 横屏全屏下记录详情通常会查看长时间段数据，双指平移稍微提速以减少来回拖动次数。
 private const val FULLSCREEN_TWO_FINGER_PAN_SPEED_MULTIPLIER = 2.0f
 
@@ -673,7 +674,7 @@ fun PowerCapacityChart(
                     // 单点数据无法形成 path，这里补绘圆点，避免“有数据但图上什么都没有”。
                     val point = activePowerPoints.first()
                     val pointX = coords.timeToX(point.timestamp)
-                    if (curveVisibility.showVoltage) {
+                    if (curveVisibility.showVoltage && point.voltage > 0L) {
                         drawCircle(
                             voltageColor,
                             radius = 2.8.dp.toPx(),
@@ -1070,7 +1071,7 @@ fun PowerCapacityChart(
                                 // 单点数据无法形成 path，这里补绘圆点，避免“有数据但图上什么都没有”。
                                 val point = activePowerPoints.first()
                                 val pointX = staticCoords.timeToX(point.timestamp)
-                                if (curveVisibility.showVoltage) {
+                                if (curveVisibility.showVoltage && point.voltage > 0L) {
                                     drawCircle(
                                         voltageColor,
                                         radius = 2.8.dp.toPx(),
@@ -1266,7 +1267,7 @@ fun PowerCapacityChart(
                                         center = Offset(selectedX, tempY)
                                     )
                                 }
-                                if (curveVisibility.showVoltage) {
+                                if (curveVisibility.showVoltage && selectedPoint.voltage > 0L) {
                                     val voltageY =
                                         coords.voltageToY(selectedPoint.voltage.toDouble())
                                     drawCircle(
@@ -1465,7 +1466,7 @@ private fun SelectedPointInfo(
         val timeText = formatRelativeTime(offset)
         val displayPowerW = selectPowerValueForDisplay(selected, powerCurveMode)
         val powerText = if (powerCurveMode == PowerCurveMode.Fitted) {
-            String.format(LocalLocale.current.platformLocale, "%.2f W（拟合）", displayPowerW)
+            String.format(LocalLocale.current.platformLocale, "%.2f W", displayPowerW)
         } else {
             String.format(LocalLocale.current.platformLocale, "%.2f W", displayPowerW)
         }
@@ -2135,7 +2136,24 @@ private fun buildVoltagePath(
     coords: ChartCoordinates,
     valueSelector: (RecordDetailChartPoint) -> Double
 ): Path {
-    return buildLinearPath(points, coords) { point -> coords.voltageToY(valueSelector(point)) }
+    val path = Path()
+    var hasStartedSegment = false
+    points.forEach { point ->
+        val voltage = valueSelector(point)
+        if (voltage <= 0.0) {
+            hasStartedSegment = false
+            return@forEach
+        }
+        val x = coords.timeToX(point.timestamp)
+        val y = coords.voltageToY(voltage)
+        if (!hasStartedSegment) {
+            path.moveTo(x, y)
+            hasStartedSegment = true
+        } else {
+            path.lineTo(x, y)
+        }
+    }
+    return path
 }
 
 private fun buildLinearPath(
@@ -2474,7 +2492,10 @@ private fun buildVoltageMarkerLayouts(
 
     val textPaint = createTextPaint(0, 20f)
     val padding = with(density) { 6.dp.toPx() }
+    val textHeight = -textPaint.fontMetrics.ascent
     val chartRight = coords.paddingLeft + coords.chartWidth
+    val scaledChartHeight = coords.chartHeight * 0.9f
+    val chartBottom = coords.paddingTop + scaledChartHeight
 
     return listOf(maxPoint, minPoint).map { point ->
         val x = coords.timeToX(point.timestamp)
@@ -2486,10 +2507,16 @@ private fun buildVoltageMarkerLayouts(
         if (textX < coords.paddingLeft) textX = coords.paddingLeft
 
         val isMax = point === maxPoint
-        val textY = if (isMax) {
+        var textY = if (isMax) {
             y - padding
         } else {
             y - textPaint.fontMetrics.ascent + padding
+        }
+        if (textY - textHeight < coords.paddingTop) {
+            textY = y + textHeight + padding
+        }
+        if (textY > chartBottom) {
+            textY = (y - padding).coerceAtLeast(coords.paddingTop + textHeight)
         }
 
         TextPointMarkerLayout(
@@ -2706,7 +2733,7 @@ private fun DrawScope.drawSelectedPointOverlay(
                         center = Offset(selectedX, tempY)
                     )
                 }
-                if (curveVisibility.showVoltage) {
+                if (curveVisibility.showVoltage && point.voltage > 0L) {
                     val voltageY = coords.voltageToY(point.voltage.toDouble())
                     drawCircle(
                         voltageColor,
@@ -2812,17 +2839,17 @@ private fun computeVoltageAxisRange(points: List<RecordDetailChartPoint>): Pair<
         .map { it.voltage.toDouble() }
         .filter { it > 0.0 }
         .toList()
-    if (validVoltages.isEmpty()) return 0.0 to VOLTAGE_EXPAND_STEP_UV
+    if (validVoltages.isEmpty()) return 0.0 to VOLTAGE_MAX_EXPAND_STEP_UV
 
     val observedMin = validVoltages.min()
     val observedMax = validVoltages.max()
     val minVoltage =
-        kotlin.math.floor(observedMin / VOLTAGE_EXPAND_STEP_UV) * VOLTAGE_EXPAND_STEP_UV
+        kotlin.math.floor(observedMin / VOLTAGE_MIN_EXPAND_STEP_UV) * VOLTAGE_MIN_EXPAND_STEP_UV
     val maxVoltage =
-        kotlin.math.ceil(observedMax / VOLTAGE_EXPAND_STEP_UV) * VOLTAGE_EXPAND_STEP_UV
+        kotlin.math.ceil(observedMax / VOLTAGE_MAX_EXPAND_STEP_UV) * VOLTAGE_MAX_EXPAND_STEP_UV
 
     return if (maxVoltage - minVoltage < 1.0) {
-        minVoltage to (minVoltage + VOLTAGE_EXPAND_STEP_UV)
+        minVoltage to (minVoltage + VOLTAGE_MAX_EXPAND_STEP_UV)
     } else {
         minVoltage to maxVoltage
     }
@@ -3019,6 +3046,8 @@ private fun DrawScope.drawVoltageExtremeMarkers(
     val padding = 6.dp.toPx()
     val textHeight = -textPaint.fontMetrics.ascent
     val chartRight = coords.paddingLeft + coords.chartWidth
+    val scaledChartHeight = coords.chartHeight * 0.9f
+    val chartBottom = coords.paddingTop + scaledChartHeight
 
     for (point in listOf(maxPoint, minPoint)) {
         val x = coords.timeToX(point.timestamp)
@@ -3033,7 +3062,13 @@ private fun DrawScope.drawVoltageExtremeMarkers(
         if (textX < coords.paddingLeft) textX = coords.paddingLeft
 
         val isMax = point === maxPoint
-        val textY = if (isMax) y - padding else y + textHeight + padding
+        var textY = if (isMax) y - padding else y + textHeight + padding
+        if (textY - textHeight < coords.paddingTop) {
+            textY = y + textHeight + padding
+        }
+        if (textY > chartBottom) {
+            textY = (y - padding).coerceAtLeast(coords.paddingTop + textHeight)
+        }
 
         drawContext.canvas.nativeCanvas.drawText(label, textX, textY, textPaint)
     }
