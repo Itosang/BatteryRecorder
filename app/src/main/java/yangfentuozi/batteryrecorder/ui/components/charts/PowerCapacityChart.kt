@@ -84,7 +84,8 @@ private fun createTextPaint(color: Int, textSize: Float) = Paint().apply {
 }
 
 private const val CAPACITY_CURVE_SCALE = 0.9f
-private val CAPACITY_COLOR = Color(0xFFFFB300)
+private val CAPACITY_COLOR = Color(0xFF4CAF50)
+private val VOLTAGE_COLOR = Color(0xFFFFB300)
 private val TEMP_COLOR = Color(0xFFFF8A65)
 private val SCREEN_ON_COLOR = Color(0xFF2E7D32)
 private val SCREEN_OFF_COLOR = Color(0xFFD32F2F)
