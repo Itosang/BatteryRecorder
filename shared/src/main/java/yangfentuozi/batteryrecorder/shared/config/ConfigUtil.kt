@@ -15,12 +15,19 @@ import java.io.IOException
 
 private const val TAG = "ConfigUtil"
 
+/**
+ * ServerSettings 的来源适配层。
+ *
+ * 这里不定义设置语义，只负责把不同来源的原始数据读成 `ServerSettings`：
+ * 1. root 场景直接读取 SharedPreferences XML。
+ * 2. shell 场景通过 ConfigProvider 取回 `ServerSettings`。
+ */
 object ConfigUtil {
     /** 来源适配层只负责读取配置来源并组装 ServerSettings。 */
     fun getServerSettingsByContentProvider(): ServerSettings? {
         return try {
             LoggerX.i(TAG, "getServerSettingsByContentProvider: 通过 ContentProvider 请求配置")
-            val settings = readServerConfigDtoByContentProvider()
+            val settings = readServerSettingsByContentProvider()
             logServerSettings("getServerSettingsByContentProvider", settings)
             settings
         } catch (e: RemoteException) {
@@ -123,7 +130,12 @@ object ConfigUtil {
         }
     }
 
-    private fun readServerConfigDtoByContentProvider(): ServerSettings {
+    /**
+     * 通过 ConfigProvider 读取当前 App 进程导出的 ServerSettings。
+     *
+     * @return Provider 返回的 ServerSettings；缺失 reply 或 parcelable 时直接抛错给上层处理。
+     */
+    private fun readServerSettingsByContentProvider(): ServerSettings {
         val reply = ActivityManagerCompat.contentProviderCall(
             "yangfentuozi.batteryrecorder.configProvider",
             "requestConfig",
@@ -141,6 +153,13 @@ object ConfigUtil {
         return serverSettings ?: throw NullPointerException("config is null")
     }
 
+    /**
+     * 打印来源适配后的关键服务端配置，便于排查 root/shell 两条读取链是否一致。
+     *
+     * @param source 当前配置来源标识。
+     * @param settings 已解析出的服务端配置。
+     * @return 无，仅输出调试日志。
+     */
     private fun logServerSettings(source: String, settings: ServerSettings) {
         LoggerX.d(
             TAG,

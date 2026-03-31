@@ -22,6 +22,16 @@ import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 private const val TAG = "SettingsViewModel"
 
+/**
+ * 设置页与页外设置消费者共用的 ViewModel。
+ *
+ * 对外保留三包真值状态：
+ * - `appSettings`
+ * - `statisticsSettings`
+ * - `serverSettings`
+ *
+ * 另外只保留少量页外高频字段的派生 StateFlow，避免把设置页外调用方也绑到设置页模型上。
+ */
 class SettingsViewModel : ViewModel() {
     private lateinit var prefs: SharedPreferences
 
@@ -77,12 +87,26 @@ class SettingsViewModel : ViewModel() {
                 initialValue = ServerSettings().screenOffRecordEnabled
             )
 
+    /**
+     * 初始化设置存储并加载三包设置。
+     *
+     * @param context 用于定位默认 SharedPreferences 的应用上下文。
+     * @return 无；多次调用时仅首次生效。
+     */
     fun init(context: Context) {
         if (::prefs.isInitialized) return
         prefs = SharedSettings.getPreferences(context)
         loadSettings()
     }
 
+    /**
+     * 从 SharedPreferences 重载三包设置到内存态。
+     *
+     * 这里使用 `prefs` 重载，是因为 ViewModel 已经长期持有同一个 SharedPreferences 实例，
+     * 再绕回 `context` 入口只会多一层无意义包装。
+     *
+     * @return 无，直接更新内部 StateFlow。
+     */
     private fun loadSettings() {
         val currentAppSettings = SharedSettings.readAppSettings(prefs)
         val currentStatisticsSettings = SharedSettings.readStatisticsSettings(prefs)
@@ -274,6 +298,18 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 统一处理服务端设置的持久化、内存态回填和运行中下发。
+     *
+     * 当前约束是：
+     * 1. 数值合法化在各个 setter 里完成。
+     * 2. 这里不再额外做总裁剪。
+     * 3. 写盘、内存态和 Binder 下发使用同一份 `ServerSettings`。
+     *
+     * @param message 下发前输出的日志文案。
+     * @param transform 基于当前 `ServerSettings` 构造新配置的转换函数。
+     * @return 无。
+     */
     private fun updateServerSettings(
         message: String,
         transform: (ServerSettings) -> ServerSettings
@@ -287,11 +323,24 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 将新的 ServerSettings 下发给运行中的服务端。
+     *
+     * @param serverSettings 已经准备好下发的服务端配置。
+     * @param message 本次更新的日志文案。
+     * @return 无；若服务尚未连接，则仅更新本地状态。
+     */
     private fun pushServerConfig(serverSettings: ServerSettings, message: String) {
         LoggerX.i(TAG, message)
         Service.service?.updateConfig(serverSettings)
     }
 
+    /**
+     * 让 App 进程内的 LoggerX 立即跟随设置值变化。
+     *
+     * @param settings 最新的服务端配置。
+     * @return 无。
+     */
     private fun applyLoggerSettings(settings: ServerSettings) {
         LoggerX.maxHistoryDays = settings.maxHistoryDays
         LoggerX.logLevel = settings.logLevel
