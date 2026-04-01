@@ -188,8 +188,13 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   - `capDelta`
 - 启用门槛：
   - 记录时长不少于 10 分钟
-  - 掉电不少于 1%
+  - 掉电不少于 2%
 - `endTs` 取自当前文件最后一条有效记录时间戳，不使用 `System.currentTimeMillis()`
+- 当前设置项已从旧的“当次记录加权 + 最大倍率/半衰期”切换为：
+  - `pred_weighted_algorithm_enabled`
+  - `pred_weighted_algorithm_alpha_max_x100`
+- `pred_weighted_algorithm_enabled` 默认开启
+- 读取侧已移除旧 key `pred_current_session_weight_enabled` 的兼容分支
 
 ### 预测失败原因链路
 
@@ -273,7 +278,7 @@ app/src/main/java/yangfentuozi/batteryrecorder/
 │   │   │   ├── DocsIntroDialog.kt
 │   │   │   └── UpdateDialog.kt
 │   │   └── settings/
-│   │       ├── CurrentSessionWeightDialog.kt
+│   │       ├── WeightedAlgorithmDialog.kt
 │   │       ├── SceneStatsRecentFileCountDialog.kt
 │   │       └── ...
 │   ├── model/
@@ -415,6 +420,8 @@ shared/src/main/
 - 充电历史页底部筛选栏需要单独处理导航栏底部 inset，不能直接套用普通滚动页的底部 padding 逻辑
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
 - 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 负责三类设置的 SharedPreferences 读写，以及 `logLevel` 编解码
+- 当前预测设置已收敛到 `StatisticsSettings.predWeightedAlgorithmEnabled` 与 `StatisticsSettings.predWeightedAlgorithmAlphaMaxX100`
+- `SharedSettings.readStatisticsSettings(...)` 当前只读取新 key，不再兼容旧的 `pred_current_session_weight_enabled`
 - `ConfigUtil.kt` 只负责 root/shell 场景下的设置来源适配；root 直接解析 SharedPreferences XML，shell 通过 `ConfigProvider` 读取 `ServerSettings`
 - `ConfigProvider` 与 `IService.aidl` 当前直接使用 `ServerSettings` 作为 IPC 边界对象，不再经过 `ServerConfigDto` / `ServerSettingsMapper`
 - Server 设置同步链路为：`SettingsConstants -> SharedSettings(ServerSettings) -> SettingsViewModel.updateServerSettings(...) -> Service.updateConfig(ServerSettings)`
