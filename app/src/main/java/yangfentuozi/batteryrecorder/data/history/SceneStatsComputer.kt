@@ -4,6 +4,7 @@ import android.content.Context
 import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 private const val TAG = "SceneStatsComputer"
@@ -96,6 +97,38 @@ object SceneStatsComputer {
     )
 
     /**
+     * 单个放电文件对场景统计的贡献。
+     *
+     * 这里同时承载展示口径和首页预测场景口径的聚合结果，避免主流程散落多组并行局部变量。
+     */
+    private data class FileSceneContribution(
+        val rawSignedOffEnergy: Double,
+        val offTime: Long,
+        val rawSignedDailyEnergy: Double,
+        val dailyTime: Long,
+        val rawSignedGameEnergy: Double,
+        val gameTime: Long,
+        val rawTotalCapDrop: Double,
+        val effectiveOffEnergy: Double,
+        val effectiveOffTimeWeighted: Double,
+        val effectiveDailyEnergy: Double,
+        val effectiveDailyTimeWeighted: Double,
+        val effectiveGameEnergy: Double,
+        val effectiveGameTimeWeighted: Double,
+        val effectiveTotalCapDrop: Double
+    )
+
+    /**
+     * 单个放电文件处理后的聚合结果。
+     *
+     * sceneContribution 面向场景统计累加；homeContribution 面向首页统一 K 输入累加。
+     */
+    private data class ProcessedAcceptedFile(
+        val sceneContribution: FileSceneContribution,
+        val homeContribution: HomePredictionContributionResult
+    )
+
+    /**
      * 计算首页场景统计和首页预测输入。
      *
      * 该方法同时负责：
@@ -130,21 +163,8 @@ object SceneStatsComputer {
             return SceneComputeResult(
                 displayStats = null,
                 predictionStats = null,
-                homePredictionInputs = HomePredictionInputs(
-                    sceneStats = null,
-                    weightingEnabled = request.predWeightedAlgorithmEnabled,
-                    alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
-                    kBase = null,
-                    kCurrent = null,
-                    kFallback = null,
-                    currentNonGameEffectiveMs = 0.0,
-                    kSampleFileCount = 0,
-                    kTotalEnergy = 0.0,
-                    kTotalSocDrop = 0.0,
-                    kRawTotalSocDrop = 0.0,
-                    kTotalDurationMs = 0L,
-                    kCV = null,
-                    kEffectiveN = 0.0,
+                homePredictionInputs = buildInsufficientHomePredictionInputs(
+                    request = request,
                     insufficientReason = "最近没有放电记录"
                 )
             )
@@ -210,105 +230,31 @@ object SceneStatsComputer {
             recordIntervalMs = recordIntervalMs,
             currentDischargeFileName = currentDischargeFileName
         ) { acceptedFile ->
-            var fileRawSignedOffEnergy = 0.0
-            var fileOffTime = 0L
-            var fileRawSignedDailyEnergy = 0.0
-            var fileDailyTime = 0L
-            var fileRawSignedGameEnergy = 0.0
-            var fileGameTime = 0L
-
-            var fileHomeEffectiveOffEnergy = 0.0
-            var fileHomeEffectiveOffTime = 0.0
-            var fileHomeEffectiveDailyEnergy = 0.0
-            var fileHomeEffectiveDailyTime = 0.0
-            var fileHomeEffectiveGameEnergy = 0.0
-            var fileHomeEffectiveGameTime = 0.0
-            var fileHomeEffectiveGameCapDrop = 0.0
-            var fileNonGameRawCapDrop = 0.0
-
-            acceptedFile.intervals.forEach { interval ->
-                when {
-                    !interval.isDisplayOn -> {
-                        fileRawSignedOffEnergy += interval.signedEnergyRawMs
-                        fileOffTime += interval.durationMs
-                        fileNonGameRawCapDrop += interval.capDrop
-                    }
-
-                    interval.packageName == null || interval.packageName !in gamePackages -> {
-                        fileRawSignedDailyEnergy += interval.signedEnergyRawMs
-                        fileDailyTime += interval.durationMs
-                        fileNonGameRawCapDrop += interval.capDrop
-                    }
-
-                    else -> {
-                        fileRawSignedGameEnergy += interval.signedEnergyRawMs
-                        fileGameTime += interval.durationMs
-                    }
-                }
-            }
-
-            val fileNonGameRawDuration = fileOffTime + fileDailyTime
-            val useHomeWeightedCurrentFile =
-                request.predWeightedAlgorithmEnabled &&
-                        acceptedFile.file.name == currentDischargeFileName &&
-                        fileNonGameRawDuration >= MIN_HOME_CURRENT_SESSION_MS &&
-                        fileNonGameRawCapDrop >= MIN_HOME_CURRENT_SESSION_SOC_DROP
-
-            var fileHomeEffectiveNonGameCapDrop = 0.0
-            acceptedFile.intervals.forEach { interval ->
-                val homeWeight = if (useHomeWeightedCurrentFile) interval.timeDecayWeight else 1.0
-                val homeEffectiveDuration = interval.durationMs.toDouble() * homeWeight
-                val homeEffectiveEnergy = kotlin.math.abs(interval.signedEnergyRawMs) * homeWeight
-                val homeEffectiveCapDrop = interval.capDrop * homeWeight
-                when {
-                    !interval.isDisplayOn -> {
-                        fileHomeEffectiveOffEnergy += homeEffectiveEnergy
-                        fileHomeEffectiveOffTime += homeEffectiveDuration
-                        fileHomeEffectiveNonGameCapDrop += homeEffectiveCapDrop
-                    }
-
-                    interval.packageName == null || interval.packageName !in gamePackages -> {
-                        fileHomeEffectiveDailyEnergy += homeEffectiveEnergy
-                        fileHomeEffectiveDailyTime += homeEffectiveDuration
-                        fileHomeEffectiveNonGameCapDrop += homeEffectiveCapDrop
-                    }
-
-                    else -> {
-                        fileHomeEffectiveGameEnergy += homeEffectiveEnergy
-                        fileHomeEffectiveGameTime += homeEffectiveDuration
-                        fileHomeEffectiveGameCapDrop += homeEffectiveCapDrop
-                    }
-                }
-            }
+            val processedFile = processAcceptedFile(
+                acceptedFile = acceptedFile,
+                gamePackages = gamePackages,
+                currentDischargeFileName = currentDischargeFileName,
+                weightingEnabled = request.predWeightedAlgorithmEnabled
+            )
+            val sceneContribution = processedFile.sceneContribution
+            val homeContribution = processedFile.homeContribution
 
             usedFileCount += 1
-            rawSignedOffEnergy += fileRawSignedOffEnergy
-            offTime += fileOffTime
-            rawSignedDailyEnergy += fileRawSignedDailyEnergy
-            dailyTime += fileDailyTime
-            rawSignedGameEnergy += fileRawSignedGameEnergy
-            gameTime += fileGameTime
-            rawTotalCapDrop += acceptedFile.rawTotalCapDrop
-            effectiveOffEnergy += fileHomeEffectiveOffEnergy
-            effectiveOffTimeWeighted += fileHomeEffectiveOffTime
-            effectiveDailyEnergy += fileHomeEffectiveDailyEnergy
-            effectiveDailyTimeWeighted += fileHomeEffectiveDailyTime
-            effectiveGameEnergy += fileHomeEffectiveGameEnergy
-            effectiveGameTimeWeighted += fileHomeEffectiveGameTime
-            effectiveTotalCapDrop += fileHomeEffectiveNonGameCapDrop + fileHomeEffectiveGameCapDrop
+            rawSignedOffEnergy += sceneContribution.rawSignedOffEnergy
+            offTime += sceneContribution.offTime
+            rawSignedDailyEnergy += sceneContribution.rawSignedDailyEnergy
+            dailyTime += sceneContribution.dailyTime
+            rawSignedGameEnergy += sceneContribution.rawSignedGameEnergy
+            gameTime += sceneContribution.gameTime
+            rawTotalCapDrop += sceneContribution.rawTotalCapDrop
+            effectiveOffEnergy += sceneContribution.effectiveOffEnergy
+            effectiveOffTimeWeighted += sceneContribution.effectiveOffTimeWeighted
+            effectiveDailyEnergy += sceneContribution.effectiveDailyEnergy
+            effectiveDailyTimeWeighted += sceneContribution.effectiveDailyTimeWeighted
+            effectiveGameEnergy += sceneContribution.effectiveGameEnergy
+            effectiveGameTimeWeighted += sceneContribution.effectiveGameTimeWeighted
+            effectiveTotalCapDrop += sceneContribution.effectiveTotalCapDrop
 
-            val fileNonGameContribution = FileNonGameContribution(
-                fileName = acceptedFile.file.name,
-                rawDurationMs = fileOffTime + fileDailyTime,
-                rawCapDrop = fileNonGameRawCapDrop,
-                effectiveDurationMs = fileHomeEffectiveOffTime + fileHomeEffectiveDailyTime,
-                effectiveEnergy = fileHomeEffectiveOffEnergy + fileHomeEffectiveDailyEnergy,
-                effectiveCapDrop = fileHomeEffectiveNonGameCapDrop
-            )
-            val homeContribution = collectHomePredictionContribution(
-                contribution = fileNonGameContribution,
-                currentDischargeFileName = currentDischargeFileName,
-            )
             if (homeContribution.contributedToTotals) {
                 kSampleFileCount += 1
                 kTotalDurationMs += homeContribution.totalDurationMs
@@ -330,21 +276,8 @@ object SceneStatsComputer {
             return SceneComputeResult(
                 displayStats = null,
                 predictionStats = null,
-                homePredictionInputs = HomePredictionInputs(
-                    sceneStats = null,
-                    weightingEnabled = request.predWeightedAlgorithmEnabled,
-                    alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
-                    kBase = null,
-                    kCurrent = null,
-                    kFallback = null,
-                    currentNonGameEffectiveMs = 0.0,
-                    kSampleFileCount = 0,
-                    kTotalEnergy = 0.0,
-                    kTotalSocDrop = 0.0,
-                    kRawTotalSocDrop = 0.0,
-                    kTotalDurationMs = 0L,
-                    kCV = null,
-                    kEffectiveN = 0.0,
+                homePredictionInputs = buildInsufficientHomePredictionInputs(
+                    request = request,
                     insufficientReason = buildScanFailureReason(scanSummary, recordIntervalMs)
                 )
             )
@@ -356,21 +289,14 @@ object SceneStatsComputer {
             return SceneComputeResult(
                 displayStats = null,
                 predictionStats = null,
-                homePredictionInputs = HomePredictionInputs(
-                    sceneStats = null,
-                    weightingEnabled = request.predWeightedAlgorithmEnabled,
-                    alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
-                    kBase = null,
-                    kCurrent = null,
-                    kFallback = null,
+                homePredictionInputs = buildInsufficientHomePredictionInputs(
+                    request = request,
                     currentNonGameEffectiveMs = currentNonGameEffectiveMs,
                     kSampleFileCount = kSampleFileCount,
                     kTotalEnergy = kTotalEnergy,
                     kTotalSocDrop = kTotalSocDrop,
                     kRawTotalSocDrop = kRawTotalSocDrop,
                     kTotalDurationMs = kTotalDurationMs,
-                    kCV = null,
-                    kEffectiveN = 0.0,
                     insufficientReason = "有效放电记录未形成可统计的场景时长"
                 )
             )
@@ -407,35 +333,23 @@ object SceneStatsComputer {
             rawTotalSocDrop = rawTotalCapDrop
         )
 
-        val kBase = weightedMedian(historicalKEntries.map { it.k to it.weight })
-        val kCV = weightedCV(historicalKEntries.map { it.k to it.weight })
-        val kEffectiveN = effectiveSampleCount(historicalKEntries.map { it.k to it.weight })
-        val kFallback = if (kTotalEnergy > 0.0 && kTotalSocDrop > 0.0) {
-            kTotalSocDrop / kTotalEnergy
-        } else {
-            null
-        }
-        val insufficientReason = when {
-            kSampleFileCount <= 0 -> "最近放电记录仅包含已排除的高负载场景"
-            else -> null
-        }
-        val homePredictionInputs = HomePredictionInputs(
-            sceneStats = predictionStats,
-            weightingEnabled = request.predWeightedAlgorithmEnabled,
-            alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
-            kBase = kBase,
-            kCurrent = kCurrent,
-            kFallback = kFallback,
+        val homePredictionInputs = buildHomePredictionInputs(
+            request = request,
+            predictionStats = predictionStats,
+            historicalKEntries = historicalKEntries,
             currentNonGameEffectiveMs = currentNonGameEffectiveMs,
             kSampleFileCount = kSampleFileCount,
             kTotalEnergy = kTotalEnergy,
             kTotalSocDrop = kTotalSocDrop,
             kRawTotalSocDrop = kRawTotalSocDrop,
             kTotalDurationMs = kTotalDurationMs,
-            kCV = kCV,
-            kEffectiveN = kEffectiveN,
-            insufficientReason = insufficientReason
+            kCurrent = kCurrent
         )
+        val insufficientReason = homePredictionInputs.insufficientReason
+        val kBase = homePredictionInputs.kBase
+        val kCV = homePredictionInputs.kCV
+        val kEffectiveN = homePredictionInputs.kEffectiveN
+        val kFallback = homePredictionInputs.kFallback
 
         if (insufficientReason == null) {
             cacheFile.parentFile?.mkdirs()
@@ -456,6 +370,203 @@ object SceneStatsComputer {
             homePredictionInputs = homePredictionInputs
         )
     }
+
+    /**
+     * 单文件聚合首页场景统计与首页 K 输入。
+     *
+     * 这里保持“先按原始口径分场景，再按首页规则决定当前文件是否启用加权”的顺序，
+     * 避免首页场景统计与首页 K 输入在跨文件主流程里交错展开。
+     */
+    private fun processAcceptedFile(
+        acceptedFile: AcceptedDischargeFile,
+        gamePackages: Set<String>,
+        currentDischargeFileName: String?,
+        weightingEnabled: Boolean
+    ): ProcessedAcceptedFile {
+        var fileRawSignedOffEnergy = 0.0
+        var fileOffTime = 0L
+        var fileRawSignedDailyEnergy = 0.0
+        var fileDailyTime = 0L
+        var fileRawSignedGameEnergy = 0.0
+        var fileGameTime = 0L
+        var fileNonGameRawCapDrop = 0.0
+
+        acceptedFile.intervals.forEach { interval ->
+            when {
+                !interval.isDisplayOn -> {
+                    fileRawSignedOffEnergy += interval.signedEnergyRawMs
+                    fileOffTime += interval.durationMs
+                    fileNonGameRawCapDrop += interval.capDrop
+                }
+
+                interval.packageName == null || interval.packageName !in gamePackages -> {
+                    fileRawSignedDailyEnergy += interval.signedEnergyRawMs
+                    fileDailyTime += interval.durationMs
+                    fileNonGameRawCapDrop += interval.capDrop
+                }
+
+                else -> {
+                    fileRawSignedGameEnergy += interval.signedEnergyRawMs
+                    fileGameTime += interval.durationMs
+                }
+            }
+        }
+
+        val fileNonGameRawDuration = fileOffTime + fileDailyTime
+        val useHomeWeightedCurrentFile =
+            weightingEnabled &&
+                acceptedFile.file.name == currentDischargeFileName &&
+                fileNonGameRawDuration >= MIN_HOME_CURRENT_SESSION_MS &&
+                fileNonGameRawCapDrop >= MIN_HOME_CURRENT_SESSION_SOC_DROP
+
+        var fileHomeEffectiveOffEnergy = 0.0
+        var fileHomeEffectiveOffTime = 0.0
+        var fileHomeEffectiveDailyEnergy = 0.0
+        var fileHomeEffectiveDailyTime = 0.0
+        var fileHomeEffectiveGameEnergy = 0.0
+        var fileHomeEffectiveGameTime = 0.0
+        var fileHomeEffectiveGameCapDrop = 0.0
+        var fileHomeEffectiveNonGameCapDrop = 0.0
+
+        acceptedFile.intervals.forEach { interval ->
+            val homeWeight = if (useHomeWeightedCurrentFile) interval.timeDecayWeight else 1.0
+            val homeEffectiveDuration = interval.durationMs.toDouble() * homeWeight
+            val homeEffectiveEnergy = abs(interval.signedEnergyRawMs) * homeWeight
+            val homeEffectiveCapDrop = interval.capDrop * homeWeight
+            when {
+                !interval.isDisplayOn -> {
+                    fileHomeEffectiveOffEnergy += homeEffectiveEnergy
+                    fileHomeEffectiveOffTime += homeEffectiveDuration
+                    fileHomeEffectiveNonGameCapDrop += homeEffectiveCapDrop
+                }
+
+                interval.packageName == null || interval.packageName !in gamePackages -> {
+                    fileHomeEffectiveDailyEnergy += homeEffectiveEnergy
+                    fileHomeEffectiveDailyTime += homeEffectiveDuration
+                    fileHomeEffectiveNonGameCapDrop += homeEffectiveCapDrop
+                }
+
+                else -> {
+                    fileHomeEffectiveGameEnergy += homeEffectiveEnergy
+                    fileHomeEffectiveGameTime += homeEffectiveDuration
+                    fileHomeEffectiveGameCapDrop += homeEffectiveCapDrop
+                }
+            }
+        }
+
+        val sceneContribution = FileSceneContribution(
+            rawSignedOffEnergy = fileRawSignedOffEnergy,
+            offTime = fileOffTime,
+            rawSignedDailyEnergy = fileRawSignedDailyEnergy,
+            dailyTime = fileDailyTime,
+            rawSignedGameEnergy = fileRawSignedGameEnergy,
+            gameTime = fileGameTime,
+            rawTotalCapDrop = acceptedFile.rawTotalCapDrop,
+            effectiveOffEnergy = fileHomeEffectiveOffEnergy,
+            effectiveOffTimeWeighted = fileHomeEffectiveOffTime,
+            effectiveDailyEnergy = fileHomeEffectiveDailyEnergy,
+            effectiveDailyTimeWeighted = fileHomeEffectiveDailyTime,
+            effectiveGameEnergy = fileHomeEffectiveGameEnergy,
+            effectiveGameTimeWeighted = fileHomeEffectiveGameTime,
+            effectiveTotalCapDrop = fileHomeEffectiveNonGameCapDrop + fileHomeEffectiveGameCapDrop
+        )
+        val homeContribution = collectHomePredictionContribution(
+            contribution = FileNonGameContribution(
+                fileName = acceptedFile.file.name,
+                rawDurationMs = fileNonGameRawDuration,
+                rawCapDrop = fileNonGameRawCapDrop,
+                effectiveDurationMs = fileHomeEffectiveOffTime + fileHomeEffectiveDailyTime,
+                effectiveEnergy = fileHomeEffectiveOffEnergy + fileHomeEffectiveDailyEnergy,
+                effectiveCapDrop = fileHomeEffectiveNonGameCapDrop
+            ),
+            currentDischargeFileName = currentDischargeFileName
+        )
+        return ProcessedAcceptedFile(
+            sceneContribution = sceneContribution,
+            homeContribution = homeContribution
+        )
+    }
+
+    /**
+     * 用跨文件累计结果组装首页预测输入。
+     *
+     * 这里统一收口 `kBase / kCurrent / kFallback` 与置信度相关字段，
+     * 保持首页预测输入的派生逻辑集中在同一处。
+     */
+    private fun buildHomePredictionInputs(
+        request: StatisticsSettings,
+        predictionStats: SceneStats,
+        historicalKEntries: List<FileKInput>,
+        currentNonGameEffectiveMs: Double,
+        kSampleFileCount: Int,
+        kTotalEnergy: Double,
+        kTotalSocDrop: Double,
+        kRawTotalSocDrop: Double,
+        kTotalDurationMs: Long,
+        kCurrent: Double?
+    ): HomePredictionInputs {
+        val kEntries = historicalKEntries.map { it.k to it.weight }
+        val kFallback = if (kTotalEnergy > 0.0 && kTotalSocDrop > 0.0) {
+            kTotalSocDrop / kTotalEnergy
+        } else {
+            null
+        }
+        return HomePredictionInputs(
+            sceneStats = predictionStats,
+            weightingEnabled = request.predWeightedAlgorithmEnabled,
+            alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
+            kBase = weightedMedian(kEntries),
+            kCurrent = kCurrent,
+            kFallback = kFallback,
+            currentNonGameEffectiveMs = currentNonGameEffectiveMs,
+            kSampleFileCount = kSampleFileCount,
+            kTotalEnergy = kTotalEnergy,
+            kTotalSocDrop = kTotalSocDrop,
+            kRawTotalSocDrop = kRawTotalSocDrop,
+            kTotalDurationMs = kTotalDurationMs,
+            kCV = weightedCV(kEntries),
+            kEffectiveN = effectiveSampleCount(kEntries),
+            insufficientReason = if (kSampleFileCount <= 0) {
+                "最近放电记录仅包含已排除的高负载场景"
+            } else {
+                null
+            }
+        )
+    }
+
+    /**
+     * 统一构造首页预测不足态。
+     *
+     * 当前约束是：不足态仍沿用 `HomePredictionInputs` 作为返回模型，
+     * 由这里集中填充默认字段，避免各个提前返回分支重复拼装。
+     */
+    private fun buildInsufficientHomePredictionInputs(
+        request: StatisticsSettings,
+        insufficientReason: String,
+        currentNonGameEffectiveMs: Double = 0.0,
+        kSampleFileCount: Int = 0,
+        kTotalEnergy: Double = 0.0,
+        kTotalSocDrop: Double = 0.0,
+        kRawTotalSocDrop: Double = 0.0,
+        kTotalDurationMs: Long = 0L
+    ): HomePredictionInputs =
+        HomePredictionInputs(
+            sceneStats = null,
+            weightingEnabled = request.predWeightedAlgorithmEnabled,
+            alphaMax = request.predWeightedAlgorithmAlphaMaxX100 / 100.0,
+            kBase = null,
+            kCurrent = null,
+            kFallback = null,
+            currentNonGameEffectiveMs = currentNonGameEffectiveMs,
+            kSampleFileCount = kSampleFileCount,
+            kTotalEnergy = kTotalEnergy,
+            kTotalSocDrop = kTotalSocDrop,
+            kRawTotalSocDrop = kRawTotalSocDrop,
+            kTotalDurationMs = kTotalDurationMs,
+            kCV = null,
+            kEffectiveN = 0.0,
+            insufficientReason = insufficientReason
+        )
 
     /**
      * 将单个文件的非游戏贡献转换为首页预测输入增量。
