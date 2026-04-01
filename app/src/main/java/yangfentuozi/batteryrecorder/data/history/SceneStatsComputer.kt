@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 
 private const val TAG = "SceneStatsComputer"
 private const val MIN_HOME_CURRENT_SESSION_MS = 10 * 60 * 1000L
-private const val MIN_HOME_CURRENT_SESSION_SOC_DROP = 1.0
+private const val MIN_HOME_CURRENT_SESSION_SOC_DROP = 2.0
 
 /**
  * 场景统计结果。

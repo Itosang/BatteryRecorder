@@ -65,7 +65,7 @@ object DischargeRecordScanner {
     private const val MAX_GAP_FACTOR = 5
     private const val MAX_DRAIN_RATE_PER_HOUR = 50.0
     private const val MIN_CURRENT_SESSION_MS = 10 * 60 * 1000L
-    private const val MIN_CURRENT_SESSION_SOC_DROP = 1.0
+    private const val MIN_CURRENT_SESSION_SOC_DROP = 2.0
     private const val DEFAULT_CURRENT_SESSION_WEIGHT_MAX_MULTIPLIER = 3.0
     private const val DEFAULT_CURRENT_SESSION_WEIGHT_HALF_LIFE_MIN = 30L
 
