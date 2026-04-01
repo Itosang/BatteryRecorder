@@ -119,16 +119,6 @@ object SceneStatsComputer {
     )
 
     /**
-     * 单个放电文件处理后的聚合结果。
-     *
-     * sceneContribution 面向场景统计累加；homeContribution 面向首页统一 K 输入累加。
-     */
-    private data class ProcessedAcceptedFile(
-        val sceneContribution: FileSceneContribution,
-        val homeContribution: HomePredictionContributionResult
-    )
-
-    /**
      * 计算首页场景统计和首页预测输入。
      *
      * 该方法同时负责：
@@ -230,14 +220,12 @@ object SceneStatsComputer {
             recordIntervalMs = recordIntervalMs,
             currentDischargeFileName = currentDischargeFileName
         ) { acceptedFile ->
-            val processedFile = processAcceptedFile(
+            val (sceneContribution, homeContribution) = processAcceptedFile(
                 acceptedFile = acceptedFile,
                 gamePackages = gamePackages,
                 currentDischargeFileName = currentDischargeFileName,
                 weightingEnabled = request.predWeightedAlgorithmEnabled
             )
-            val sceneContribution = processedFile.sceneContribution
-            val homeContribution = processedFile.homeContribution
 
             usedFileCount += 1
             rawSignedOffEnergy += sceneContribution.rawSignedOffEnergy
@@ -345,13 +333,8 @@ object SceneStatsComputer {
             kTotalDurationMs = kTotalDurationMs,
             kCurrent = kCurrent
         )
-        val insufficientReason = homePredictionInputs.insufficientReason
-        val kBase = homePredictionInputs.kBase
-        val kCV = homePredictionInputs.kCV
-        val kEffectiveN = homePredictionInputs.kEffectiveN
-        val kFallback = homePredictionInputs.kFallback
 
-        if (insufficientReason == null) {
+        if (homePredictionInputs.insufficientReason == null) {
             cacheFile.parentFile?.mkdirs()
             cacheFile.writeText(
                 displayStats.toString() + "\n" +
@@ -361,7 +344,7 @@ object SceneStatsComputer {
         }
         LoggerX.i(
             TAG,
-            "[预测] 场景统计完成: usedFiles=$usedFileCount kSampleFiles=$kSampleFileCount kBase=$kBase kCurrent=$kCurrent kFallback=$kFallback kCV=$kCV kEffectiveN=$kEffectiveN"
+            "[预测] 场景统计完成: usedFiles=$usedFileCount kSampleFiles=$kSampleFileCount kBase=${homePredictionInputs.kBase} kCurrent=$kCurrent kFallback=${homePredictionInputs.kFallback} kCV=${homePredictionInputs.kCV} kEffectiveN=${homePredictionInputs.kEffectiveN}"
         )
 
         return SceneComputeResult(
@@ -382,7 +365,7 @@ object SceneStatsComputer {
         gamePackages: Set<String>,
         currentDischargeFileName: String?,
         weightingEnabled: Boolean
-    ): ProcessedAcceptedFile {
+    ): Pair<FileSceneContribution, HomePredictionContributionResult> {
         var fileRawSignedOffEnergy = 0.0
         var fileOffTime = 0L
         var fileRawSignedDailyEnergy = 0.0
@@ -481,10 +464,7 @@ object SceneStatsComputer {
             ),
             currentDischargeFileName = currentDischargeFileName
         )
-        return ProcessedAcceptedFile(
-            sceneContribution = sceneContribution,
-            homeContribution = homeContribution
-        )
+        return sceneContribution to homeContribution
     }
 
     /**
