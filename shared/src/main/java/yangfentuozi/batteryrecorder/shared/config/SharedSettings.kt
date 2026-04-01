@@ -17,9 +17,6 @@ import yangfentuozi.batteryrecorder.shared.util.LoggerX
  * 3. 数值范围的轻量收口放在 UI 与 `SettingsViewModel` 的 setter。
  */
 object SharedSettings {
-    private const val LEGACY_PRED_CURRENT_SESSION_WEIGHT_ENABLED_KEY =
-        "pred_current_session_weight_enabled"
-
     /**
      * 获取项目统一的设置存储。
      *
@@ -75,14 +72,7 @@ object SharedSettings {
             gameBlacklist = SettingsConstants.gameBlacklist.readFromSP(prefs),
             sceneStatsRecentFileCount = SettingsConstants.sceneStatsRecentFileCount.readFromSP(prefs),
             predWeightedAlgorithmEnabled =
-                if (prefs.contains(SettingsConstants.predWeightedAlgorithmEnabled.key)) {
-                    SettingsConstants.predWeightedAlgorithmEnabled.readFromSP(prefs)
-                } else {
-                    prefs.getBoolean(
-                        LEGACY_PRED_CURRENT_SESSION_WEIGHT_ENABLED_KEY,
-                        SettingsConstants.predWeightedAlgorithmEnabled.def
-                    )
-                },
+                SettingsConstants.predWeightedAlgorithmEnabled.readFromSP(prefs),
             predWeightedAlgorithmAlphaMaxX100 =
                 SettingsConstants.predWeightedAlgorithmAlphaMaxX100.readFromSP(prefs)
         )
