@@ -142,7 +142,7 @@ object SettingsConstants {
     val predWeightedAlgorithmAlphaMaxX100 =
         IntConfigItem(
             key = "pred_weighted_algorithm_alpha_max_x100",
-            def = 40,
+            def = 20,
             min = 0,
             max = 80
         )
