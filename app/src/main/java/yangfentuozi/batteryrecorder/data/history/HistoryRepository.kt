@@ -71,11 +71,6 @@ object HistoryRepository {
             ?.toList()
             ?: emptyList()
 
-    private data class ImportedRecordEntry(
-        val name: String,
-        val stagedFile: File
-    )
-
     fun RecordsFile.toFile(context: Context): File? {
         val dataDir = dataDir(context, type)
         return validFile(dataDir, name)
@@ -380,68 +375,53 @@ object HistoryRepository {
         try {
             val stagedEntries = inputStream.use { rawInput ->
                 ZipInputStream(rawInput.buffered()).use { zipInput ->
-                    extractImportEntries(zipInput, stagingDir)
+                    val seenNames = LinkedHashSet<String>()
+                    buildList {
+                        var entry = zipInput.nextEntry
+                        while (entry != null) {
+                            if (entry.isDirectory) {
+                                throw IOException("ZIP 包含目录条目，不是一键导出格式: ${entry.name}")
+                            }
+
+                            val entryName = entry.name.trim()
+                            if (entryName.isEmpty()) {
+                                throw IOException("ZIP 包含空文件名条目")
+                            }
+                            if (entryName.contains('/') || entryName.contains('\\')) {
+                                throw IOException("ZIP 条目路径非法，不是一键导出格式: ${entry.name}")
+                            }
+                            if (recordFileTimestampOrNull(File(entryName)) == null) {
+                                throw IOException("ZIP 条目文件名非法: ${entry.name}")
+                            }
+                            if (!seenNames.add(entryName)) {
+                                throw IOException("ZIP 包含重复记录文件: $entryName")
+                            }
+
+                            val stagedFile = File(stagingDir, entryName)
+                            stagedFile.outputStream().use { output ->
+                                zipInput.copyTo(output)
+                            }
+                            validateImportedRecordFile(stagedFile)
+                            add(stagedFile)
+                            zipInput.closeEntry()
+                            entry = zipInput.nextEntry
+                        }
+                    }
                 }
             }
             if (stagedEntries.isEmpty()) {
                 throw IOException("ZIP 中没有可导入的记录文件")
             }
-            stagedEntries.forEach { entry ->
-                val destinationFile = File(targetDir, entry.name)
-                entry.stagedFile.copyTo(destinationFile, overwrite = true)
-                getPowerStatsCacheFile(context.cacheDir, entry.name).delete()
+            stagedEntries.forEach { stagedFile ->
+                val destinationFile = File(targetDir, stagedFile.name)
+                stagedFile.copyTo(destinationFile, overwrite = true)
+                getPowerStatsCacheFile(context.cacheDir, stagedFile.name).delete()
             }
             LoggerX.i(TAG, "[历史] 导入记录压缩包成功: type=${type.dataDirName} count=${stagedEntries.size} source=$sourceUri")
             return stagedEntries.size
         } finally {
             stagingDir.deleteRecursively()
         }
-    }
-
-    private fun extractImportEntries(
-        zipInput: ZipInputStream,
-        stagingDir: File
-    ): List<ImportedRecordEntry> {
-        val importedEntries = mutableListOf<ImportedRecordEntry>()
-        val seenNames = LinkedHashSet<String>()
-
-        var entry = zipInput.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                throw IOException("ZIP 包含目录条目，不是一键导出格式: ${entry.name}")
-            }
-            val entryName = validateImportEntryName(entry.name)
-            if (!seenNames.add(entryName)) {
-                throw IOException("ZIP 包含重复记录文件: $entryName")
-            }
-
-            val stagedFile = File(stagingDir, entryName)
-            stagedFile.outputStream().use { output ->
-                zipInput.copyTo(output)
-            }
-            validateImportedRecordFile(stagedFile)
-            importedEntries += ImportedRecordEntry(
-                name = entryName,
-                stagedFile = stagedFile
-            )
-            zipInput.closeEntry()
-            entry = zipInput.nextEntry
-        }
-        return importedEntries
-    }
-
-    private fun validateImportEntryName(entryName: String): String {
-        val normalizedName = entryName.trim()
-        if (normalizedName.isEmpty()) {
-            throw IOException("ZIP 包含空文件名条目")
-        }
-        if (normalizedName.contains('/') || normalizedName.contains('\\')) {
-            throw IOException("ZIP 条目路径非法，不是一键导出格式: $entryName")
-        }
-        if (recordFileTimestampOrNull(File(normalizedName)) == null) {
-            throw IOException("ZIP 条目文件名非法: $entryName")
-        }
-        return normalizedName
     }
 
     private fun validateImportedRecordFile(file: File) {
