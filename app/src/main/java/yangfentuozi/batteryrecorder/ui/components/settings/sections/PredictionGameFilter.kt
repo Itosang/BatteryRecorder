@@ -45,11 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
 import java.io.File
 
@@ -96,10 +98,14 @@ fun PredictionGameFilterItem(
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
-    val summary = if (gamePackages.isEmpty()) "未选择" else "已选 ${gamePackages.size} 个"
+    val summary = if (gamePackages.isEmpty()) {
+        stringResource(R.string.common_not_selected)
+    } else {
+        stringResource(R.string.common_selected_count, gamePackages.size)
+    }
 
     SettingsItem(
-        title = "排除高负载 App",
+        title = stringResource(R.string.settings_prediction_game_filter_title),
         summary = summary
     ) { showDialog = true }
 
@@ -209,11 +215,11 @@ private fun PredictionGameFilterDialog(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "排除高负载 App",
+                    text = stringResource(R.string.settings_prediction_game_filter_title),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
-                    text = "已选 App 不参与首页续航预测统计",
+                    text = stringResource(R.string.settings_prediction_game_filter_summary),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -224,7 +230,7 @@ private fun PredictionGameFilterDialog(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("搜索应用名或包名") },
+                    placeholder = { Text(stringResource(R.string.settings_prediction_search_app)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -247,7 +253,7 @@ private fun PredictionGameFilterDialog(
                         onCheckedChange = { showSystemApps = it }
                     )
                     Text(
-                        text = "显示系统应用",
+                        text = stringResource(R.string.settings_prediction_show_system_apps),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.clickable { showSystemApps = !showSystemApps }
                     )
@@ -273,7 +279,7 @@ private fun PredictionGameFilterDialog(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("未找到应用")
+                        Text(stringResource(R.string.settings_prediction_no_app_found))
                     }
                 } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
@@ -339,7 +345,7 @@ private fun PredictionGameFilterDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消")
+                        Text(stringResource(R.string.common_cancel))
                     }
                     Spacer(Modifier.width(8.dp))
                     TextButton(onClick = {
@@ -348,7 +354,7 @@ private fun PredictionGameFilterDialog(
                             detectedGamePkgs
                         )
                     }) {
-                        Text("确定 (${selectedPackages.size})")
+                        Text(stringResource(R.string.settings_prediction_confirm_selected, selectedPackages.size))
                     }
                 }
             }

@@ -90,7 +90,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 TextButton(onClick = {
                     context.startActivity(Intent(Intent.ACTION_VIEW, REPO_URL.toUri()))
                 }) {
-                    Text("在 GitHub 查看源码")
+                    Text(stringResource(R.string.about_view_source))
                 }
             }
         }

@@ -1,5 +1,7 @@
 package yangfentuozi.batteryrecorder.utils
 
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -124,9 +126,9 @@ fun formatRemainingTime(hours: Double): String {
     val h = totalMinutes / 60
     val m = totalMinutes % 60
     return when {
-        h > 0 && m > 0 -> "约 ${h}h${m}m"
-        h > 0 -> "约 ${h}h"
-        else -> "约 ${m}m"
+        h > 0 && m > 0 -> appString(R.string.format_about_remaining_hm, h, m)
+        h > 0 -> appString(R.string.format_about_remaining_h, h)
+        else -> appString(R.string.format_about_remaining_m, m)
     }
 }
 

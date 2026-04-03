@@ -1,14 +1,16 @@
 package yangfentuozi.batteryrecorder.ui.model
 
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 
 val LoggerX.LogLevel.displayName: String
     get() = when (this) {
-        LoggerX.LogLevel.Verbose -> "详细"
-        LoggerX.LogLevel.Debug -> "调试"
-        LoggerX.LogLevel.Info -> "信息"
-        LoggerX.LogLevel.Warning -> "警告"
-        LoggerX.LogLevel.Error -> "错误"
-        LoggerX.LogLevel.Assert -> "断言"
-        LoggerX.LogLevel.Disabled -> "关闭"
+        LoggerX.LogLevel.Verbose -> appString(R.string.log_level_verbose)
+        LoggerX.LogLevel.Debug -> appString(R.string.log_level_debug)
+        LoggerX.LogLevel.Info -> appString(R.string.log_level_info)
+        LoggerX.LogLevel.Warning -> appString(R.string.log_level_warning)
+        LoggerX.LogLevel.Error -> appString(R.string.log_level_error)
+        LoggerX.LogLevel.Assert -> appString(R.string.log_level_assert)
+        LoggerX.LogLevel.Disabled -> appString(R.string.log_level_disabled)
     }

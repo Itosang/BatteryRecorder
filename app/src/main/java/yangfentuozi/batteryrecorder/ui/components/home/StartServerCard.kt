@@ -13,7 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.startup.RootServerStarter
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
@@ -32,12 +34,12 @@ fun StartServerCard(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "启动（Root）",
+                text = stringResource(R.string.home_action_start_root),
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "启动后台监测服务",
+                text = stringResource(R.string.home_start_service_title),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -57,7 +59,7 @@ fun StartServerCard(
                 }.start()
             }
         ) {
-            Text("启动服务")
+            Text(stringResource(R.string.home_action_start_service))
         }
     }
 }

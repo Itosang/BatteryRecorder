@@ -1,6 +1,8 @@
 package yangfentuozi.batteryrecorder.data.history
 
 import android.content.Context
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
@@ -155,7 +157,7 @@ object SceneStatsComputer {
                 predictionStats = null,
                 homePredictionInputs = buildInsufficientHomePredictionInputs(
                     request = request,
-                    insufficientReason = "最近没有放电记录"
+                    insufficientReason = appString(R.string.prediction_reason_no_discharge_records)
                 )
             )
         }
@@ -285,7 +287,7 @@ object SceneStatsComputer {
                     kTotalSocDrop = kTotalSocDrop,
                     kRawTotalSocDrop = kRawTotalSocDrop,
                     kTotalDurationMs = kTotalDurationMs,
-                    insufficientReason = "有效放电记录未形成可统计的场景时长"
+                    insufficientReason = appString(R.string.prediction_reason_no_valid_scene_duration)
                 )
             )
         }
@@ -507,7 +509,7 @@ object SceneStatsComputer {
             kCV = weightedCV(kEntries),
             kEffectiveN = effectiveSampleCount(kEntries),
             insufficientReason = if (kSampleFileCount <= 0) {
-                "最近放电记录仅包含已排除的高负载场景"
+                appString(R.string.prediction_reason_only_excluded_high_load)
             } else {
                 null
             }
@@ -621,26 +623,31 @@ object SceneStatsComputer {
         recordIntervalMs: Long
     ): String {
         if (summary == null || summary.selectedFileCount <= 0) {
-            return "最近没有放电记录"
+            return appString(R.string.prediction_reason_no_discharge_records)
         }
 
         val selected = summary.selectedFileCount
         if (summary.rejectedAbnormalDrainRateCount == selected) {
-            return "最近${selected}个放电文件均因掉电速率超过 50%/h 被异常校验过滤"
+            return appString(R.string.prediction_reason_abnormal_rate_filtered, selected)
         }
         if (summary.rejectedNoValidDurationCount == selected) {
             val maxGapMs = DischargeRecordScanner.computeMaxGapMs(recordIntervalMs)
-            return "最近${selected}个放电文件均无有效采样区间，请检查记录间隔设置是否与历史数据匹配（当前最大间隔 ${maxGapMs}ms）"
+            return appString(R.string.prediction_reason_no_valid_interval, selected, maxGapMs)
         }
         if (summary.rejectedNoSocDropCount == selected) {
-            return "最近${selected}个放电文件均未形成有效掉电"
+            return appString(R.string.prediction_reason_no_valid_capacity, selected)
         }
         if (summary.rejectedNoEnergyCount == selected) {
-            return "最近${selected}个放电文件均未形成有效功耗数据"
+            return appString(R.string.prediction_reason_latest_files_no_power, selected)
         }
 
         val rejected = selected - summary.acceptedFileCount
-        return "最近${selected}个放电文件中仅 ${summary.acceptedFileCount} 个通过校验，${rejected} 个被过滤"
+        return appString(
+            R.string.prediction_reason_partial_filtered,
+            summary.acceptedFileCount,
+            selected,
+            rejected
+        )
     }
 
     /**

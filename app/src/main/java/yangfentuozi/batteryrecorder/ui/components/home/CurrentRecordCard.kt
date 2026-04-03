@@ -33,7 +33,9 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.ui.components.global.StatRow
 import yangfentuozi.batteryrecorder.ui.model.CurrentRecordUiState
@@ -76,9 +78,21 @@ fun CurrentRecordCard(
     val lastTemp = uiState.lastTemp
     val hasKnownStatus = uiState.displayStatus != BatteryStatus.Unknown
     val isDischargingNow = uiState.displayStatus == BatteryStatus.Discharging
-    val chargeStatusText = if (isDischargingNow) "放电" else "充电"
-    val averageLabel = if (isDischargingNow) "平均功耗" else "平均功率"
-    val currentLabel = if (isDischargingNow) "当前功耗" else "当前功率"
+    val chargeStatusText = if (isDischargingNow) {
+        stringResource(R.string.home_status_discharging)
+    } else {
+        stringResource(R.string.home_status_charging)
+    }
+    val averageLabel = if (isDischargingNow) {
+        stringResource(R.string.home_current_record_avg_consumption)
+    } else {
+        stringResource(R.string.home_current_record_avg_power)
+    }
+    val currentLabel = if (isDischargingNow) {
+        stringResource(R.string.home_current_record_current_consumption)
+    } else {
+        stringResource(R.string.home_current_record_current_power)
+    }
 
     Column(
         modifier = modifier
@@ -87,12 +101,14 @@ fun CurrentRecordCard(
             .padding(16.dp)
     ) {
         Text(
-            text = buildString {
-                append("当前记录")
-                if (hasKnownStatus) {
-                    append(" - ")
-                    append(chargeStatusText)
-                }
+            text = if (hasKnownStatus) {
+                stringResource(
+                    R.string.home_current_record_title_with_status,
+                    stringResource(R.string.home_current_record_title),
+                    chargeStatusText
+                )
+            } else {
+                stringResource(R.string.home_current_record_title)
             },
             style = MaterialTheme.typography.titleMedium
         )
@@ -100,7 +116,7 @@ fun CurrentRecordCard(
         if (uiState.isSwitching) {
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "等待新分段生成有效样本",
+                text = stringResource(R.string.home_current_record_waiting),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -149,17 +165,17 @@ fun CurrentRecordCard(
                         .fillMaxHeight()
                 ) {
                     StatRow(
-                        "开始时间",
+                        stringResource(R.string.home_current_record_start_time),
                         formatDateTime(stats.startTime),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     StatRow(
-                        "当前电量",
+                        stringResource(R.string.home_current_record_capacity),
                         currentCapacityText,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     StatRow(
-                        "电压",
+                        stringResource(R.string.home_current_record_voltage),
                         currentVoltageText,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -184,12 +200,12 @@ fun CurrentRecordCard(
             ) {
                 Column(modifier = Modifier.weight(1f, fill = true)) {
                     StatRow(
-                        "温度",
+                        stringResource(R.string.home_current_record_temperature),
                         latestPowerRaw?.let { "${lastTemp / 10.0}°C" } ?: "--",
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     StatRow(
-                        "时长",
+                        stringResource(R.string.home_current_record_duration),
                         formatDurationHours(stats.endTime - stats.startTime),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -210,7 +226,7 @@ fun CurrentRecordCard(
         } else if (!uiState.isSwitching) {
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "暂无记录",
+                text = stringResource(R.string.home_current_record_no_record),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -230,7 +246,7 @@ private fun LivePowerChart(
     Box(modifier = modifier) {
         if (points.size < 2) {
             Text(
-                text = "暂无数据",
+                text = stringResource(R.string.common_no_data),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Center)

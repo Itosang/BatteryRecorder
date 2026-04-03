@@ -1,5 +1,7 @@
 package yangfentuozi.batteryrecorder.data.history
 
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -159,7 +161,7 @@ object BatteryPredictor {
                 screenOnDailyFullHours = null,
                 insufficientData = true,
                 confidenceScore = 0,
-                insufficientReason = "历史记录未形成有效功耗数据"
+                insufficientReason = appString(R.string.prediction_reason_invalid_power_data)
             )
         }
         LoggerX.d(
@@ -178,7 +180,7 @@ object BatteryPredictor {
                 screenOnDailyFullHours = null,
                 insufficientData = true,
                 confidenceScore = 0,
-                insufficientReason = "历史记录存在异常掉电跳变，无法计算预测"
+                insufficientReason = appString(R.string.prediction_reason_abnormal_drain)
             )
         }
 
@@ -257,25 +259,25 @@ object BatteryPredictor {
 
     private fun getInsufficientReason(inputs: HomePredictionInputs?): String? {
         if (inputs == null) {
-            return "暂无可用于预测的放电统计数据"
+            return appString(R.string.prediction_reason_no_prediction_stats)
         }
         if (inputs.insufficientReason != null) {
             return inputs.insufficientReason
         }
         if (inputs.sceneStats == null) {
-            return "暂无可用于预测的放电统计数据"
+            return appString(R.string.prediction_reason_no_prediction_stats)
         }
         if (inputs.kSampleFileCount < MIN_FILE_COUNT) {
-            return "有效放电记录不足 3 份"
+            return appString(R.string.prediction_reason_not_enough_valid_records)
         }
         if (inputs.kTotalSocDrop <= 0) {
-            return "历史记录未形成有效百分比掉电数据"
+            return appString(R.string.prediction_reason_no_valid_soc_drop)
         }
         if (inputs.kTotalEnergy <= 0) {
-            return "历史记录未形成有效功耗数据"
+            return appString(R.string.prediction_reason_no_valid_power_data)
         }
         if (inputs.kTotalDurationMs <= 0L) {
-            return "历史记录总时长无效"
+            return appString(R.string.prediction_reason_invalid_total_duration)
         }
         return null
     }

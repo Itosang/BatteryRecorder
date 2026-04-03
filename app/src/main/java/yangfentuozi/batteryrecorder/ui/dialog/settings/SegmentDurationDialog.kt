@@ -13,7 +13,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
@@ -34,7 +36,7 @@ fun SegmentDurationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("记录分段时间") },
+        title = { Text(stringResource(R.string.dialog_segment_duration_title)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -43,13 +45,19 @@ fun SegmentDurationDialog(
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it },
-                    label = { Text("分钟") },
+                    label = { Text(stringResource(R.string.dialog_segment_duration_label)) },
                     isError = isError,
                     supportingText = {
                         when {
-                            isError -> Text("请输入 ${config.min}-${config.max} 之间的整数")
-                            parsedValue == 0L -> Text("设置为 0 表示不按时间自动分段")
-                            else -> Text("$parsedValue 分钟 = ${"%.1f".format(parsedValue / 60.0)} 小时")
+                            isError -> Text(stringResource(R.string.common_integer_range_hint, config.min, config.max))
+                            parsedValue == 0L -> Text(stringResource(R.string.dialog_segment_duration_zero_hint))
+                            else -> Text(
+                                stringResource(
+                                    R.string.common_minutes_to_hours,
+                                    parsedValue.toInt(),
+                                    parsedValue / 60.0
+                                )
+                            )
                         }
                     },
                     singleLine = true,
@@ -62,12 +70,12 @@ fun SegmentDurationDialog(
                 onClick = { parsedValue?.let { onSave(it) } },
                 enabled = !isError
             ) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

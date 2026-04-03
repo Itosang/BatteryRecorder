@@ -1,6 +1,7 @@
 package yangfentuozi.batteryrecorder
 
 import android.app.Application
+import androidx.annotation.StringRes
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -9,8 +10,14 @@ import java.io.File
 private const val TAG = "App"
 
 class App: Application() {
+    companion object {
+        lateinit var instance: App
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         val settings = SharedSettings.readServerSettings(this)
         LoggerX.d(TAG, 
             "[应用] SharedPreferences 配置读取完成: intervalMs=${settings.recordIntervalMs} " +
@@ -25,3 +32,6 @@ class App: Application() {
         )
     }
 }
+
+fun appString(@StringRes resId: Int, vararg formatArgs: Any): String =
+    App.instance.getString(resId, *formatArgs)

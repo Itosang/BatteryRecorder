@@ -20,8 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 import kotlin.math.roundToInt
@@ -50,7 +52,7 @@ fun RecordIntervalDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("采样间隔")
+                Text(stringResource(R.string.dialog_record_interval_title))
                 Box(
                     modifier = Modifier
                         .clip(AppShape.small)
@@ -59,7 +61,7 @@ fun RecordIntervalDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${(value * 10).roundToInt() / 10.0} 秒",
+                        text = stringResource(R.string.common_seconds_value, (value * 10).roundToInt() / 10.0),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -82,12 +84,12 @@ fun RecordIntervalDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave((value * 1000).toLong()) }) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

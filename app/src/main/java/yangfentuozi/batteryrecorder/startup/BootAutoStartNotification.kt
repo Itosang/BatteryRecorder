@@ -12,15 +12,11 @@ import yangfentuozi.batteryrecorder.R
 
 object BootAutoStartNotification {
     private const val CHANNEL_ID = "boot_auto_start_reminder"
-    private const val CHANNEL_NAME = "开机自启提醒"
-    private const val CHANNEL_DESCRIPTION = "用于提示开机自启相关操作"
     private const val NOTIFICATION_ID_PERMISSION_HINT = 10001
     private const val NOTIFICATION_ID_BOOT_RESULT = 10002
-    const val CONTENT_TEXT = "请在系统设置中允许 BatteryRecorder 自启动"
-    private const val BOOT_SUCCESS_TITLE = "开机自启动已完成"
-    private const val BOOT_SUCCESS_TEXT = "已发起服务启动"
-    private const val BOOT_FAILED_TITLE = "开机自启动失败"
-    private const val BOOT_FAILED_TEXT = "服务启动命令执行失败"
+
+    fun permissionHintText(context: Context): String =
+        context.getString(R.string.boot_autostart_permission_hint)
 
     @Suppress("DEPRECATION")
     fun notifyEnabled(context: Context) {
@@ -34,11 +30,11 @@ object BootAutoStartNotification {
         }
 
         val manager = appContext.getSystemService(NotificationManager::class.java) ?: return
-        ensureChannel(manager)
+        ensureChannel(appContext, manager)
         val notification = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("开机自启已开启")
-            .setContentText(CONTENT_TEXT)
+            .setContentTitle(appContext.getString(R.string.boot_autostart_enabled_title))
+            .setContentText(appContext.getString(R.string.boot_autostart_permission_hint))
             .setCategory(Notification.CATEGORY_REMINDER)
             .setPriority(Notification.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -60,11 +56,13 @@ object BootAutoStartNotification {
         }
 
         val manager = appContext.getSystemService(NotificationManager::class.java) ?: return
-        ensureChannel(manager)
+        ensureChannel(appContext, manager)
         val (title, text) = if (started) {
-            BOOT_SUCCESS_TITLE to BOOT_SUCCESS_TEXT
+            appContext.getString(R.string.boot_autostart_success_title) to
+                appContext.getString(R.string.boot_autostart_success_text)
         } else {
-            BOOT_FAILED_TITLE to BOOT_FAILED_TEXT
+            appContext.getString(R.string.boot_autostart_failed_title) to
+                appContext.getString(R.string.boot_autostart_failed_text)
         }
         val notification = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -79,14 +77,14 @@ object BootAutoStartNotification {
         }
     }
 
-    private fun ensureChannel(manager: NotificationManager) {
+    private fun ensureChannel(context: Context, manager: NotificationManager) {
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            CHANNEL_NAME,
+            context.getString(R.string.boot_autostart_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = CHANNEL_DESCRIPTION
+            description = context.getString(R.string.boot_autostart_channel_description)
             setShowBadge(true)
         }
         manager.createNotificationChannel(channel)

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.data.history.HistoryRecord
 import yangfentuozi.batteryrecorder.data.history.HistoryRepository
 import yangfentuozi.batteryrecorder.data.history.HistoryRepository.toFile
@@ -255,7 +257,7 @@ class HistoryViewModel : ViewModel() {
                 val recordFile = recordsFile.toFile(context)
                 if (recordFile == null) {
                     if (detailToken != detailLoadToken) return@launch
-                    _userMessage.value = "记录文件不存在"
+                    _userMessage.value = appString(R.string.toast_record_file_missing)
                     _isRecordChartLoading.value = false
                     return@launch
                 }
@@ -297,7 +299,7 @@ class HistoryViewModel : ViewModel() {
             } catch (e: Exception) {
                 if (detailToken != detailLoadToken) return@launch
                 LoggerX.e(TAG, "[记录详情] 加载失败: ${recordsFile.name}", tr = e)
-                _userMessage.value = "加载记录详情失败"
+                _userMessage.value = appString(R.string.toast_load_record_detail_failed)
                 clearRecordDetailState()
                 _isRecordChartLoading.value = false
             } finally {
@@ -386,15 +388,15 @@ class HistoryViewModel : ViewModel() {
                         _recordAppDetailEntries.value = emptyList()
                         requestRecordChartUiStateRecompute()
                     }
-                    _userMessage.value = "删除成功"
+                    _userMessage.value = appString(R.string.toast_delete_success)
                 } else {
-                    _userMessage.value = "删除失败"
+                    _userMessage.value = appString(R.string.toast_delete_failed)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LoggerX.e(TAG, "[删除] 记录删除失败: ${recordsFile.name}", tr = e)
-                _userMessage.value = "删除失败"
+                _userMessage.value = appString(R.string.toast_delete_failed)
             } finally {
                 _isLoading.value = false
             }
@@ -413,12 +415,12 @@ class HistoryViewModel : ViewModel() {
                 withContext(Dispatchers.IO) {
                     HistoryRepository.exportRecord(context, recordsFile, destinationUri)
                 }
-                _userMessage.value = "导出成功"
+                _userMessage.value = appString(R.string.toast_export_success)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LoggerX.e(TAG, "[导出] 单记录导出失败: ${recordsFile.name}", tr = e)
-                _userMessage.value = "导出失败"
+                _userMessage.value = appString(R.string.toast_export_failed)
             } finally {
                 _isImportExporting.value = false
             }
@@ -441,12 +443,12 @@ class HistoryViewModel : ViewModel() {
                         .map { file -> RecordsFile.fromFile(file) }
                     HistoryRepository.exportRecordsZip(context, exportRecords, destinationUri)
                 }
-                _userMessage.value = "导出成功"
+                _userMessage.value = appString(R.string.toast_export_success)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LoggerX.e(TAG, "[导出] 批量导出失败: ${type.dataDirName}", tr = e)
-                _userMessage.value = "导出失败"
+                _userMessage.value = appString(R.string.toast_export_failed)
             } finally {
                 _isImportExporting.value = false
             }
@@ -478,12 +480,12 @@ class HistoryViewModel : ViewModel() {
                     type = type,
                     preserveChargeFilter = true
                 )
-                _userMessage.value = "导入成功，共 $importedCount 条"
+                _userMessage.value = appString(R.string.toast_import_success, importedCount)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LoggerX.e(TAG, "[导入] 批量导入失败: ${type.dataDirName}", tr = e)
-                _userMessage.value = "导入失败"
+                _userMessage.value = appString(R.string.toast_import_failed)
             } finally {
                 _isImportExporting.value = false
             }

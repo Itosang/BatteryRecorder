@@ -15,6 +15,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import yangfentuozi.batteryrecorder.BuildConfig
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.ui.dialog.home.DocsIntroDialog
 import yangfentuozi.batteryrecorder.ui.dialog.home.UpdateDialog
@@ -69,7 +70,7 @@ fun BatteryRecorderApp(
 
         val update = UpdateUtils.fetchUpdate(appSettings.updateChannel).getOrElse {
             LoggerX.w(TAG, "[更新] 启动更新检测失败，未获取到可用更新信息")
-            Toast.makeText(context, "检测更新失败", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.update_check_failed), Toast.LENGTH_SHORT).show()
             return@LaunchedEffect
         }
         if (update == null) {

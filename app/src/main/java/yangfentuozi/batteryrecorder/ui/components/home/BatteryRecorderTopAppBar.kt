@@ -57,10 +57,10 @@ fun BatteryRecorderTopAppBar(
         actions = {
             if (!showBackButton) {
                 IconButton(onClick = onRefreshClick) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.menu_refresh))
                 }
                 IconButton(onClick = onSettingsClick) {
-                    Icon(Icons.Default.Settings, contentDescription = "设置")
+                    Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.menu_settings))
                 }
             }
             IconButton(onClick = { showMenu = !showMenu }) {
@@ -75,7 +75,7 @@ fun BatteryRecorderTopAppBar(
             ) {
                 if (!showBackButton && showStopServer) {
                     DropdownMenuItem(
-                        text = { Text("停止服务") },
+                        text = { Text(stringResource(R.string.menu_stop_service)) },
                         onClick = {
                             showMenu = false
                             onStopServerClick()
@@ -84,7 +84,7 @@ fun BatteryRecorderTopAppBar(
                 }
                 if (!showBackButton) {
                     DropdownMenuItem(
-                        text = { Text("导出日志") },
+                        text = { Text(stringResource(R.string.menu_export_logs)) },
                         onClick = {
                             showMenu = false
                             onExportLogsClick()
@@ -92,14 +92,14 @@ fun BatteryRecorderTopAppBar(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("使用手册") },
+                    text = { Text(stringResource(R.string.menu_user_guide)) },
                     onClick = {
                         showMenu = false
                         context.startActivity(Intent(Intent.ACTION_VIEW, "https://itosang.github.io/BatteryRecorder".toUri()))
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("关于") },
+                    text = { Text(stringResource(R.string.menu_about)) },
                     onClick = {
                         showMenu = false
                         onAboutClick()

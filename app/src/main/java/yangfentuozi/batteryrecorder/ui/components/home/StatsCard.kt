@@ -11,8 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.data.history.HistorySummary
 import yangfentuozi.batteryrecorder.ui.components.global.StatRow
 import yangfentuozi.batteryrecorder.utils.formatPower
@@ -43,12 +45,12 @@ fun StatsCard(
         if (summary != null) {
             Spacer(Modifier.height(12.dp))
             StatRow(
-                "记录数",
-                "${summary.recordCount} 次",
+                stringResource(R.string.home_stats_record_count),
+                stringResource(R.string.common_times_count, summary.recordCount),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
             StatRow(
-                "平均功率",
+                stringResource(R.string.home_stats_average_power),
                 formatPower(
                     powerW = summary.averagePower,
                     dualCellEnabled = dualCellEnabled,
@@ -59,7 +61,7 @@ fun StatsCard(
         } else {
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "暂无数据",
+                text = stringResource(R.string.common_no_data),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

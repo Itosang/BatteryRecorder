@@ -18,8 +18,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.components.global.MarkdownText
 import yangfentuozi.batteryrecorder.ui.model.displayName
 import yangfentuozi.batteryrecorder.utils.AppUpdate
@@ -44,7 +46,7 @@ fun UpdateDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "发现新版本",
+                    text = stringResource(R.string.update_found_new_version),
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
@@ -70,7 +72,7 @@ fun UpdateDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消")
+                        Text(stringResource(R.string.common_cancel))
                     }
                     TextButton(onClick = {
                         context.startActivity(
@@ -81,7 +83,7 @@ fun UpdateDialog(
                         )
                         onDismiss()
                     }) {
-                        Text("下载更新")
+                        Text(stringResource(R.string.update_download))
                     }
                 }
             }

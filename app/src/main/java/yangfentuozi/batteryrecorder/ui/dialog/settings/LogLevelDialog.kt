@@ -20,8 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.ui.model.displayName
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
@@ -58,7 +60,7 @@ fun LogLevelDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("日志级别")
+                Text(stringResource(R.string.dialog_log_level_title))
                 Box(
                     modifier = Modifier
                         .clip(AppShape.small)
@@ -92,12 +94,12 @@ fun LogLevelDialog(
         },
         confirmButton = {
             TextButton(onClick = { config.onSave(levels[selectedIndex]) }) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = config.onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

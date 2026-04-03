@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
 data class LogValueDialogConfig(
@@ -66,12 +68,12 @@ fun LogValueDialog(
                 onClick = { parsedValue?.let(config.onSave) },
                 enabled = parsedValue != null
             ) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = config.onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

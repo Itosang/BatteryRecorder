@@ -57,12 +57,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.data.model.RecordDetailChartPoint
 import yangfentuozi.batteryrecorder.data.model.normalizeRecordDetailChartPoints
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
@@ -452,7 +455,7 @@ fun PowerCapacityChart(
 
         ChartPreparationResult.Empty -> {
             Text(
-                text = "暂无数据",
+                text = stringResource(R.string.common_no_data),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1420,25 +1423,25 @@ fun PowerCapacityChart(
                 onClick = onTogglePowerVisibility
             )
             LegendItem(
-                label = "电量",
+                label = stringResource(R.string.chart_capacity),
                 color = capacityColor,
                 enabled = curveVisibility.showCapacity,
                 onClick = onToggleCapacityVisibility
             )
             LegendItem(
-                label = "温度",
+                label = stringResource(R.string.chart_temperature),
                 color = tempColor,
                 enabled = curveVisibility.showTemp,
                 onClick = onToggleTempVisibility
             )
             LegendItem(
-                label = "电压",
+                label = stringResource(R.string.chart_voltage),
                 color = voltageColor,
                 enabled = curveVisibility.showVoltage,
                 onClick = onToggleVoltageVisibility
             )
             LegendItem(
-                label = "应用",
+                label = stringResource(R.string.chart_app),
                 color = MaterialTheme.colorScheme.secondary,
                 enabled = showAppIcons,
                 onClick = onToggleAppIconsVisibility
@@ -1460,7 +1463,7 @@ private fun SelectedPointInfo(
     startPadding: Dp,
 ) {
     val text = if (selected == null) {
-        "时间点详细数据"
+        stringResource(R.string.chart_point_detail)
     } else {
         val offset = (selected.timestamp - recordStartTime).coerceAtLeast(0L)
         val timeText = formatRelativeTime(offset)
@@ -1508,7 +1511,11 @@ private fun SelectedPointInfo(
         ) {
             Icon(
                 imageVector = if (isFullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                contentDescription = if (isFullscreen) "退出全屏" else "放大图表"
+                contentDescription = if (isFullscreen) {
+                    stringResource(R.string.chart_exit_fullscreen)
+                } else {
+                    stringResource(R.string.chart_enter_fullscreen)
+                }
             )
         }
     }
@@ -3091,8 +3098,8 @@ private fun selectPowerValueForDisplay(
 private fun powerCurveModeLabel(mode: PowerCurveMode): String {
     // Hidden 仍显示“功耗”标签，目的是保留同一个点击入口，而不是让图例项消失。
     return when (mode) {
-        PowerCurveMode.Raw -> "功耗"
-        PowerCurveMode.Fitted -> "趋势"
-        PowerCurveMode.Hidden -> "功耗"
+        PowerCurveMode.Raw -> appString(R.string.chart_power_curve)
+        PowerCurveMode.Fitted -> appString(R.string.chart_trend_curve)
+        PowerCurveMode.Hidden -> appString(R.string.chart_power_curve)
     }
 }

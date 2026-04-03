@@ -47,8 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.ui.components.global.SwipeRevealRow
@@ -143,14 +145,18 @@ fun HistoryListScreen(
         }
     }
 
-    val title = if (batteryStatus == BatteryStatus.Charging) "充电历史" else "放电历史"
+    val title = if (batteryStatus == BatteryStatus.Charging) {
+        stringResource(R.string.history_charging_title)
+    } else {
+        stringResource(R.string.history_discharging_title)
+    }
     val emptyText = if (
         batteryStatus == BatteryStatus.Charging &&
         chargeCapacityChangeFilter != null
     ) {
-        "暂无符合条件的记录"
+        stringResource(R.string.history_empty_filtered)
     } else {
-        "暂无记录"
+        stringResource(R.string.history_empty)
     }
 
     Scaffold(
@@ -169,7 +175,7 @@ fun HistoryListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Download,
-                            contentDescription = "导入"
+                            contentDescription = stringResource(R.string.history_import)
                         )
                     }
                     IconButton(
@@ -180,7 +186,7 @@ fun HistoryListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Outbox,
-                            contentDescription = "导出全部"
+                            contentDescription = stringResource(R.string.history_export_all)
                         )
                     }
                 }
@@ -264,7 +270,7 @@ fun HistoryListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Outbox,
-                                        contentDescription = "导出",
+                                        contentDescription = stringResource(R.string.history_export),
                                         tint = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
@@ -286,7 +292,7 @@ fun HistoryListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Delete,
-                                        contentDescription = "删除",
+                                        contentDescription = stringResource(R.string.history_delete),
                                         tint = MaterialTheme.colorScheme.onError
                                     )
                                 }
@@ -310,7 +316,11 @@ fun HistoryListScreen(
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        text = "时长 ${formatDurationHours(durationMs)} · 电量 ${capacityChange}%",
+                                        text = stringResource(
+                                            R.string.history_item_summary,
+                                            formatDurationHours(durationMs),
+                                            capacityChange
+                                        ),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

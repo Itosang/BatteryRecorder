@@ -28,12 +28,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
@@ -100,7 +102,7 @@ fun CalibrationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("电流单位校准") },
+        title = { Text(stringResource(R.string.settings_calibration_title)) },
         text = {
             Column {
                 Row(
@@ -155,26 +157,26 @@ fun CalibrationDialog(
                         if (abs(valueW) < 0.005) 0.0 else valueW
                     }
                     Text(
-                        text = "显示为 ${String.format("%+.2f W", finalW)}",
+                        text = stringResource(R.string.dialog_calibration_preview, String.format("%+.2f W", finalW)),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "充电应显示为正数，放电应显示为负数",
+                        text = stringResource(R.string.dialog_calibration_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 } else {
                     Text(
-                        text = "显示为 --W",
+                        text = stringResource(R.string.dialog_calibration_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "请启动服务",
+                        text = stringResource(R.string.dialog_calibration_start_service),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -184,12 +186,12 @@ fun CalibrationDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(value) }) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

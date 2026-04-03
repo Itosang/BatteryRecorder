@@ -14,8 +14,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.startup.BootAutoStartNotification
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
@@ -44,12 +46,12 @@ fun ServerSection(
     ) { _ -> }
 
     SplicedColumnGroup(
-        title = "服务",
+        title = stringResource(R.string.settings_section_service),
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {
             M3ESwitchWidget(
-                text = "开机自启（ROOT）",
+                text = stringResource(R.string.settings_root_boot_autostart),
                 checked = state.rootBootAutoStartEnabled,
                 onCheckedChange = { enabled ->
                     actions.setRootBootAutoStartEnabled(enabled)
@@ -65,7 +67,7 @@ fun ServerSection(
                     }
                     Toast.makeText(
                         context,
-                        BootAutoStartNotification.CONTENT_TEXT,
+                        BootAutoStartNotification.permissionHintText(context),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -74,7 +76,7 @@ fun ServerSection(
 
         item {
             M3ESwitchWidget(
-                text = "息屏记录",
+                text = stringResource(R.string.settings_screen_off_record),
                 checked = state.recordScreenOffEnabled,
                 onCheckedChange = actions.setScreenOffRecordEnabled
             )
@@ -82,7 +84,7 @@ fun ServerSection(
 
         item {
             M3ESwitchWidget(
-                text = "轮询获取息屏状态",
+                text = stringResource(R.string.settings_poll_screen_status),
                 checked = state.alwaysPollingScreenStatusEnabled,
                 onCheckedChange = actions.setAlwaysPollingScreenStatusEnabled
             )
@@ -90,33 +92,33 @@ fun ServerSection(
 
         item {
             SettingsItem(
-                title = "采样间隔",
-                summary = "${"%.1f".format(state.recordIntervalMs / 1000.0)} 秒"
+                title = stringResource(R.string.settings_record_interval),
+                summary = stringResource(R.string.common_seconds_value, state.recordIntervalMs / 1000.0)
             ) { showRecordIntervalDialog = true }
         }
 
         item {
             SettingsItem(
-                title = "写入延迟",
-                summary = "${"%.1f".format(state.writeLatencyMs / 1000.0)} 秒"
+                title = stringResource(R.string.settings_write_latency),
+                summary = stringResource(R.string.common_seconds_value, state.writeLatencyMs / 1000.0)
             ) { showWriteLatencyDialog = true }
         }
 
         item {
             SettingsItem(
-                title = "批量大小",
-                summary = "${state.batchSize} 条"
+                title = stringResource(R.string.settings_batch_size),
+                summary = stringResource(R.string.common_items_count, state.batchSize)
             ) { showBatchSizeDialog = true }
         }
 
         item {
             val summary = if (state.segmentDurationMin == 0L) {
-                "不按时间分段"
+                stringResource(R.string.settings_segment_duration_disabled)
             } else {
-                "${state.segmentDurationMin} 分钟"
+                stringResource(R.string.common_minutes_value, state.segmentDurationMin.toInt())
             }
             SettingsItem(
-                title = "分段时间",
+                title = stringResource(R.string.settings_segment_duration),
                 summary = summary
             ) { showSegmentDurationDialog = true }
         }

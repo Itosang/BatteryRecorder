@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
@@ -28,7 +30,7 @@ fun BatchSizeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("批量大小") },
+        title = { Text(stringResource(R.string.settings_batch_size)) },
         text = {
             OutlinedTextField(
                 value = value,
@@ -37,10 +39,10 @@ fun BatchSizeDialog(
                     isError =
                         newValue.toIntOrNull() == null || newValue.toInt() < config.min || newValue.toInt() > config.max
                 },
-                label = { Text("批量大小") },
+                label = { Text(stringResource(R.string.settings_batch_size)) },
                 isError = isError,
                 supportingText = if (isError) {
-                    { Text("请输入 ${config.min}-${config.max} 之间的整数") }
+                    { Text(stringResource(R.string.common_integer_range_hint, config.min, config.max)) }
                 } else null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -57,12 +59,12 @@ fun BatchSizeDialog(
                 },
                 enabled = !isError
             ) {
-                Text("确定")
+                Text(stringResource(R.string.common_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onReset) {
-                Text("重置")
+                Text(stringResource(R.string.common_reset))
             }
         },
         shape = AppShape.extraLarge

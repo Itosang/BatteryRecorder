@@ -20,7 +20,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.CalibrationSection
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.LogSection
@@ -117,7 +119,7 @@ fun SettingsScreen(
         contentWindowInsets = batteryRecorderScaffoldInsets(),
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text("设置") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 scrollBehavior = scrollBehavior,
                 windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
                 colors = TopAppBarDefaults.topAppBarColors(

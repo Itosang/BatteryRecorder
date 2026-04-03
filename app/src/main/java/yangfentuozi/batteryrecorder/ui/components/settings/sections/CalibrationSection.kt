@@ -13,8 +13,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
@@ -36,12 +38,12 @@ fun CalibrationSection(
     var showUpdateChannelMenu by remember { mutableStateOf(false) }
 
     SplicedColumnGroup(
-        title = "常规",
+        title = stringResource(R.string.settings_section_general),
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {
             M3ESwitchWidget(
-                text = "启动时检测更新",
+                text = stringResource(R.string.settings_check_update_on_startup),
                 checked = state.checkUpdateOnStartup,
                 onCheckedChange = rootActions.setCheckUpdateOnStartup
             )
@@ -50,7 +52,7 @@ fun CalibrationSection(
         item {
             Box(modifier = Modifier.fillMaxWidth()) {
                 SettingsItem(
-                    title = "版本更新通道",
+                    title = stringResource(R.string.settings_update_channel),
                     valueText = state.updateChannel.displayName,
                     onClick = { showUpdateChannelMenu = true }
                 )
@@ -63,14 +65,14 @@ fun CalibrationSection(
                         offset = DpOffset(x = 0.dp, y = (-24).dp)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("稳定版") },
+                            text = { Text(stringResource(R.string.update_channel_stable)) },
                             onClick = {
                                 rootActions.setUpdateChannel(UpdateChannel.Stable)
                                 showUpdateChannelMenu = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("预发布") },
+                            text = { Text(stringResource(R.string.update_channel_prerelease)) },
                             onClick = {
                                 rootActions.setUpdateChannel(UpdateChannel.Prerelease)
                                 showUpdateChannelMenu = false
@@ -83,7 +85,7 @@ fun CalibrationSection(
 
         item {
             M3ESwitchWidget(
-                text = "串联双电芯",
+                text = stringResource(R.string.settings_dual_cell),
                 checked = state.dualCellEnabled,
                 onCheckedChange = actions.setDualCellEnabled
             )
@@ -91,7 +93,7 @@ fun CalibrationSection(
 
         item {
             M3ESwitchWidget(
-                text = "放电也显示正值",
+                text = stringResource(R.string.settings_discharge_positive),
                 checked = state.dischargeDisplayPositive,
                 onCheckedChange = actions.setDischargeDisplayPositiveEnabled
             )
@@ -99,8 +101,8 @@ fun CalibrationSection(
 
         item {
             SettingsItem(
-                title = "电流单位校准",
-                summary = "调整电流读数的倍率"
+                title = stringResource(R.string.settings_calibration_title),
+                summary = stringResource(R.string.settings_calibration_summary)
             ) { showDialog = true }
         }
     }

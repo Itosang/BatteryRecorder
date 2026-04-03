@@ -61,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.ui.components.charts.FixedPowerAxisMode
@@ -174,7 +176,7 @@ fun RecordDetailScreen(
         val message = userMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         viewModel.consumeUserMessage()
-        if (message == "删除成功") {
+        if (message == context.getString(R.string.toast_delete_success)) {
             onNavigateBack()
         }
     }
@@ -207,14 +209,14 @@ fun RecordDetailScreen(
         topBar = {
             if (!isChartFullscreen) {
                 TopAppBar(
-                    title = { Text("记录详情") },
+                    title = { Text(stringResource(R.string.history_record_detail_title)) },
                     actions = {
                         IconButton(
                             onClick = { exportLauncher.launch(recordsFile.name) }
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Outbox,
-                                contentDescription = "导出记录"
+                                contentDescription = stringResource(R.string.history_export_record)
                             )
                         }
                         IconButton(
@@ -222,7 +224,7 @@ fun RecordDetailScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.DeleteOutline,
-                                contentDescription = "删除记录"
+                                contentDescription = stringResource(R.string.history_delete_record)
                             )
                         }
                         IconButton(
@@ -230,7 +232,7 @@ fun RecordDetailScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Info,
-                                contentDescription = "查看图表说明"
+                                contentDescription = stringResource(R.string.history_view_chart_guide)
                             )
                         }
                     }
@@ -249,7 +251,11 @@ fun RecordDetailScreen(
             else -> null
         }
         val detailType = detailState?.type ?: recordsFile.type
-        val typeLabel = if (detailType == BatteryStatus.Charging) "充电记录" else "放电记录"
+        val typeLabel = if (detailType == BatteryStatus.Charging) {
+            stringResource(R.string.history_record_type_charging)
+        } else {
+            stringResource(R.string.history_record_type_discharging)
+        }
 
         val fixedPowerMode =
             if (detailType == BatteryStatus.Discharging && !dischargeDisplayPositive) {
@@ -407,8 +413,8 @@ fun RecordDetailScreen(
                                     .padding(16.dp)
                             ) {
                                 InfoRow(
-                                    "时间",
-                                    "${formatDateTime(stats.startTime)} 到 ${formatDateTime(stats.endTime)} (${
+                                    stringResource(R.string.history_info_time),
+                                    "${formatDateTime(stats.startTime)} - ${formatDateTime(stats.endTime)} (${
                                         formatDurationHours(durationMs)
                                     })"
                                 )
@@ -423,7 +429,7 @@ fun RecordDetailScreen(
                                     )
                                 } else {
                                     InfoRow(
-                                        "平均功率",
+                                        stringResource(R.string.history_info_average_power),
                                         formatPower(
                                             stats.averagePower,
                                             dualCellEnabled,
@@ -432,17 +438,17 @@ fun RecordDetailScreen(
                                     )
                                 }
                                 if (detailState.type == BatteryStatus.Charging && capacityChange != null) {
-                                    InfoRow("电量变化", "${capacityChange}%")
+                                    InfoRow(stringResource(R.string.history_info_capacity_change), "${capacityChange}%")
                                 }
-                                InfoRow("亮屏", formatDurationHours(stats.screenOnTimeMs))
-                                InfoRow("息屏", formatDurationHours(stats.screenOffTimeMs))
+                                InfoRow(stringResource(R.string.history_info_screen_on), formatDurationHours(stats.screenOnTimeMs))
+                                InfoRow(stringResource(R.string.history_info_screen_off), formatDurationHours(stats.screenOffTimeMs))
 //                        InfoRow("记录ID", detailState.name.dropLast(4))
                             }
                         }
                     }
                 }
 
-                SplicedColumnGroup(title = "功耗/电量曲线") {
+                SplicedColumnGroup(title = stringResource(R.string.history_chart_section_title)) {
                     item {
                         Column(modifier = Modifier.padding(12.dp)) {
                             chartBlock(Modifier.fillMaxWidth(), false)
@@ -454,7 +460,7 @@ fun RecordDetailScreen(
                     detailState?.type == BatteryStatus.Discharging &&
                     recordAppDetailEntries.isNotEmpty()
                 ) {
-                    SplicedColumnGroup(title = "应用详情") {
+                    SplicedColumnGroup(title = stringResource(R.string.history_app_detail_section_title)) {
                         recordAppDetailEntries.forEach { entry ->
                             item(key = entry.key) {
                                 RecordAppDetailRow(
@@ -478,8 +484,8 @@ fun RecordDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除记录") },
-            text = { Text("删除后不可恢复，确认继续吗？") },
+            title = { Text(stringResource(R.string.history_delete_title)) },
+            text = { Text(stringResource(R.string.history_delete_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -487,12 +493,12 @@ fun RecordDetailScreen(
                         viewModel.deleteRecord(context, recordsFile)
                     }
                 ) {
-                    Text("删除")
+                    Text(stringResource(R.string.common_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -698,14 +704,14 @@ private fun RecordDetailPowerHeader(modifier: Modifier = Modifier) {
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
-                Text("全局平均/亮屏平均/息屏平均")
+                Text(stringResource(R.string.history_power_stats_label))
             }
         },
         state = tooltipState,
         enableUserInput = false
     ) {
         Text(
-            text = "功耗 ?",
+            text = stringResource(R.string.history_power_unknown),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = modifier.clickable(

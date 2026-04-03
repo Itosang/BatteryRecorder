@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.data.history.AppStatsComputer
 import yangfentuozi.batteryrecorder.data.history.BatteryPredictor
 import yangfentuozi.batteryrecorder.data.history.HistoryRepository
@@ -94,7 +96,7 @@ class PredictionDetailViewModel : ViewModel() {
                 if (generation == loadGeneration) {
                     _uiState.value = PredictionDetailUiState(
                         isLoading = false,
-                        errorMessage = "加载应用预测失败"
+                        errorMessage = appString(R.string.prediction_detail_load_failed)
                     )
                 }
                 return@launch

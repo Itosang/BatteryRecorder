@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.M3ESwitchWidget
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
@@ -26,7 +28,7 @@ fun PredictionSection(
     var showRecentCountDialog by remember { mutableStateOf(false) }
 
     SplicedColumnGroup(
-        title = "预测",
+        title = stringResource(R.string.settings_section_prediction),
         modifier = Modifier.padding(horizontal = 16.dp)
     ) {
         item {
@@ -39,14 +41,14 @@ fun PredictionSection(
 
         item {
             SettingsItem(
-                title = "样本次数",
-                summary = "最近 ${state.sceneStatsRecentFileCount} 次"
+                title = stringResource(R.string.settings_prediction_recent_file_count),
+                summary = stringResource(R.string.common_recent_records, state.sceneStatsRecentFileCount)
             ) { showRecentCountDialog = true }
         }
 
         item {
             M3ESwitchWidget(
-                text = "启用加权算法",
+                text = stringResource(R.string.settings_prediction_weighted_algorithm),
                 checked = state.predWeightedAlgorithmEnabled,
                 onCheckedChange = actions.setPredWeightedAlgorithmEnabled
             )
@@ -54,8 +56,11 @@ fun PredictionSection(
 
         item {
             SettingsItem(
-                title = "加权强度",
-                summary = "最大影响 ${state.predWeightedAlgorithmAlphaMaxX100}%"
+                title = stringResource(R.string.settings_prediction_weight_strength),
+                summary = stringResource(
+                    R.string.common_max_impact_percent,
+                    state.predWeightedAlgorithmAlphaMaxX100
+                )
             ) { showWeightDialog = true }
         }
     }

@@ -27,9 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 
 private data class CommandItem(
     val title: String,
@@ -45,11 +47,11 @@ fun AdbGuideDialog(onDismiss: () -> Unit) {
     val commandItems = remember(shellCommand) {
         listOf(
             CommandItem(
-                title = "ADB 场景：电脑端已连接设备，直接执行",
+                title = context.getString(R.string.adb_guide_pc_title),
                 command = "adb shell \"$shellCommand\""
             ),
             CommandItem(
-                title = "纯 Shell 场景：已进入设备 shell 环境",
+                title = context.getString(R.string.adb_guide_shell_title),
                 command = shellCommand
             )
         )
@@ -57,16 +59,16 @@ fun AdbGuideDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ADB 启动") },
+        title = { Text(stringResource(R.string.adb_guide_title)) },
         text = {
             Column {
                 Text(
-                    text = "1. 确保设备已开启 USB 调试或无线调试",
+                    text = stringResource(R.string.adb_guide_step_enable_debug),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "2. 在终端中执行以下命令",
+                    text = stringResource(R.string.adb_guide_step_run_command),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(12.dp))
@@ -88,7 +90,7 @@ fun AdbGuideDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.common_close))
             }
         }
     )
@@ -126,7 +128,7 @@ private fun CommandBox(
             ) {
                 Icon(
                     imageVector = Icons.Filled.ContentCopy,
-                    contentDescription = "复制命令"
+                    contentDescription = stringResource(R.string.adb_guide_copy_command)
                 )
             }
         }
@@ -136,7 +138,7 @@ private fun CommandBox(
 private fun copyCommand(context: Context, command: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("command", command))
-    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, context.getString(R.string.adb_guide_copied), Toast.LENGTH_SHORT).show()
 }
 
 @Preview

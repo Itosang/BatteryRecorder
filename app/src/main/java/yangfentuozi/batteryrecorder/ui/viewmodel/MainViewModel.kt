@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.appString
 import yangfentuozi.batteryrecorder.data.history.BatteryPredictor
 import yangfentuozi.batteryrecorder.data.history.CurrentRecordLoadResult
 import yangfentuozi.batteryrecorder.data.history.HistoryRecord
@@ -174,12 +176,12 @@ class MainViewModel : ViewModel() {
                     )
                 }
                 LoggerX.i(TAG, "[导出] 首页日志导出成功")
-                _userMessage.value = "导出成功"
+                _userMessage.value = appString(R.string.toast_export_success)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LoggerX.e(TAG, "[导出] 日志导出失败", tr = e)
-                _userMessage.value = "导出失败"
+                _userMessage.value = appString(R.string.toast_export_failed)
             }
         }
     }
@@ -460,7 +462,7 @@ class MainViewModel : ViewModel() {
         error: Throwable
     ): String {
         val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
-        return "当前记录加载失败：${recordsFile.name}（$detail）"
+        return appString(R.string.toast_current_record_load_failed, recordsFile.name, detail)
     }
 
     /**
@@ -475,7 +477,7 @@ class MainViewModel : ViewModel() {
         }
         if (prediction.insufficientData) {
             return HomePredictionDisplay(
-                insufficientReason = prediction.insufficientReason ?: "数据不足"
+                insufficientReason = prediction.insufficientReason ?: appString(R.string.common_insufficient_data)
             )
         }
 

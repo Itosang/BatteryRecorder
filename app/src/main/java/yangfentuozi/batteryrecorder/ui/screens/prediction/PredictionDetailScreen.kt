@@ -33,10 +33,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.components.global.LazySplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.theme.AppShape
 import yangfentuozi.batteryrecorder.ui.viewmodel.PredictionDetailUiEntry
@@ -71,7 +73,7 @@ fun PredictionDetailScreen(
         contentWindowInsets = batteryRecorderScaffoldInsets(),
         topBar = {
             TopAppBar(
-                title = { Text("应用预测") }
+                title = { Text(stringResource(R.string.prediction_detail_title)) }
             )
         }
     ) { paddingValues ->
@@ -90,14 +92,14 @@ fun PredictionDetailScreen(
             uiState.errorMessage != null -> {
                 PredictionDetailMessage(
                     paddingValues = paddingValues,
-                    message = uiState.errorMessage ?: "加载应用预测失败"
+                    message = uiState.errorMessage ?: stringResource(R.string.prediction_detail_load_failed)
                 )
             }
 
             uiState.entries.isEmpty() -> {
                 PredictionDetailMessage(
                     paddingValues = paddingValues,
-                    message = "暂无应用预测数据"
+                    message = stringResource(R.string.prediction_detail_empty)
                 )
             }
 
@@ -191,7 +193,7 @@ private fun PredictionDetailRow(
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = entry.currentHours?.let(::formatRemainingTime) ?: "数据不足",
+                text = entry.currentHours?.let(::formatRemainingTime) ?: stringResource(R.string.common_insufficient_data),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.End
             )

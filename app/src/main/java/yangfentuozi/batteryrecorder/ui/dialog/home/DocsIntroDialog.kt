@@ -14,9 +14,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import yangfentuozi.batteryrecorder.R
 
 private const val DOCS_URL = "https://itosang.github.io/BatteryRecorder"
 
@@ -39,11 +41,11 @@ fun DocsIntroDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "首次使用请先看文档",
+                    text = stringResource(R.string.docs_intro_title),
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = "请先阅读使用说明，再继续使用应用。\n文档包含启动方式、校准、排除高负载 App、续航预测、历史记录手势和图表交互说明。",
+                    text = stringResource(R.string.docs_intro_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -54,7 +56,7 @@ fun DocsIntroDialog(
                         onOpenDocs()
                     }
                 ) {
-                    Text("查看使用文档")
+                    Text(stringResource(R.string.docs_intro_open))
                 }
             }
         }

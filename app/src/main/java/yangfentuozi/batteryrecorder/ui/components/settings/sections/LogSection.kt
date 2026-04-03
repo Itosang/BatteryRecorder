@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
 import yangfentuozi.batteryrecorder.ui.components.settings.SettingsItem
@@ -27,32 +29,35 @@ fun LogSection(
     val logActions = props.actions.log
     var showHistoryDaysDialog by remember { mutableStateOf(false) }
     var showLogLevelDialog by remember { mutableStateOf(false) }
-        SplicedColumnGroup(
-            title = "日志",
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            item {
-                SettingsItem(
-                    title = "日志保留天数",
-                    summary = "${state.maxHistoryDays} 天"
-                ) { showHistoryDaysDialog = true }
-            }
-
-            item {
-                SettingsItem(
-                    title = "日志级别",
-                    summary = state.logLevel.displayName
-                ) { showLogLevelDialog = true }
-            }
+    SplicedColumnGroup(
+        title = stringResource(R.string.settings_section_logs),
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        item {
+            SettingsItem(
+                title = stringResource(R.string.settings_log_retention_days),
+                summary = stringResource(R.string.common_days_count, state.maxHistoryDays.toInt())
+            ) { showHistoryDaysDialog = true }
         }
+
+        item {
+            SettingsItem(
+                title = stringResource(R.string.settings_log_level),
+                summary = state.logLevel.displayName
+            ) { showLogLevelDialog = true }
+        }
+    }
 
     if (showHistoryDaysDialog) {
         LogValueDialog(
             config = LogValueDialogConfig(
-                title = "日志保留天数",
-                label = "保留天数",
+                title = stringResource(R.string.settings_log_retention_days),
+                label = stringResource(R.string.settings_log_retention_label),
                 currentValue = state.maxHistoryDays.toString(),
-                errorMessage = "请输入大于等于 ${SettingsConstants.logMaxHistoryDays.min} 的整数",
+                errorMessage = stringResource(
+                    R.string.settings_log_retention_error,
+                    SettingsConstants.logMaxHistoryDays.min
+                ),
                 parser = { rawValue ->
                     rawValue.toLongOrNull()
                         ?.takeIf { it >= SettingsConstants.logMaxHistoryDays.min }

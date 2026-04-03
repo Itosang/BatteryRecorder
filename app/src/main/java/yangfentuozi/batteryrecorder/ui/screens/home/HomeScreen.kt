@@ -62,6 +62,7 @@ import yangfentuozi.batteryrecorder.ui.viewmodel.MainViewModel
 import yangfentuozi.batteryrecorder.ui.viewmodel.SettingsViewModel
 import yangfentuozi.batteryrecorder.utils.batteryRecorderScaffoldInsets
 import yangfentuozi.batteryrecorder.utils.navigationBarBottomPadding
+import yangfentuozi.batteryrecorder.R
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -324,12 +325,12 @@ fun HomeScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "启动（ADB）",
+                                    text = stringResource(R.string.home_action_start_adb),
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "通过 ADB 命令启动",
+                                    text = stringResource(R.string.adb_guide_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -339,7 +340,7 @@ fun HomeScreen(
                                 shape = AppShape.SplicedGroup.single,
                                 onClick = { showAdbGuideDialog = true }
                             ) {
-                                Text("查看命令")
+                                Text(stringResource(R.string.home_action_view_command))
                             }
                         }
                     }
@@ -366,7 +367,7 @@ fun HomeScreen(
                     rowItem {
                         item {
                             StatsCard(
-                                title = "充电总结",
+                                title = stringResource(R.string.home_summary_charging),
                                 summary = chargeSummary,
                                 dualCellEnabled = dualCellEnabled,
                                 calibrationValue = calibrationValue,
@@ -375,7 +376,7 @@ fun HomeScreen(
                         }
                         item {
                             StatsCard(
-                                title = "放电总结",
+                                title = stringResource(R.string.home_summary_discharging),
                                 summary = dischargeSummary,
                                 dualCellEnabled = dualCellEnabled,
                                 calibrationValue = calibrationValue,
@@ -412,8 +413,8 @@ fun HomeScreen(
     if (showStopDialog) {
         AlertDialog(
             onDismissRequest = viewModel::dismissStopDialog,
-            title = { Text("停止服务") },
-            text = { Text("确认停止服务?") },
+            title = { Text(stringResource(R.string.home_title_stop_service)) },
+            text = { Text(stringResource(R.string.home_message_confirm_stop_service)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -421,14 +422,14 @@ fun HomeScreen(
                         viewModel.stopService()
                     }
                 ) {
-                    Text(stringResource(android.R.string.ok))
+                    Text(stringResource(R.string.common_ok))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = viewModel::dismissStopDialog
                 ) {
-                    Text(stringResource(android.R.string.cancel))
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
