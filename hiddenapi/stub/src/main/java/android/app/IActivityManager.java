@@ -13,6 +13,18 @@ public interface IActivityManager extends IInterface {
     void removeContentProviderExternal(String name, IBinder token)
             throws RemoteException;
 
+    void registerProcessObserver(IProcessObserver observer)
+            throws RemoteException;
+
+    void unregisterProcessObserver(IProcessObserver observer)
+            throws RemoteException;
+
+    void registerUidObserver(IUidObserver observer, int which, int cutpoint, String callingPackage)
+            throws RemoteException;
+
+    void unregisterUidObserver(IUidObserver observer)
+            throws RemoteException;
+
     abstract class Stub extends Binder implements IActivityManager {
 
         public static IActivityManager asInterface(IBinder obj) {

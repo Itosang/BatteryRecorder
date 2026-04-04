@@ -34,5 +34,6 @@ object Global {
     }
 
     var appSourceDir = ""
+    var appUid = -1
 }
 

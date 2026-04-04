@@ -1,6 +1,8 @@
 package yangfentuozi.hiddenapi.compat;
 
 import android.app.IActivityManager;
+import android.app.IProcessObserver;
+import android.app.IUidObserver;
 import android.content.AttributionSource;
 import android.content.IContentProvider;
 import android.os.Bundle;
@@ -15,6 +17,36 @@ public class ActivityManagerCompat {
 
     private static final String TAG = "ActivityManagerCompat";
     private static IActivityManager service;
+
+    /** Flag for registerUidObserver: report changes in process state.
+     *  AOSP value: 1<<0 */
+    public static int UID_OBSERVER_PROCSTATE;
+
+    /** Flag for registerUidObserver: report uid gone.
+     *  AOSP value: 1<<1 */
+    public static int UID_OBSERVER_GONE;
+
+    /** Flag for registerUidObserver: report uid has become idle.
+     *  AOSP value: 1<<2 */
+    public static int UID_OBSERVER_IDLE;
+
+    /** Flag for registerUidObserver: report uid has become active.
+     *  AOSP value: 1<<3 */
+    public static int UID_OBSERVER_ACTIVE;
+
+    /** Flag for registerUidObserver: report uid cached state has changed.
+     *  AOSP value: 1<<4 */
+    public static int UID_OBSERVER_CACHED;
+
+    /** Flag for registerUidObserver: report uid capability has changed.
+     *  AOSP value: 1<<5 */
+    public static int UID_OBSERVER_CAPABILITY;
+
+    public static int FLAG_AND_UNLOCKED;
+
+    public static int PROCESS_STATE_UNKNOWN;
+
+    public static int PROCESS_STATE_TOP;
 
     private static void init() {
         if (service == null) {
@@ -61,5 +93,29 @@ public class ActivityManagerCompat {
                 }
             }
         }
+    }
+
+    public static void registerProcessObserver(@Nullable IProcessObserver processObserver) throws RemoteException {
+        init();
+
+        service.registerProcessObserver(processObserver);
+    }
+
+    public static void unregisterProcessObserver(@Nullable IProcessObserver observer) throws RemoteException {
+        init();
+
+        service.unregisterProcessObserver(observer);
+    }
+
+    public static void registerUidObserver(@Nullable IUidObserver observer, int which, int cutpoint, @Nullable String callingPackage) throws RemoteException {
+        init();
+
+        service.registerUidObserver(observer, which, cutpoint, callingPackage);
+    }
+
+    public static void unregisterUidObserver(@Nullable IUidObserver observer) throws RemoteException {
+        init();
+
+        service.unregisterUidObserver(observer);
     }
 }

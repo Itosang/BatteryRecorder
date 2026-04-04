@@ -20,7 +20,6 @@ import yangfentuozi.batteryrecorder.server.notification.NotificationUtil
 import yangfentuozi.batteryrecorder.server.notification.RemoteNotificationUtil
 import yangfentuozi.batteryrecorder.server.sampler.Sampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
-import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
 import yangfentuozi.batteryrecorder.shared.util.Handlers
@@ -35,7 +34,6 @@ private const val TAG = "Monitor"
 
 class Monitor(
     private val writer: PowerRecordWriter,
-    private val sendBinder: (() -> Unit),
     private val sampler: Sampler
 ) {
     private val iActivityTaskManager =
@@ -291,10 +289,6 @@ class Monitor(
     private fun onFocusedAppChanged(taskInfo: TaskInfo) {
         val componentName = taskInfo.topActivity ?: return
         val packageName = componentName.packageName
-        if (packageName == Constants.APP_PACKAGE_NAME) {
-            LoggerX.d(TAG, "onFocusedAppChanged: 焦点回到 App, 尝试重新发送 Binder")
-            sendBinder()
-        }
         if (currForegroundApp != packageName) {
             LoggerX.d(TAG, "onFocusedAppChanged: 应用切换, $currForegroundApp -> $packageName")
         }

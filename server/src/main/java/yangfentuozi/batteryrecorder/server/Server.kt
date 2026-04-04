@@ -275,6 +275,7 @@ class Server internal constructor() : IService.Stub() {
 
         val appInfo = getAppInfo(Constants.APP_PACKAGE_NAME)
         Global.appSourceDir = appInfo.sourceDir
+        Global.appUid = appInfo.uid
         appDataDir = File(appInfo.dataDir)
         appConfigFile = File("${appInfo.dataDir}/shared_prefs/${SettingsConstants.PREFS_NAME}.xml")
         appPowerDataDir = File("${appInfo.dataDir}/${Constants.APP_POWER_DATA_PATH}")
@@ -321,7 +322,6 @@ class Server internal constructor() : IService.Stub() {
 
         monitor = Monitor(
             writer = writer,
-            sendBinder = this::sendBinder,
             sampler
         )
         LoggerX.d(TAG, "init: Monitor 初始化完成")
@@ -340,6 +340,9 @@ class Server internal constructor() : IService.Stub() {
 
         monitor.start()
         LoggerX.i(TAG, "init: Monitor 已启动, 进入消息循环")
+
+        LoggerX.i(TAG, "init: 初始化 BinderSender")
+        BinderSender(::sendBinder)
 
         Thread({
             try {
