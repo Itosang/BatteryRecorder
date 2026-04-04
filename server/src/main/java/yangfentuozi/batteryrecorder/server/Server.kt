@@ -83,8 +83,8 @@ class Server internal constructor() : IService.Stub() {
 
             unlockOPlusSampleTimeLimit(settings.recordIntervalMs.coerceAtLeast(200))
 
-            monitor.notificationPowerMultiplier =
-                (if (settings.dualCellEnabled) 2.0 else 1.0) / settings.calibrationValue
+            monitor.dualCellEnabled = settings.dualCellEnabled
+            monitor.calibrationValue = settings.calibrationValue
             monitor.setNotificationEnabled(settings.notificationEnabled)
             monitor.alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
             monitor.recordIntervalMs = settings.recordIntervalMs

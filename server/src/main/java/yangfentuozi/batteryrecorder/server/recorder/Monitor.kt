@@ -71,11 +71,10 @@ class Monitor(
     var notificationUtil: NotificationUtil? = null
 
     @Volatile
-    var notificationPowerMultiplier: Double =
-        computeNotificationPowerMultiplier(
-            dualCellEnabled = SettingsConstants.dualCellEnabled.def,
-            calibrationValue = SettingsConstants.calibrationValue.def
-        )
+    var calibrationValue: Int = SettingsConstants.calibrationValue.def
+
+    @Volatile
+    var dualCellEnabled: Boolean = SettingsConstants.dualCellEnabled.def
 
     @Volatile
     private var notificationEnabled = SettingsConstants.notificationEnabled.def
@@ -138,7 +137,7 @@ class Monitor(
                     )
                     val writeResult = writer.write(record)
                     notificationUtil?.updateNotification(
-                        NotificationInfo(power * notificationPowerMultiplier, temp)
+                        NotificationInfo(1.0 * power / calibrationValue * (if (dualCellEnabled) 2 else 1), temp)
                     )
 
                     callbackHandler.post {
@@ -322,16 +321,6 @@ class Monitor(
             notificationEnabled = true
         } else {
             disableNotification()
-        }
-    }
-
-    companion object {
-        private fun computeNotificationPowerMultiplier(
-            dualCellEnabled: Boolean,
-            calibrationValue: Int
-        ): Double {
-            val cellMultiplier = if (dualCellEnabled) 2.0 else 1.0
-            return cellMultiplier / calibrationValue
         }
     }
 }
