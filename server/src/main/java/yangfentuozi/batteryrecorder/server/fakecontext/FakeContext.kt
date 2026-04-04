@@ -7,8 +7,10 @@ import android.content.ContextWrapper
 import android.content.pm.ApplicationInfo
 import android.system.Os
 import android.util.Log
+import androidx.annotation.Keep
 import java.lang.reflect.Constructor
 
+@Keep
 class FakeContext : ContextWrapper(systemContext) {
     private val packageContext: Context = systemContext ?: this
 
@@ -34,6 +36,7 @@ class FakeContext : ContextWrapper(systemContext) {
         return this
     }
 
+    @Keep
     fun createApplicationContext(
         application: ApplicationInfo,
         flags: Int
