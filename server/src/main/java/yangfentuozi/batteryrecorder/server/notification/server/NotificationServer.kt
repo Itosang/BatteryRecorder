@@ -3,12 +3,11 @@ package yangfentuozi.batteryrecorder.server.notification.server
 import android.net.LocalServerSocket
 import android.net.LocalSocket
 import android.os.Looper
-import android.os.Process
 import android.system.Os
 import yangfentuozi.batteryrecorder.server.notification.LocalNotificationUtil
 import yangfentuozi.batteryrecorder.server.notification.NotificationUtil
-import yangfentuozi.batteryrecorder.server.notification.stream.StreamProtocol
-import yangfentuozi.batteryrecorder.server.notification.stream.StreamReader
+import yangfentuozi.batteryrecorder.server.notification.server.stream.StreamProtocol
+import yangfentuozi.batteryrecorder.server.notification.server.stream.StreamReader
 import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.hiddenapi.compat.ServiceManagerCompat
@@ -17,9 +16,7 @@ import kotlin.system.exitProcess
 
 private const val TAG = "NotificationServer"
 
-class NotificationServer(
-    val parentServerPID: Int
-) {
+class NotificationServer {
     @Volatile
     var isStopped = false
 
@@ -30,16 +27,19 @@ class NotificationServer(
     var socket: LocalSocket? = null
     var reader: StreamReader? = null
     val serverSocket: LocalServerSocket
-    val serverHandler = Handlers.getHandler("ServerSocketThread")
-    val serverRunnable = Runnable {
+    val serverThread = Thread({
         try {
             LoggerX.i(TAG, "@serverRunnable: 等待客户端")
             socket = serverSocket.accept()
             LoggerX.i(TAG, "@serverRunnable: 接受客户端")
             reader = StreamReader(socket!!.inputStream)
-            while (true) {
-                val info = reader!!.readNext() ?: break
-                notificationUtil.updateNotification(info)
+            while (!isStopped) {
+                try {
+                    val info = reader!!.readNext() ?: break
+                    notificationUtil.updateNotification(info)
+                } catch (_: StreamProtocol.CancelNotificationException) {
+                    notificationUtil.cancelNotification()
+                }
             }
         } catch (e: IOException) {
             if (!isStopped) LoggerX.e(TAG, "@serverRunnable: 处理客户端请求时出现异常", tr = e)
@@ -52,14 +52,14 @@ class NotificationServer(
         }
         reader = null
         socket = null
-        notificationUtil.close()
+        notificationUtil.cancelNotification()
         exitProcess(0)
-    }
+    }, "ServerSocketThread")
 
     init {
         LoggerX.i(
             TAG,
-            "init: NotificationServer 初始化开始, uid=${Os.getuid()}, parentServerPID=$parentServerPID"
+            "init: NotificationServer 初始化开始, uid=${Os.getuid()}"
         )
         if (Looper.getMainLooper() == null) {
             @Suppress("DEPRECATION")
@@ -69,29 +69,6 @@ class NotificationServer(
 
         if (Os.getuid() != 2000) {
             LoggerX.i(TAG, "init: uid 不为 2000, 执行降权")
-            val groups = arrayOf(
-                "input",
-                "log",
-                "adb",
-                "sdcard_rw",
-                "sdcard_r",
-                "ext_data_rw",
-                "ext_obb_rw",
-                "net_bt_admin",
-                "net_bt",
-                "inet",
-                "net_bw_stats",
-                "readproc",
-                "uhid",
-                "readtracefs"
-            )
-            for (group in groups) {
-                val groupId = Process.getGidForName(group)
-                if (groupId != -1) {
-                    @Suppress("DEPRECATION")
-                    Os.setgid(groupId)
-                }
-            }
             @Suppress("DEPRECATION")
             Os.setuid(2000)
         }
@@ -109,13 +86,8 @@ class NotificationServer(
             LoggerX.a(thread.name, "NotificationServer crashed", tr = throwable)
             LoggerX.writer?.close()
         }
-
-        startServer()
+        serverThread.start()
         Looper.loop()
-    }
-
-    fun startServer() {
-        serverHandler.post(serverRunnable)
     }
 
     private fun stopServiceImmediately() {
@@ -123,12 +95,11 @@ class NotificationServer(
         LoggerX.i(TAG, "停止服务")
         cleanedUp = true
         isStopped = true
-        serverHandler.removeCallbacks(serverRunnable)
         runCatching {
+            serverThread.interrupt()
             reader?.let { runCatching { it.close() } }
             socket?.let { runCatching { it.close() } }
-            notificationUtil.close()
-            Handlers.interruptAll()
+            notificationUtil.cancelNotification()
             serverSocket.close()
         }
     }

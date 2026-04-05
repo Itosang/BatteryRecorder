@@ -1,8 +1,6 @@
 package yangfentuozi.batteryrecorder.server.notification
 
-import java.io.Closeable
-
-interface NotificationUtil: Closeable {
+interface NotificationUtil {
     fun updateNotification(info: NotificationInfo)
-    override fun close()
+    fun cancelNotification()
 }

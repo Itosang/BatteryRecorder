@@ -9,6 +9,7 @@ import android.os.RemoteException
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
+import yangfentuozi.batteryrecorder.server.notification.server.ChildServerBridge
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener
 import yangfentuozi.batteryrecorder.server.recorder.Monitor
 import yangfentuozi.batteryrecorder.server.recorder.Monitor.Companion.computeNotificationPowerMultiplier
@@ -40,6 +41,7 @@ private const val TAG = "Server"
 class Server internal constructor() : IService.Stub() {
     private var monitor: Monitor
     private var writer: PowerRecordWriter
+    private var bridge: ChildServerBridge? = null
 
     private var appDataDir: File
     private var appConfigFile: File
@@ -222,7 +224,8 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.e(TAG, "stopServiceImmediately: flushBuffer 失败", tr = e)
         }
         writer.close()
-
+        bridge?.stop()
+        Handlers.interruptAll()
     }
 
     private fun sendBinder() {
@@ -308,6 +311,8 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.fixFileOwner = {
                 Global.changeOwnerRecursively(it, 2000)
             }
+
+            bridge = ChildServerBridge()
         }
 
         try {
@@ -325,7 +330,8 @@ class Server internal constructor() : IService.Stub() {
 
         monitor = Monitor(
             writer = writer,
-            sampler
+            sampler,
+            bridge
         )
         LoggerX.d(TAG, "init: Monitor 初始化完成")
 

@@ -68,7 +68,7 @@ class LocalNotificationUtil : NotificationUtil {
         }
     }
 
-    override fun close() {
+    override fun cancelNotification() {
         synchronized(lock) {
             NotificationManagerCompat.cancelNotification(
                 notificationManager,

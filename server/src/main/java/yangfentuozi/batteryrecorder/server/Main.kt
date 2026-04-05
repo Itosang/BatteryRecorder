@@ -27,12 +27,12 @@ object Main {
     @Keep
     @JvmStatic
     fun main(args: Array<String>) {
-        val isNotificationServer = args.size > 1 && args[0] == "--notificationServer"
+        val isNotificationServer = args.isNotEmpty() && args[0] == "--notification-server"
         DdmHandleAppName.setAppName(SERVER_PROCESS_NAME, 0)
 
         // 配置 LoggerX
         LoggerX.logDirPath = "${Constants.SHELL_DATA_DIR_PATH}/${Constants.SHELL_LOG_DIR_PATH}"
-        if (isNotificationServer) LoggerX.suffix = "-notificationServer"
+        if (isNotificationServer) LoggerX.suffix = "-notification-server"
         LoggerX.d(
             TAG,
             "main: LoggerX 配置完成, dir=${LoggerX.logDirPath}, suffix=${LoggerX.suffix}"
@@ -48,7 +48,7 @@ object Main {
 
         if (isNotificationServer) {
             LoggerX.i(TAG, "main: 初始化 NotificationServer")
-            NotificationServer(parentServerPID = args[1].toInt())
+            NotificationServer()
         } else {
             LoggerX.i(TAG, "main: 初始化 Server")
             Server()

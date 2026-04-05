@@ -1,4 +1,4 @@
-package yangfentuozi.batteryrecorder.server.notification.stream
+package yangfentuozi.batteryrecorder.server.notification.server.stream
 
 import yangfentuozi.batteryrecorder.server.notification.NotificationInfo
 import java.io.Closeable
@@ -27,6 +27,13 @@ class StreamWriter(
         out.writeInt(StreamProtocol.MAGIC)
         // flag
         out.writeInt(StreamProtocol.FLAG_STOP)
+    }
+
+    fun writeCancel() {
+        // 标志位
+        out.writeInt(StreamProtocol.MAGIC)
+        // flag
+        out.writeInt(StreamProtocol.FLAG_CANCEL)
     }
 
     override fun close() {

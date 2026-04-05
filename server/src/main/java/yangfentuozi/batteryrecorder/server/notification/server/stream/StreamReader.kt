@@ -1,4 +1,4 @@
-package yangfentuozi.batteryrecorder.server.notification.stream
+package yangfentuozi.batteryrecorder.server.notification.server.stream
 
 import yangfentuozi.batteryrecorder.server.notification.NotificationInfo
 import java.io.Closeable
@@ -38,6 +38,7 @@ class StreamReader(
             when(val flag = input.readInt()) {
                 StreamProtocol.FLAG_DATA -> {}
                 StreamProtocol.FLAG_STOP -> throw StreamProtocol.StopException()
+                StreamProtocol.FLAG_CANCEL -> throw StreamProtocol.CancelNotificationException()
                 else -> throw IOException("无效 flag: $flag")
             }
 

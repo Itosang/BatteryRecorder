@@ -18,6 +18,7 @@ import yangfentuozi.batteryrecorder.server.notification.LocalNotificationUtil
 import yangfentuozi.batteryrecorder.server.notification.NotificationInfo
 import yangfentuozi.batteryrecorder.server.notification.NotificationUtil
 import yangfentuozi.batteryrecorder.server.notification.RemoteNotificationUtil
+import yangfentuozi.batteryrecorder.server.notification.server.ChildServerBridge
 import yangfentuozi.batteryrecorder.server.sampler.Sampler
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
@@ -35,7 +36,8 @@ private const val POWER_SCALE_DIVISOR = 1_000_000_000_000.0
 
 class Monitor(
     private val writer: PowerRecordWriter,
-    private val sampler: Sampler
+    private val sampler: Sampler,
+    private val bridge: ChildServerBridge?
 ) {
     private val iActivityTaskManager =
         IActivityTaskManager.Stub.asInterface(ServiceManager.getService("activity_task"))
@@ -298,8 +300,8 @@ class Monitor(
     // 耗时操作
     private fun enableNotification() {
         lock.withLock {
-            notificationUtil?.close()
-            notificationUtil = if (Os.getuid() == 0) RemoteNotificationUtil()
+            notificationUtil?.cancelNotification()
+            notificationUtil = if (Os.getuid() == 0) RemoteNotificationUtil(bridge!!)
             else {
                 ServiceManagerCompat.waitService("notification")
                 LocalNotificationUtil()
@@ -309,7 +311,7 @@ class Monitor(
 
     private fun disableNotification() {
         lock.withLock {
-            notificationUtil?.close()
+            notificationUtil?.cancelNotification()
             notificationUtil = null
             notificationEnabled = false
         }
