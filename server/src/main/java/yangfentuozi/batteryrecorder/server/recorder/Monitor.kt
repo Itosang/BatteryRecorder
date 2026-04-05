@@ -138,9 +138,7 @@ class Monitor(
                         sample.current
                     )
                     val writeResult = writer.write(record)
-                    notificationUtil?.updateNotification(
-                        NotificationInfo(notificationPowerMultiplier * power, temp)
-                    )
+                    if (isInteractive) notificationUtil?.updateNotification(NotificationInfo(notificationPowerMultiplier * power, temp))
 
                     callbackHandler.post {
                         // 回调 app：先同步当前记录文件切换，再下发已进入当前记录的实时样本。
