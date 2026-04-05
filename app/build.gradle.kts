@@ -99,6 +99,12 @@ android {
             }
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 tasks.register("printVersionMetadata") {
