@@ -1,6 +1,6 @@
 package yangfentuozi.batteryrecorder.server.fakecontext
 
-import android.annotation.SuppressLint
+import android.app.ActivityThread
 import android.app.IActivityManager
 import android.content.AttributionSource
 import android.content.ContentResolver
@@ -11,23 +11,22 @@ import android.os.Binder
 import android.os.ServiceManager
 import android.system.Os
 import androidx.annotation.Keep
-import java.lang.reflect.Method
 
 @Keep
 class FakeContext : ContextWrapper(systemContext) {
     private val packageContext: Context = systemContext
 
     override fun getPackageName(): String {
-        return PACKAGE_NAME
+        return if (Os.getuid() == 0) "root" else "com.android.shell"
     }
 
     override fun getOpPackageName(): String {
-        return PACKAGE_NAME
+        return packageName
     }
 
     override fun getAttributionSource(): AttributionSource {
         val builder = AttributionSource.Builder(Os.getuid())
-        builder.setPackageName(PACKAGE_NAME)
+        builder.setPackageName(packageName)
         return builder.build()
     }
 
@@ -58,10 +57,7 @@ class FakeContext : ContextWrapper(systemContext) {
         return externalContentResolver
     }
 
-    @SuppressLint("DiscouragedPrivateApi")
     companion object {
-        var PACKAGE_NAME: String = if (Os.getuid() == 0) "root" else "com.android.shell"
-
         private val providerToken = Binder()
 
         private val activityManager: IActivityManager by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -69,21 +65,11 @@ class FakeContext : ContextWrapper(systemContext) {
                 ?: throw IllegalStateException("activity 服务未就绪")
         }
 
-        private val activityThreadClass: Class<*> = Class.forName("android.app.ActivityThread")
-        private val currentActivityThreadMethod: Method =
-            activityThreadClass.getDeclaredMethod("currentActivityThread").apply {
-                isAccessible = true
-            }
-        private val systemMainMethod: Method =
-            activityThreadClass.getDeclaredMethod("systemMain").apply { isAccessible = true }
-        private val getSystemContextMethod: Method =
-            activityThreadClass.getDeclaredMethod("getSystemContext").apply { isAccessible = true }
-
         val systemContext: Context by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-            val activityThread = currentActivityThreadMethod.invoke(null)
-                ?: systemMainMethod.invoke(null)
+            val activityThread = ActivityThread.currentActivityThread()
+                ?: ActivityThread.systemMain()
                 ?: throw IllegalStateException("获取 system ActivityThread 失败")
-            getSystemContextMethod.invoke(activityThread) as? Context
+            activityThread.systemContext as? Context
                 ?: throw IllegalStateException("获取 systemContext 失败")
         }
 

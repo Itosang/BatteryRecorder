@@ -19,4 +19,8 @@ public class ActivityThread {
     public static ActivityThread currentActivityThread() {
         throw new UnsupportedOperationException("STUB");
     }
+
+    public static ActivityThread systemMain() {
+        throw new UnsupportedOperationException("STUB");
+    }
 }
