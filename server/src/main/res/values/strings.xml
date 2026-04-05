@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_message">Power %1$.2f W | Temp %2$.1f℃</string>
+</resources>

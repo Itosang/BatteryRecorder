@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.os.RemoteException
 import android.os.ServiceManager
+import yangfentuozi.batteryrecorder.server.R
 import yangfentuozi.batteryrecorder.server.fakecontext.FakeContext
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -118,8 +119,12 @@ class LocalNotificationUtil : NotificationUtil {
     }
 
     private fun buildContentText(info: NotificationInfo): String {
-        return "功率 %.2f W | 温度 %.1f℃".format(info.power, 1.0 * info.temp / 10)
+        return notificationMessage.format(info.power, 1.0 * info.temp / 10)
     }
+
+    private val notificationMessage: String =
+        context.packageManager.getResourcesForApplication(Constants.APP_PACKAGE_NAME)
+            .getString(R.string.notification_message)
 
     companion object {
         private const val SHELL_PACKAGE_NAME = "com.android.shell"
