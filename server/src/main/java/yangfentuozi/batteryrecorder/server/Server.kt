@@ -265,6 +265,7 @@ class Server internal constructor() : IService.Stub() {
         ServiceManagerCompat.waitService("activity_task")
         ServiceManagerCompat.waitService("display")
         ServiceManagerCompat.waitService("power")
+        ServiceManagerCompat.waitService("notification")
 
         fun getAppInfo(packageName: String): ApplicationInfo {
             try {
