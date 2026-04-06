@@ -35,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +50,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
@@ -94,6 +98,7 @@ fun HistoryListScreen(
     val chargeCapacityChangeFilter by viewModel.chargeCapacityChangeFilter.collectAsState()
     // 列表滚动状态（用于计算是否接近列表底部）
     val listState = rememberLazyListState()
+    val lifecycleOwner = LocalLifecycleOwner.current
     var openRecordName by remember { mutableStateOf<String?>(null) }
     // CreateDocument 回调异步返回，这里暂存要导出的记录，避免回调时丢失上下文
     var pendingExportFile by remember { mutableStateOf<RecordsFile?>(null) }
@@ -124,6 +129,16 @@ fun HistoryListScreen(
     LaunchedEffect(batteryStatus) {
         openRecordName = null
         viewModel.loadRecords(context, batteryStatus)
+    }
+    DisposableEffect(lifecycleOwner, batteryStatus, context, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event != Lifecycle.Event.ON_START) return@LifecycleEventObserver
+            viewModel.loadRecords(context, batteryStatus)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
     LaunchedEffect(userMessage) {
         val message = userMessage ?: return@LaunchedEffect

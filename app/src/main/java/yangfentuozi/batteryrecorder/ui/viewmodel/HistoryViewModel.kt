@@ -151,19 +151,23 @@ class HistoryViewModel : ViewModel() {
      *
      * @param context 应用上下文。
      * @param type 历史类型。
-     * @return 初始化列表分页上下文，并加载第一页数据。
+     * @return 首次进入时初始化分页上下文；同类型页面再次进入时刷新首条当前记录，必要时回退整页重载。
      */
     fun loadRecords(context: Context, type: BatteryStatus) {
         if (_isLoading.value) return
-        if (currentListType == type && hasInitializedListContext) return
+        _isLoading.value = true
+        val shouldReloadFromScratch = currentListType != type || !hasInitializedListContext
         viewModelScope.launch {
-            _isLoading.value = true
             try {
-                reloadRecordsInternal(
-                    context = context,
-                    type = type,
-                    preserveChargeFilter = false
-                )
+                if (shouldReloadFromScratch) {
+                    reloadRecordsInternal(
+                        context = context,
+                        type = type,
+                        preserveChargeFilter = false
+                    )
+                } else {
+                    refreshRecordsOnEnterInternal(context, type)
+                }
             } finally {
                 _isLoading.value = false
             }
@@ -529,6 +533,107 @@ class HistoryViewModel : ViewModel() {
         }
         resetDisplayedRecords(currentSourceCount())
         loadNextPageInternal(context, token)
+    }
+
+    /**
+     * 历史列表重新进入前台时刷新当前上下文。
+     *
+     * @param context 应用上下文。
+     * @param type 当前历史页类型。
+     * @return 文件集合、筛选上下文或显示口径变化时整页重载；仅当前记录增长时只重算首条记录。
+     */
+    private suspend fun refreshRecordsOnEnterInternal(
+        context: Context,
+        type: BatteryStatus
+    ) {
+        if (currentListType != type || !hasInitializedListContext) {
+            reloadRecordsInternal(
+                context = context,
+                type = type,
+                preserveChargeFilter = false
+            )
+            return
+        }
+
+        val dischargeDisplayPositive = getDischargeDisplayPositive(context)
+        val latestFiles = withContext(Dispatchers.IO) {
+            HistoryRepository.listRecordFiles(context, type)
+        }
+        if (shouldReloadListOnEnter(latestFiles, dischargeDisplayPositive)) {
+            reloadRecordsInternal(
+                context = context,
+                type = type,
+                preserveChargeFilter = true
+            )
+            return
+        }
+
+        listFiles = latestFiles
+        latestListFile = latestFiles.firstOrNull()
+        listDischargeDisplayPositive = dischargeDisplayPositive
+
+        val latestFile = latestListFile ?: return
+        val currentFirstRecord = _records.value.firstOrNull() ?: return
+        if (currentFirstRecord.lastModified == latestFile.lastModified()) return
+
+        val refreshedRecord = withContext(Dispatchers.IO) {
+            buildHistoryRecord(
+                context = context,
+                file = latestFile,
+                latestFile = latestFile,
+                dischargeDisplayPositive = dischargeDisplayPositive
+            )
+        }
+        if (refreshedRecord == null) {
+            reloadRecordsInternal(
+                context = context,
+                type = type,
+                preserveChargeFilter = true
+            )
+            return
+        }
+        replaceCachedRecord(refreshedRecord)
+    }
+
+    /**
+     * 判断前台刷新是否必须退回整页重载。
+     *
+     * @param latestFiles 重新列出的文件集合。
+     * @param dischargeDisplayPositive 当前放电展示口径。
+     * @return 只要整页可见结果可能改变，就返回 true。
+     */
+    private fun shouldReloadListOnEnter(
+        latestFiles: List<File>,
+        dischargeDisplayPositive: Boolean
+    ): Boolean {
+        if (_chargeCapacityChangeFilter.value != null) return true
+        if (listDischargeDisplayPositive != dischargeDisplayPositive) return true
+        if (latestFiles.size != listFiles.size) return true
+        if (latestFiles.indices.any { index -> latestFiles[index].name != listFiles[index].name }) {
+            return true
+        }
+
+        val latestFile = latestFiles.firstOrNull() ?: return _records.value.isNotEmpty()
+        val currentFirstRecord = _records.value.firstOrNull() ?: return true
+        return currentFirstRecord.name != latestFile.name
+    }
+
+    /**
+     * 用最新记录数据回写当前列表缓存。
+     *
+     * @param refreshedRecord 最新重算得到的记录。
+     * @return 同步替换已展示列表与筛选缓存中的同名记录，避免后续继续命中旧值。
+     */
+    private fun replaceCachedRecord(refreshedRecord: HistoryRecord) {
+        _records.value = _records.value.map { record ->
+            if (record.name == refreshedRecord.name) refreshedRecord else record
+        }
+        allListRecordsCache = allListRecordsCache?.map { record ->
+            if (record.name == refreshedRecord.name) refreshedRecord else record
+        }
+        pagedSourceRecords = pagedSourceRecords?.map { record ->
+            if (record.name == refreshedRecord.name) refreshedRecord else record
+        }
     }
 
     private fun resetDisplayedRecords(sourceSize: Int) {
