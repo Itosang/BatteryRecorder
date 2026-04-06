@@ -147,19 +147,19 @@ class HistoryViewModel : ViewModel() {
     }
 
     /**
-     * 加载历史列表首页。
+     * 加载历史列表。
+     *
+     * 首次进入时初始化分页上下文；同类型页面再次进入时只刷新首条当前记录，必要时回退整页重载。
      *
      * @param context 应用上下文。
      * @param type 历史类型。
-     * @return 首次进入时初始化分页上下文；同类型页面再次进入时刷新首条当前记录，必要时回退整页重载。
      */
     fun loadRecords(context: Context, type: BatteryStatus) {
         if (_isLoading.value) return
         _isLoading.value = true
-        val shouldReloadFromScratch = currentListType != type || !hasInitializedListContext
         viewModelScope.launch {
             try {
-                if (shouldReloadFromScratch) {
+                if (currentListType != type || !hasInitializedListContext) {
                     reloadRecordsInternal(
                         context = context,
                         type = type,
