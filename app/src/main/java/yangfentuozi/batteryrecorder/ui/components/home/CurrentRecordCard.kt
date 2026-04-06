@@ -43,6 +43,7 @@ import yangfentuozi.batteryrecorder.utils.computePowerW
 import yangfentuozi.batteryrecorder.utils.formatDateTime
 import yangfentuozi.batteryrecorder.utils.formatDurationHours
 import yangfentuozi.batteryrecorder.utils.formatPower
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -151,7 +152,7 @@ fun CurrentRecordCard(
                 if (it in 1..20) {
                     "$it V"
                 } else {
-                    "$it mV"
+                    String.format(Locale.getDefault(), "%.2f V", it / 1000.0)
                 }
             } ?: "--"
 

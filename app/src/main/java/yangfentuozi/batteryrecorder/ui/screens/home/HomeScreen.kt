@@ -65,6 +65,7 @@ import yangfentuozi.batteryrecorder.utils.batteryRecorderScaffoldInsets
 import yangfentuozi.batteryrecorder.utils.navigationBarBottomPadding
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "HomeScreen"
@@ -186,7 +187,7 @@ fun HomeScreen(
             if (rawVoltage in 1..20) {
                 "$rawVoltage V"
             } else {
-                "$rawVoltage mV"
+                String.format(Locale.getDefault(), "%.2f V", rawVoltage / 1000.0)
             }
         }
         LoggerX.d(
