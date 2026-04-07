@@ -145,7 +145,6 @@ object HistoryRepository {
     }
 
     /** 加载指定名称的单条记录 */
-    @Throws(Exception::class)
     fun loadRecord(context: Context, file: File): HistoryRecord {
         val dataDir = file.parentFile!!
         val latestFile = listSortedRecordFiles(dataDir).firstOrNull()
@@ -159,7 +158,6 @@ object HistoryRepository {
     }
 
     /** 加载记录的图表数据点，用于绘制功率曲线 */
-    @Throws(FileNotFoundException::class)
     fun loadRecordPoints(context: Context, recordsFile: RecordsFile): List<ChartPoint> {
         val file = recordsFile.toFile(context)
             ?: throw FileNotFoundException("Record file not found: ${recordsFile.name}")
@@ -301,7 +299,6 @@ object HistoryRepository {
     }
 
     /** 导出单条记录到用户选择位置 */
-    @Throws(IOException::class)
     fun exportRecord(
         context: Context,
         recordsFile: RecordsFile,
@@ -322,7 +319,6 @@ object HistoryRepository {
     }
 
     /** 导出当前列表内的所有记录到 ZIP */
-    @Throws(IOException::class)
     fun exportRecordsZip(
         context: Context,
         recordsFiles: List<RecordsFile>,
@@ -355,7 +351,6 @@ object HistoryRepository {
      * @param sourceUri 用户选择的 ZIP 文档 Uri。
      * @return 返回成功导入的记录数；任一条目不符合一键导出格式时直接抛错，不执行部分导入。
      */
-    @Throws(IOException::class)
     fun importRecordsZip(
         context: Context,
         type: BatteryStatus,

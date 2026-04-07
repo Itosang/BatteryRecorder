@@ -34,7 +34,6 @@ object LogRepository {
      * @param destinationUri SAF 目标 URI。
      * @return 导出结果，包含 App/Server 两侧的导出状态。
      */
-    @Throws(IOException::class)
     fun exportLogsZip(
         context: Context,
         destinationUri: Uri
@@ -153,7 +152,6 @@ object LogRepository {
      * @param label 日志归属标识。
      * @return 目录内文件数量。
      */
-    @Throws(FileNotFoundException::class)
     private fun requireLogFiles(directory: File, label: String): Int {
         if (!directory.exists() || !directory.isDirectory) {
             throw FileNotFoundException("$label 日志目录不存在: ${directory.absolutePath}")
@@ -174,7 +172,6 @@ object LogRepository {
      * @param tempDir 接收服务端日志的临时目录。
      * @return 接收到的服务端日志文件数量。
      */
-    @Throws(IOException::class)
     private fun tryReceiveServerLogs(tempDir: File): Int {
         LoggerX.i(TAG, "tryReceiveServerLogs: 开始尝试拉取 Server 日志")
         val service = Service.service ?: throw IOException("服务未连接，无法导出 Server 日志")
