@@ -125,7 +125,7 @@ jobs:
           releaseTitle=`printf '%s\n' "$versionMetadata" | sed -n 's/^releaseTitle=//p'`
           ./gradlew :app:assembleRelease :app:assembleDebug ${{ steps.channel.outputs.gradle_args }}
 
-          releaseApk=`ls app/build/outputs/apk/release/batteryrecorder*-v*-release.apk`
+          releaseApk=`ls app/build/outputs/apk/release/batteryrecorder-v*.apk`
           debugApk=`ls app/build/outputs/apk/debug/batteryrecorder*-v*-debug.apk`
           releaseArtifactName="release-$tagName"
           debugArtifactName="debug-$tagName"
