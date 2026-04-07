@@ -320,36 +320,49 @@ fun HistoryListScreen(
                                 } else {
                                     stats.startCapacity - stats.endCapacity
                                 }
-                                Column(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = formatFullDateTime(stats.startTime),
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        text = stringResource(
-                                            R.string.history_item_summary,
-                                            formatDurationHours(durationMs),
-                                            capacityChange
-                                        ),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "平均功率 ${
-                                            formatPower(
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = formatFullDateTime(stats.startTime),
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(
+                                            text = stringResource(
+                                                R.string.history_item_summary,
+                                                formatDurationHours(durationMs),
+                                                capacityChange
+                                            ),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                    ) {
+                                        Text(
+                                            text = formatPower(
                                                 stats.averagePower,
                                                 dualCellEnabled,
                                                 calibrationValue
-                                            )
-                                        }",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                            ),
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = "平均功耗",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             },
                             onContentClick = {
