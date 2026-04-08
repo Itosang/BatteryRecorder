@@ -141,7 +141,7 @@
     <string name="docs_intro_open">Open user guide</string>
     <string name="about_view_source">View source on GitHub</string>
     <string name="donate_dialog_title">Support ongoing maintenance</string>
-    <string name="donate_dialog_message">If this project helps you, you can support it with the QR code below. The income will be used for domain renewal and ongoing maintenance support.</string>
+    <string name="donate_dialog_message">If this project helps you, you can support it with the QR code below.\nThe income will be used for domain renewal and ongoing maintenance support.</string>
     <string name="donate_dialog_qr_content_description">Donation QR code</string>
 
     <string name="history_charging_title">Charging history</string>

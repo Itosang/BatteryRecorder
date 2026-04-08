@@ -16,12 +16,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.circle
+import org.intellij.lang.annotations.Language
 import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.ui.theme.AppShape
 
 /**
  * 首页捐赠弹窗，展示维护说明与收款码。
@@ -60,7 +64,9 @@ fun DonateDialog(onDismiss: () -> Unit) {
                         .fillMaxWidth()
                         .heightIn(max = 360.dp)
                         .sizeIn(maxWidth = 360.dp)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 8.dp)
+                        .clip(AppShape.extraLarge)
+                    ,
                     contentScale = ContentScale.Fit
                 )
                 TextButton(
@@ -74,7 +80,7 @@ fun DonateDialog(onDismiss: () -> Unit) {
     }
 }
 
-@Preview
+@Preview(locale = "zh")
 @Composable
 private fun DonateDialogPreview() {
     MaterialTheme {
