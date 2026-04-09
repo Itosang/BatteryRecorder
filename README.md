@@ -36,8 +36,8 @@
 - [ ] 重启 server 时，续接之前 server 的状态
 - [x] 额外电压记录
 - [x] 电池温度信息 `/sys/class/power_supply/battery/temp` 记录
-- [ ] 亮屏判断改为以屏幕亮度为准
-- [ ] 日志导出
+- ~~[ ] 亮屏判断改为以屏幕亮度为准~~
+- [x] 日志导出
 - [ ] 优化 needDeleteSegment 判断
 
 ### ext

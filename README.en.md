@@ -36,8 +36,8 @@ A battery power recording app designed to capture more accurate power data with 
 - [ ] Restore the previous Server state after restarting server
 - [x] Additional voltage recording
 - [x] Record battery temperature from `/sys/class/power_supply/battery/temp`
-- [ ] Change screen-on detection to use screen brightness
-- [ ] Log export
+- ~~[ ] Change screen-on detection to use screen brightness~~
+- [x] Log export
 - [ ] Optimize `needDeleteSegment` logic
 
 ### ext
