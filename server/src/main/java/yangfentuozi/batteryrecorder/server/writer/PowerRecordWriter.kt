@@ -16,6 +16,7 @@ import java.io.OutputStream
 
 class PowerRecordWriter(
     powerDir: File,
+    writerStatusData: WriterStatusData?,
     private val fixFileOwner: ((File) -> Unit)
 ) {
     private val tag = "PowerRecordWriter"
@@ -40,11 +41,11 @@ class PowerRecordWriter(
     private val dischargeDir = File(powerDir, "discharge")
 
     @Volatile
-    var lastStatus: BatteryStatus? = null
+    var lastStatus: BatteryStatus? = writerStatusData?.lastStatus
         private set
 
-    val chargeDataWriter = ChargeDataWriter(chargeDir)
-    val dischargeDataWriter = DischargeDataWriter(dischargeDir)
+    val chargeDataWriter = ChargeDataWriter(chargeDir, writerStatusData?.chargeDataWriterStatusData)
+    val dischargeDataWriter = DischargeDataWriter(dischargeDir, writerStatusData?.dischargeDataWriterStatusData)
 
     @Volatile
     var batchSize = 200
@@ -109,7 +110,7 @@ class PowerRecordWriter(
         dischargeDataWriter.flushBufferBlocking()
     }
 
-    inner class ChargeDataWriter(dir: File) : BaseDelayedRecordWriter(dir) {
+    inner class ChargeDataWriter(dir: File, statusData: ChildWriterStatusData?) : BaseDelayedRecordWriter(dir, statusData) {
         override fun needStartNewSegment(justChangedStatus: Boolean, nowTime: Long): Boolean {
             // case1 记录超过最大分段时间（0 表示不按时间分段）
             return (maxSegmentDurationMs > 0 && nowTime - startTime > maxSegmentDurationMs) ||
@@ -122,7 +123,7 @@ class PowerRecordWriter(
         }
     }
 
-    inner class DischargeDataWriter(dir: File) : BaseDelayedRecordWriter(dir) {
+    inner class DischargeDataWriter(dir: File, statusData: ChildWriterStatusData?) : BaseDelayedRecordWriter(dir, statusData) {
         override fun needStartNewSegment(justChangedStatus: Boolean, nowTime: Long): Boolean {
             // case1 记录超过最大分段时间（0 表示不按时间分段）
             return (maxSegmentDurationMs > 0 && nowTime - startTime > maxSegmentDurationMs) || justChangedStatus
@@ -135,7 +136,8 @@ class PowerRecordWriter(
         }
     }
 
-    abstract inner class BaseDelayedRecordWriter(val dir: File) {
+    abstract inner class BaseDelayedRecordWriter(val dir: File, statusData: ChildWriterStatusData?) {
+
         private val tag = "BaseDelayedRecordWriter"
 
         @Volatile
@@ -149,7 +151,39 @@ class PowerRecordWriter(
 
         protected val handler: Handler = Handlers.getHandler("RecorderWritingThread")
 
+        @Volatile
+        private var isClosed = false
+
+        init {
+            if (statusData != null) {
+                LoggerX.d(tag, "init: 续接之前状态 $statusData")
+                val file = File(statusData.segmentFile)
+                segmentFile = file
+                startTime = statusData.startTime
+                lastTime = statusData.lastTime
+                lastChangedStatusTime = statusData.lastChangedStatusTime
+
+                val openOutputStream: (() -> OutputStream) = {
+                    if (!file.exists() && !file.createNewFile()) {
+                        throw IOException("@openOutputStream: 创建分段文件: ${file.absolutePath} 失败")
+                    }
+                    fixFileOwner(file)
+                    FileOutputStream(file, true)
+                }
+                writer = AdvancedWriter(
+                    handler = handler,
+                    batchSize = { batchSize },
+                    flushIntervalMs = { flushIntervalMs },
+                    outputStream = openOutputStream(),
+                    retryTimes = 3,
+                    retryIntervalMs = 1000,
+                    reopenOutputStream = openOutputStream
+                )
+            }
+        }
+
         fun write(record: LineRecord): WriteResult {
+            if (isClosed) return WriteResult.Rejected
             val justChangedStatus = lastStatus != record.status
 
             // 选择性丢弃一些干扰数据
@@ -291,5 +325,38 @@ class PowerRecordWriter(
             if (needStartNewSegment(justChangedStatus)) closeCurrentSegment()
             return segmentFile
         }
+
+        fun currWriterStatusAndClose(): ChildWriterStatusData {
+            val result = ChildWriterStatusData(
+                segmentFile = segmentFile!!.absolutePath,
+                startTime = startTime,
+                lastTime = lastTime,
+                lastChangedStatusTime = lastChangedStatusTime
+            )
+            isClosed = true
+            writer?.close()
+            writer = null
+            return result
+        }
     }
+
+    fun currWriterStatusAndClose(): WriterStatusData {
+        return WriterStatusData(
+            lastStatus = lastStatus ?: BatteryStatus.Unknown,
+            chargeDataWriterStatusData = chargeDataWriter.currWriterStatusAndClose(),
+            dischargeDataWriterStatusData = dischargeDataWriter.currWriterStatusAndClose())
+    }
+
+    data class ChildWriterStatusData(
+        val segmentFile: String,
+        val startTime: Long = 0L,
+        val lastTime: Long = 0L,
+        val lastChangedStatusTime: Long = 0L
+    )
+
+    data class WriterStatusData(
+        val lastStatus: BatteryStatus,
+        val chargeDataWriterStatusData: ChildWriterStatusData,
+        val dischargeDataWriterStatusData: ChildWriterStatusData,
+    )
 }

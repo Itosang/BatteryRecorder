@@ -2,6 +2,9 @@ package yangfentuozi.batteryrecorder.server
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.LocalServerSocket
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.os.Bundle
 import android.os.Looper
 import android.os.ParcelFileDescriptor
@@ -15,6 +18,8 @@ import yangfentuozi.batteryrecorder.server.recorder.Monitor
 import yangfentuozi.batteryrecorder.server.recorder.Monitor.Companion.computeNotificationPowerMultiplier
 import yangfentuozi.batteryrecorder.server.sampler.DumpsysSampler
 import yangfentuozi.batteryrecorder.server.sampler.SysfsSampler
+import yangfentuozi.batteryrecorder.server.stream.StreamReader
+import yangfentuozi.batteryrecorder.server.stream.StreamWriter
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
@@ -42,6 +47,7 @@ class Server internal constructor() : IService.Stub() {
     private var monitor: Monitor
     private var writer: PowerRecordWriter
     private var bridge: ChildServerBridge? = null
+    private var serverSocket: LocalServerSocket? = null
 
     private var appDataDir: File
     private var appConfigFile: File
@@ -312,15 +318,61 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.fixFileOwner = {
                 Global.changeOwnerRecursively(it, 2000)
             }
+        }
 
+        var writerStatusData: PowerRecordWriter.WriterStatusData? = null
+
+        run {
+            var socket = LocalSocket()
+            try {
+                socket.connect(LocalSocketAddress(SOCKET_NAME))
+                LoggerX.i(tag, "已连接旧 server, 准备接收状态数据")
+                Thread.sleep(200)
+                StreamReader(socket.inputStream).use { streamReader ->
+                    repeat(5) {
+                        if (writerStatusData == null) {
+                            Thread.sleep(200)
+                            writerStatusData = streamReader.readNext()
+                        }
+                    }
+                    LoggerX.i(tag, "已接收状态数据: $writerStatusData")
+                }
+                Thread.sleep(10000)
+            } catch (_: Exception) {
+            } finally {
+                runCatching { socket.close() }
+            }
+        }
+
+        Thread({
+            try {
+                serverSocket = LocalServerSocket(SOCKET_NAME)
+            } catch (e: IOException) {
+                throw RuntimeException(e)
+            }
+            runCatching {
+                serverSocket?.let {
+                    val socket = it.accept()
+                    LoggerX.i(tag, "新 server 已启动, 准备发送状态数据然后退出")
+                    StreamWriter(socket.outputStream).use { streamWriter ->
+                        streamWriter.write(writer.currWriterStatusAndClose())
+                    }
+                    LoggerX.i(tag, "已发送状态数据")
+                    it.close()
+                    Handlers.main.postDelayed({ exitProcess(0) }, 100)
+                }
+            }
+        }, "ServerSocketThread").start()
+
+        if (Os.getuid() == 0) {
             bridge = ChildServerBridge()
         }
 
         try {
             writer = if (Os.getuid() == 0)
-                PowerRecordWriter(appPowerDataDir) { Global.changeOwnerRecursively(it, appInfo.uid) }
+                PowerRecordWriter(appPowerDataDir, writerStatusData) { Global.changeOwnerRecursively(it, appInfo.uid) }
             else
-                PowerRecordWriter(shellPowerDataDir) {}
+                PowerRecordWriter(shellPowerDataDir, writerStatusData) {}
         } catch (e: IOException) {
             throw RuntimeException(e)
         }
@@ -368,5 +420,9 @@ class Server internal constructor() : IService.Stub() {
             }
         }, "InputHandler").start()
         Looper.loop()
+    }
+
+    companion object {
+        const val SOCKET_NAME = "BatteryRecorder_Server"
     }
 }
