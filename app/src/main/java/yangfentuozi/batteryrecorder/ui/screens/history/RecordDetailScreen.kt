@@ -253,11 +253,6 @@ fun RecordDetailScreen(
             else -> null
         }
         val detailType = detailState?.type ?: recordsFile.type
-        val chargingMahDisplayMultiplier = when {
-            calibrationValue > 0 -> 1.0
-            calibrationValue < 0 -> -1.0
-            else -> 0.0
-        }
         val typeLabel = if (detailType == BatteryStatus.Charging) {
             stringResource(R.string.history_record_type_charging)
         } else {
@@ -459,10 +454,8 @@ fun RecordDetailScreen(
                                 if (detailState.type == BatteryStatus.Charging && capacityChange != null) {
                                     val capacityChangeText = buildString {
                                         append("${capacityChange}%")
-                                        recordDetailPowerUiState?.totalTransferredMahBase?.let { baseMah ->
-                                            val calibratedMah = baseMah * chargingMahDisplayMultiplier
-                                            val displayMah =
-                                                if (dualCellEnabled) calibratedMah * 2.0 else calibratedMah
+                                        recordDetailPowerUiState?.totalTransferredMah?.let { mah ->
+                                            val displayMah = if (dualCellEnabled) mah * 2.0 else mah
                                             append(" - ")
                                             append(
                                                 String.format(
@@ -481,11 +474,11 @@ fun RecordDetailScreen(
                                 val screenOnDurationText = formatDurationHours(stats.screenOnTimeMs)
                                 val screenOnText =
                                     (if (detailState.type != BatteryStatus.Charging) {
-                                        recordDetailPowerUiState?.screenOnConsumedMahBase
+                                        recordDetailPowerUiState?.screenOnConsumedMah
                                     } else {
                                         null
-                                    })?.let { baseMah ->
-                                        val displayMah = if (dualCellEnabled) baseMah * 2.0 else baseMah
+                                    })?.let { mah ->
+                                        val displayMah = if (dualCellEnabled) mah * 2.0 else mah
                                         "$screenOnDurationText - ${
                                             String.format(java.util.Locale.getDefault(), "%.1fmAh", displayMah)
                                         }"
@@ -493,11 +486,11 @@ fun RecordDetailScreen(
                                 val screenOffDurationText = formatDurationHours(stats.screenOffTimeMs)
                                 val screenOffText =
                                     (if (detailState.type != BatteryStatus.Charging) {
-                                        recordDetailPowerUiState?.screenOffConsumedMahBase
+                                        recordDetailPowerUiState?.screenOffConsumedMah
                                     } else {
                                         null
-                                    })?.let { baseMah ->
-                                        val displayMah = if (dualCellEnabled) baseMah * 2.0 else baseMah
+                                    })?.let { mah ->
+                                        val displayMah = if (dualCellEnabled) mah * 2.0 else mah
                                         "$screenOffDurationText - ${
                                             String.format(java.util.Locale.getDefault(), "%.1fmAh", displayMah)
                                         }"

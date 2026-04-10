@@ -28,6 +28,32 @@ class DumpsysSampler : Sampler {
         LoggerX.d(tag, "init: 启用 Dumpsys 回退采样器")
     }
 
+    /**
+     * 将 dumpsys 返回的电压统一归一到 uV。
+     *
+     * 当前已确认存在两种 OEM 行为：
+     * - `4` 这类整数表示 V
+     * - `4172` 这类整数表示 mV
+     *
+     * 记录文件与功率换算统一要求使用 uV，因此必须在采样阶段完成归一化。
+     *
+     * @param rawVoltage dumpsys 原始电压值
+     * @return 统一后的 uV 电压；非正数直接原样返回
+     */
+    private fun normalizeDumpVoltageToMicroVolt(rawVoltage: Long): Long {
+        if (rawVoltage <= 0L) return rawVoltage
+        val normalizedVoltage = if (rawVoltage < 100L) {
+            rawVoltage * 1_000_000L
+        } else {
+            rawVoltage * 1_000L
+        }
+        LoggerX.d(
+            tag,
+            "normalizeDumpVoltageToMicroVolt: raw=$rawVoltage normalized=$normalizedVoltage"
+        )
+        return normalizedVoltage
+    }
+
     override fun sample(): Sampler.BatteryData {
         val pipe = ParcelFileDescriptor.createPipe()
 
@@ -100,7 +126,7 @@ class DumpsysSampler : Sampler {
             }
         }
         return Sampler.BatteryData(
-            voltage = voltage * 1000, // 修正单位与内核数据一致
+            voltage = normalizeDumpVoltageToMicroVolt(voltage),
             current = current,
             capacity = capacity,
             status = status,

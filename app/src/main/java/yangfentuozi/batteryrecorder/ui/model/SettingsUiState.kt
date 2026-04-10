@@ -35,7 +35,7 @@ data class SettingsUiState(
     val notificationEnabled: Boolean = ServerSettings().notificationEnabled,
     /** 串联双电芯 */
     val dualCellEnabled: Boolean = ServerSettings().dualCellEnabled,
-    /** 电流单位校准 */
+    /** 电流校准 */
     val calibrationValue: Int = ServerSettings().calibrationValue,
     /** 采样间隔 */
     val recordIntervalMs: Long = ServerSettings().recordIntervalMs,

@@ -99,7 +99,7 @@ fun HistoryListScreen(
     val records by viewModel.records.collectAsState()
     // 是否启用双电芯模式（影响功率显示换算）
     val dualCellEnabled by settingsViewModel.dualCellEnabled.collectAsState()
-    // 功率显示校准值（用于修正显示结果）
+    // 电流校准值（用于修正功率与 mAh 显示结果）
     val calibrationValue by settingsViewModel.calibrationValue.collectAsState()
     // 一次性用户提示消息（如导出/删除结果提示）
     val userMessage by viewModel.userMessage.collectAsState()

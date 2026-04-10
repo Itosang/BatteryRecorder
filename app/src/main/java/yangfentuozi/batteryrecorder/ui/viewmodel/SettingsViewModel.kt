@@ -163,7 +163,7 @@ class SettingsViewModel : ViewModel() {
     fun setCalibrationValue(value: Int) {
         val finalValue = SettingsConstants.calibrationValue.coerce(value)
         updateServerSettings(
-            message = "[设置] 更新校准值并准备下发: calibration=$finalValue"
+            message = "[设置] 更新电流校准并准备下发: calibration=$finalValue"
         ) { current ->
             current.copy(calibrationValue = finalValue)
         }
