@@ -231,6 +231,7 @@ class Server internal constructor() : IService.Stub() {
         }
         writer.close()
         bridge?.stop()
+        serverSocket?.close()
         Handlers.interruptAll()
     }
 
