@@ -128,6 +128,7 @@ fun UpdateDialog(
                     TextButton(onClick = {
                         if (AppDownloader.canRequestPackageInstalls(context)) {
                             startDownload()
+                            onDismiss()
                         } else {
                             val intent = AppDownloader.createInstallPermissionIntent()
                             installPermissionLauncher.launch(intent)
