@@ -1,8 +1,6 @@
 package yangfentuozi.batteryrecorder.utils
 
 import android.app.DownloadManager
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -21,83 +19,6 @@ private const val PREFS_NAME = "download_prefs"
 private const val KEY_DOWNLOAD_ID = "download_id"
 
 object AppDownloader {
-
-    class DownloadCompleteReceiver : BroadcastReceiver() {
-
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != "android.intent.action.DOWNLOAD_COMPLETE" &&
-                intent.action != "yangfentuozi.batteryrecorder.DOWNLOAD_COMPLETE") {
-                LoggerX.d(TAG, "[更新] 无效action=${intent.action}，忽略")
-                return
-            }
-            LoggerX.d(TAG, "[更新] 收到下载完成广播, action=${intent.action}")
-
-            if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) == -1L) {
-                LoggerX.d(TAG, "[更新] 无下载ID，忽略")
-                return
-            }
-
-            val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
-            val savedDownloadId = getDownloadId(context)
-
-            if (downloadId != savedDownloadId) {
-                LoggerX.d(TAG, "[更新] 下载完成，但不是我们的下载任务，忽略: downloadId=$downloadId savedId=$savedDownloadId")
-                return
-            }
-
-            LoggerX.i(TAG, "[更新] 下载完成，准备安装 APK, downloadId=$downloadId")
-
-            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            val query = DownloadManager.Query().setFilterById(downloadId)
-
-            downloadManager.query(query)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    if (statusIndex != -1) {
-                        val status = cursor.getInt(statusIndex)
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                            if (uriIndex != -1) {
-                                val uriString = cursor.getString(uriIndex)
-                                if (uriString != null) {
-                                    if (!canRequestPackageInstalls(context)) {
-                                        LoggerX.w(TAG, "[更新] 缺少安装未知应用权限，引导用户去设置")
-                                        Toast.makeText(
-                                            context,
-                                            R.string.update_install_permission_required,
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        val permissionIntent = createInstallPermissionIntent(context)
-                                        permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        try {
-                                            context.startActivity(permissionIntent)
-                                        } catch (e: Exception) {
-                                            LoggerX.e(TAG, "[更新] 无法启动权限设置页面", tr = e)
-                                        }
-                                        return
-                                    }
-
-                                    val apkUri = Uri.parse(uriString)
-                                    val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                        FileProvider.getUriForFile(
-                                            context,
-                                            "${BuildConfig.APPLICATION_ID}.fileprovider",
-                                            File(apkUri.path!!)
-                                        )
-                                    } else {
-                                        apkUri
-                                    }
-                                    installApk(context, contentUri)
-                                }
-                            }
-                        } else {
-                            LoggerX.w(TAG, "[更新] 下载失败，status=$status")
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     fun canRequestPackageInstalls(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -177,70 +98,6 @@ object AppDownloader {
         } catch (e: Exception) {
             LoggerX.e(TAG, "[更新] 启动安装失败", tr = e)
             Toast.makeText(context, R.string.update_install_failed, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun checkAndInstallPendingApk(context: Context) {
-        val downloadId = getDownloadId(context)
-        if (downloadId == -1L) {
-            LoggerX.d(TAG, "[更新] 无待处���下载")
-            return
-        }
-
-        LoggerX.i(TAG, "[更新] 检查待处理下载, downloadId=$downloadId")
-
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val query = DownloadManager.Query().setFilterById(downloadId)
-
-        try {
-            downloadManager.query(query)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                    if (statusIndex != -1) {
-                        val status = cursor.getInt(statusIndex)
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            val uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                            if (uriIndex != -1) {
-                                val uriString = cursor.getString(uriIndex)
-                                if (uriString != null) {
-                                    if (!canRequestPackageInstalls(context)) {
-                                        LoggerX.w(TAG, "[更新] 缺少安装权限，引导用户去设置")
-                                        Toast.makeText(
-                                            context,
-                                            R.string.update_install_permission_required,
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        val permissionIntent = createInstallPermissionIntent(context)
-                                        permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        try {
-                                            context.startActivity(permissionIntent)
-                                        } catch (e: Exception) {
-                                            LoggerX.e(TAG, "[更新] 无法启动权限设置页面", tr = e)
-                                        }
-                                        return
-                                    }
-
-                                    val apkUri = Uri.parse(uriString)
-                                    val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                        FileProvider.getUriForFile(
-                                            context,
-                                            "${BuildConfig.APPLICATION_ID}.fileprovider",
-                                            File(apkUri.path!!)
-                                        )
-                                    } else {
-                                        apkUri
-                                    }
-                                    installApk(context, contentUri)
-                                }
-                            }
-                        } else {
-                            LoggerX.w(TAG, "[更新] 下载失败或未完成，status=$status")
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            LoggerX.e(TAG, "[更新] 查询下载状态失败", tr = e)
         }
     }
 
