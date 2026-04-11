@@ -215,6 +215,101 @@ jobs:
 
           echo "notesFile=$notesFile" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare Telegram publish
+        if: success()
+        id: telegram
+        env:
+          IS_RELEASE: ${{ steps.channel.outputs.is_release }}
+          IS_PRERELEASE: ${{ steps.channel.outputs.is_prerelease }}
+          RELEASE_TITLE: ${{ steps.buildWithGradle.outputs.releaseTitle }}
+          NOTES_FILE: ${{ steps.releaseNotes.outputs.notesFile }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          rawCaptionFile=telegram-caption-raw.txt
+          captionFile=telegram-caption.txt
+          shouldPush=false
+          maxCaptionLength=1022
+
+          strip_markdown() {
+            sed -E 's/\[([^][]+)\]\([^)]+\)/\1/g' \
+            | sed -E 's/\*\*([^*]+)\*\*/\1/g' \
+            | sed -E 's/`([^`]+)`/\1/g' \
+            | sed -E 's/^- [0-9a-f]{7,}[[:space:]]+/- /'
+          }
+
+          char_count() {
+            printf '%s' "$1" | wc -m | awk '{print $1}'
+          }
+
+          truncate_caption() {
+            inputFile="$1"
+            outputFile="$2"
+            caption=""
+            truncated=false
+
+            while IFS= read -r line || [ -n "$line" ]; do
+              if [ -z "$caption" ]; then
+                candidate="$line"
+              else
+                candidate=`printf '%s\n%s' "$caption" "$line"`
+              fi
+
+              if [ "$(char_count "$candidate")" -le "$maxCaptionLength" ]; then
+                caption="$candidate"
+                continue
+              fi
+
+              if [ -z "$caption" ]; then
+                caption=`printf '%s' "$line" | cut -c1-"$maxCaptionLength"`
+              fi
+              truncated=true
+              break
+            done < "$inputFile"
+
+            if [ "$truncated" = "true" ]; then
+              if [ -n "$caption" ]; then
+                caption=`printf '%s\n…' "$caption"`
+              else
+                caption="…"
+              fi
+            fi
+
+            printf '%s\n' "$caption" > "$outputFile"
+          }
+
+          if [ "$IS_RELEASE" = "true" ]; then
+            threadId=5
+            shouldPush=true
+            {
+              echo "$RELEASE_TITLE"
+              echo
+              sed '/^<!-- versionCode:/d' "$NOTES_FILE" | strip_markdown
+            } > "$rawCaptionFile"
+          elif [ "$IS_PRERELEASE" = "true" ]; then
+            threadId=7
+            shouldPush=true
+            {
+              echo "$RELEASE_TITLE"
+              echo
+              sed '/^<!-- versionCode:/d' "$NOTES_FILE" | strip_markdown
+            } > "$rawCaptionFile"
+          elif [ "$GITHUB_REF_NAME" = "main" ]; then
+            threadId=3
+            commitSubject=`git log -1 --pretty=%s`
+            shouldPush=true
+            echo "$commitSubject" > "$rawCaptionFile"
+          else
+            threadId=3
+          fi
+
+          if [ "$shouldPush" = "true" ]; then
+            truncate_caption "$rawCaptionFile" "$captionFile"
+          fi
+
+          echo "shouldPush=$shouldPush" >> "$GITHUB_OUTPUT"
+          echo "threadId=$threadId" >> "$GITHUB_OUTPUT"
+          echo "captionFile=$captionFile" >> "$GITHUB_OUTPUT"
+
       - name: Publish GitHub release
         if: success() && steps.channel.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
@@ -227,3 +322,41 @@ jobs:
           files: |
             ${{ steps.buildWithGradle.outputs.releaseApk }}
             ${{ steps.buildWithGradle.outputs.mappingFile }}
+
+      - name: Publish to Telegram
+        if: success() && steps.telegram.outputs.shouldPush == 'true'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || vars.BOT_TOKEN }}
+          CHAT_ID: -1003856065409
+          MESSAGE_THREAD_ID: ${{ steps.telegram.outputs.threadId }}
+          CAPTION_FILE: ${{ steps.telegram.outputs.captionFile }}
+          DOCUMENT_FILE: ${{ steps.buildWithGradle.outputs.releaseApk }}
+        run: |
+          set -euo pipefail
+
+          apiBase="https://api.telegram.org/bot$BOT_TOKEN"
+          caption=`cat "$CAPTION_FILE"`
+
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "[Telegram] BOT_TOKEN 未配置" >&2
+            exit 1
+          fi
+
+          telegram_api() {
+            method="$1"
+            shift
+
+            response=`curl --silent --show-error --request POST "$apiBase/$method" "$@"`
+            if echo "$response" | grep -q '"ok":true'; then
+              return 0
+            fi
+
+            echo "[Telegram/$method] $response" >&2
+            return 1
+          }
+
+          telegram_api sendDocument \
+            --form chat_id="$CHAT_ID" \
+            --form message_thread_id="$MESSAGE_THREAD_ID" \
+            --form-string caption="$caption" \
+            --form document=@"$DOCUMENT_FILE"

@@ -2,6 +2,9 @@ package yangfentuozi.batteryrecorder.server
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.LocalServerSocket
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.os.Bundle
 import android.os.Looper
 import android.os.ParcelFileDescriptor
@@ -15,6 +18,8 @@ import yangfentuozi.batteryrecorder.server.recorder.Monitor
 import yangfentuozi.batteryrecorder.server.recorder.Monitor.Companion.computeNotificationPowerMultiplier
 import yangfentuozi.batteryrecorder.server.sampler.DumpsysSampler
 import yangfentuozi.batteryrecorder.server.sampler.SysfsSampler
+import yangfentuozi.batteryrecorder.server.stream.StreamReader
+import yangfentuozi.batteryrecorder.server.stream.StreamWriter
 import yangfentuozi.batteryrecorder.server.writer.PowerRecordWriter
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.ConfigUtil
@@ -42,6 +47,8 @@ class Server internal constructor() : IService.Stub() {
     private var monitor: Monitor
     private var writer: PowerRecordWriter
     private var bridge: ChildServerBridge? = null
+    private var serverSocket: LocalServerSocket? = null
+    private val appSourceDirObserver: AppSourceDirObserver
 
     private var appDataDir: File
     private var appConfigFile: File
@@ -288,16 +295,22 @@ class Server internal constructor() : IService.Stub() {
         return readEnd
     }
 
-    private fun stopServiceImmediately() {
+    private fun onStop() {
         monitor.stop()
 
         try {
             writer.flushBuffer()
         } catch (e: IOException) {
-            LoggerX.e(tag, "stopServiceImmediately: flushBuffer 失败", tr = e)
+            LoggerX.e(tag, "onStop: flushBuffer 失败", tr = e)
         }
         writer.close()
         bridge?.stop()
+        serverSocket?.close()
+        try {
+            LoggerX.flushBlocking()
+        } catch (e: Exception) {
+            LoggerX.e(tag, "onStop: 刷新日志缓冲失败", tr = e, notWrite = true)
+        }
         Handlers.interruptAll()
     }
 
@@ -322,6 +335,20 @@ class Server internal constructor() : IService.Stub() {
         }
     }
 
+    private var onAppSourceDirChangedInvoked = false
+
+    private fun onAppSourceDirChanged(appInfo: ApplicationInfo?) {
+        if (onAppSourceDirChangedInvoked) return
+        onAppSourceDirChangedInvoked = true
+        if (appInfo == null || appInfo.sourceDir == null || appInfo.nativeLibraryDir == null) {
+            LoggerX.i(tag, "onAppSourceDirChanged: App 已被卸载, 退出服务")
+            stopService()
+        } else {
+            LoggerX.i(tag, "onAppSourceDirChanged: App 已被更新, 重启服务")
+            ProcessBuilder(appInfo.nativeLibraryDir + "/libstarter.so").start()
+        }
+    }
+
     init {
         LoggerX.i(tag, "init: Server 初始化开始, uid=${Os.getuid()}")
         if (Looper.getMainLooper() == null) {
@@ -330,7 +357,7 @@ class Server internal constructor() : IService.Stub() {
         }
 
         Handlers.initMainThread()
-        Runtime.getRuntime().addShutdownHook(Thread { this.stopServiceImmediately() })
+        Runtime.getRuntime().addShutdownHook(Thread(::onStop))
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             LoggerX.a(thread.name, "Server crashed", tr = throwable)
             LoggerX.writer?.close()
@@ -360,6 +387,9 @@ class Server internal constructor() : IService.Stub() {
         appConfigFile = File("${appInfo.dataDir}/shared_prefs/${SettingsConstants.PREFS_NAME}.xml")
         appPowerDataDir = File("${appInfo.dataDir}/${Constants.APP_POWER_DATA_PATH}")
 
+        appSourceDirObserver = AppSourceDirObserver(::onAppSourceDirChanged)
+        appSourceDirObserver.startWatching()
+
         val sampler = if (SysfsSampler.init(appInfo)) SysfsSampler else DumpsysSampler()
         LoggerX.i(tag, "init: 采样器选择完成, sampler=${sampler::class.java.simpleName}")
 
@@ -385,15 +415,38 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.fixFileOwner = {
                 Global.changeOwnerRecursively(it, 2000)
             }
+        }
 
+        var writerStatusData: PowerRecordWriter.WriterStatusData? = null
+
+        run {
+            LocalSocket().use { socket ->
+                runCatching {
+                    socket.connect(LocalSocketAddress(SOCKET_NAME))
+                    LoggerX.i(tag, "已连接旧 server, 准备接收状态数据")
+                    Thread.sleep(200)
+                    StreamReader(socket.inputStream).use { streamReader ->
+                        repeat(5) {
+                            if (writerStatusData == null) {
+                                Thread.sleep(200)
+                                writerStatusData = streamReader.readNext()
+                            }
+                        }
+                        LoggerX.i(tag, "已接收状态数据: $writerStatusData")
+                    }
+                }
+            }
+        }
+
+        if (Os.getuid() == 0) {
             bridge = ChildServerBridge()
         }
 
         try {
             writer = if (Os.getuid() == 0)
-                PowerRecordWriter(appPowerDataDir) { Global.changeOwnerRecursively(it, appInfo.uid) }
+                PowerRecordWriter(appPowerDataDir, writerStatusData) { Global.changeOwnerRecursively(it, appInfo.uid) }
             else
-                PowerRecordWriter(shellPowerDataDir) {}
+                PowerRecordWriter(shellPowerDataDir, writerStatusData) {}
         } catch (e: IOException) {
             throw RuntimeException(e)
         }
@@ -428,6 +481,31 @@ class Server internal constructor() : IService.Stub() {
         BinderSender(::sendBinder)
 
         Thread({
+            Thread.sleep(1000)
+            // 强制杀死状态异常的 server
+            Main.killOtherServersExceptSelf()
+
+            try {
+                serverSocket = LocalServerSocket(SOCKET_NAME)
+            } catch (e: IOException) {
+                throw RuntimeException(e)
+            }
+            runCatching {
+                serverSocket?.let {
+                    val socket = it.accept()
+                    LoggerX.i(tag, "新 server 已启动, 准备发送状态数据然后退出")
+                    StreamWriter(socket.outputStream).use { streamWriter ->
+                        streamWriter.write(writer.currWriterStatusAndClose())
+                    }
+                    LoggerX.i(tag, "已发送状态数据")
+                    socket.close()
+                    it.close()
+                    Handlers.main.postDelayed({ exitProcess(0) }, 100)
+                }
+            }
+        }, "ServerSocketThread").start()
+
+        Thread({
             try {
                 val scanner = Scanner(System.`in`)
                 var line: String
@@ -441,5 +519,9 @@ class Server internal constructor() : IService.Stub() {
             }
         }, "InputHandler").start()
         Looper.loop()
+    }
+
+    companion object {
+        const val SOCKET_NAME = "BatteryRecorder_Server"
     }
 }

@@ -32,8 +32,8 @@
 ### server
 
 - [x] 解决 Monitor 唤醒锁异常(实际为 callback 阻塞)
-- [ ] 监听 app 安装，并在适当时机重启 Server
-- [ ] 重启 server 时，续接之前 server 的状态
+- [x] 监听 app 安装，并在适当时机重启 Server
+- [x] 重启 server 时，续接之前 server 的状态
 - [x] 额外电压记录
 - [x] 电池温度信息 `/sys/class/power_supply/battery/temp` 记录
 - ~~[ ] 亮屏判断改为以屏幕亮度为准~~

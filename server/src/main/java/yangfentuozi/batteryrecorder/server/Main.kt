@@ -39,7 +39,6 @@ object Main {
         )
 
         if (!isNotificationServer) {
-            killOtherServersExceptSelf()
             switchCgroupIfNeeded()
         }
 
@@ -75,7 +74,7 @@ object Main {
         }
     }
 
-    private fun killOtherServersExceptSelf() {
+    fun killOtherServersExceptSelf() {
         val selfPid = Os.getpid()
         val procDir = File("/proc")
         val entries = procDir.listFiles() ?: run {

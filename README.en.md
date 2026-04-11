@@ -32,8 +32,8 @@ A battery power recording app designed to capture more accurate power data with 
 ### server
 
 - [x] Fix Monitor wake lock issue (actually caused by callback blocking)
-- [ ] Monitor app installation and restart Server at the proper time
-- [ ] Restore the previous Server state after restarting server
+- [x] Monitor app installation and restart Server at the proper time
+- [x] Restore the previous Server state after restarting server
 - [x] Additional voltage recording
 - [x] Record battery temperature from `/sys/class/power_supply/battery/temp`
 - ~~[ ] Change screen-on detection to use screen brightness~~
