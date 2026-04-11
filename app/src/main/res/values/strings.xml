@@ -26,7 +26,11 @@
 
     <string name="update_check_failed">Failed to check for updates</string>
     <string name="update_found_new_version">New version available</string>
-    <string name="update_download">Download update</string>
+    <string name="update_download">Download</string>
+    <string name="update_open_in_browser">Open in browser</string>
+    <string name="update_download_started">Download started</string>
+    <string name="update_download_failed">Download failed</string>
+    <string name="update_install_failed">Failed to install APK</string>
     <string name="update_channel_stable">Stable</string>
     <string name="update_channel_prerelease">Prerelease</string>
 

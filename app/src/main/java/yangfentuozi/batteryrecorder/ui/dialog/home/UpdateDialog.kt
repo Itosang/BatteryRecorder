@@ -24,6 +24,7 @@ import androidx.core.net.toUri
 import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.components.global.MarkdownText
 import yangfentuozi.batteryrecorder.ui.model.displayName
+import yangfentuozi.batteryrecorder.utils.AppDownloader
 import yangfentuozi.batteryrecorder.utils.AppUpdate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +82,12 @@ fun UpdateDialog(
                                 update.downloadUrl.toUri()
                             )
                         )
+                        onDismiss()
+                    }) {
+                        Text(stringResource(R.string.update_open_in_browser))
+                    }
+                    TextButton(onClick = {
+                        AppDownloader.downloadApk(context, update.downloadUrl, update.versionName)
                         onDismiss()
                     }) {
                         Text(stringResource(R.string.update_download))
