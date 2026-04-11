@@ -26,7 +26,7 @@ object AppDownloader {
         private val tag = "DownloadCompleteReceiver"
 
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != "android.intent.action.DOWNLOAD_COMPLETE") {
+            if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
                 LoggerX.d(tag, "[更新] 无效action=${intent.action}，忽略")
                 return
             }
