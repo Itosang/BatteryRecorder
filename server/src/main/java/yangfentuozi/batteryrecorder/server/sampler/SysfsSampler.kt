@@ -12,7 +12,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipFile
 
 @Keep
-object SysfsSampler: Sampler {
+object SysfsSampler: Sampler() {
 
     private const val TAG = "SysfsSampler"
 
@@ -61,9 +61,9 @@ object SysfsSampler: Sampler {
         }
     }
 
-    override fun sample(): Sampler.BatteryData {
-        return Sampler.BatteryData(
-            voltage = nativeGetVoltage(),
+    override fun sample(): BatteryData {
+        return BatteryData(
+            voltage = normalizeVoltageToMicroVolt(nativeGetVoltage()),
             current = nativeGetCurrent(),
             capacity = nativeGetCapacity(),
             status = when (nativeGetStatus().toChar()) {

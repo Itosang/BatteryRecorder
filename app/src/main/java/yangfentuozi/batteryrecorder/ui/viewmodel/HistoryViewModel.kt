@@ -59,9 +59,9 @@ data class RecordDetailPowerUiState(
     val averagePower: Double,
     val screenOnAveragePower: Double?,
     val screenOffAveragePower: Double?,
-    val totalTransferredMahBase: Double,
-    val screenOnConsumedMahBase: Double,
-    val screenOffConsumedMahBase: Double
+    val totalTransferredMah: Double,
+    val screenOnConsumedMah: Double,
+    val screenOffConsumedMah: Double
 )
 
 private data class LoadedRecordDetailState(
@@ -871,13 +871,14 @@ class HistoryViewModel : ViewModel() {
         } else {
             1.0
         }
+        val calibrationMagnitude = kotlin.math.abs(calibrationValue.toDouble())
         return RecordDetailPowerUiState(
             averagePower = stats.averagePowerRaw * multiplier,
             screenOnAveragePower = stats.screenOnAveragePowerRaw?.times(multiplier),
             screenOffAveragePower = stats.screenOffAveragePowerRaw?.times(multiplier),
-            totalTransferredMahBase = stats.totalTransferredMahBaseSigned,
-            screenOnConsumedMahBase = stats.screenOnConsumedMahBase,
-            screenOffConsumedMahBase = stats.screenOffConsumedMahBase
+            totalTransferredMah = stats.netMahBase * calibrationValue,
+            screenOnConsumedMah = stats.screenOnMahBase * calibrationMagnitude,
+            screenOffConsumedMah = stats.screenOffMahBase * calibrationMagnitude
         )
     }
 
@@ -886,7 +887,7 @@ class HistoryViewModel : ViewModel() {
      *
      * @param rawPoints 从记录文件解析出的原始点序列
      * @param dualCellEnabled 是否按双电芯功率口径换算
-     * @param calibrationValue 当前功率校准系数
+     * @param calibrationValue 当前电流校准系数
      * @return 返回保留真实功率符号的图表点；充电记录的负值不再在这里裁剪
      */
     private fun mapDisplayPoints(

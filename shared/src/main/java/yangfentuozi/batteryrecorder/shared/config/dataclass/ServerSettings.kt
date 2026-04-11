@@ -16,7 +16,7 @@ data class ServerSettings(
     val notificationEnabled: Boolean = SettingsConstants.notificationEnabled.def,
     /** 是否按双电芯设备处理功率展示与通知。 */
     val dualCellEnabled: Boolean = SettingsConstants.dualCellEnabled.def,
-    /** 功率校准值，仅影响展示与换算。 */
+    /** 电流校准值，统一用于功率与 mAh 换算。 */
     val calibrationValue: Int = SettingsConstants.calibrationValue.def,
     /**
      * 采样间隔，单位毫秒。

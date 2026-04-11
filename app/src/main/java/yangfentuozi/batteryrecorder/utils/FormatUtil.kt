@@ -82,14 +82,14 @@ fun computePowerW(
 /**
  * 将原始功率值转换为瓦特并格式化（保留1位小数）
  *
- * 计算公式：finalValue = cellMultiplier × calibrationValue × (rawPower / 1000000000)
- * - 注意：不同平台的原始功率单位可能不一致；当前实现按 10^9 做缩放转换为瓦特(W)
+ * 计算公式：finalValue = cellMultiplier × calibrationValue × (rawPower / 1000000000000)
+ * - 注意：当前实现按 10^12 做缩放转换为瓦特(W)
  * - 双电芯设备需乘以 2（两块电池并联）
- * - calibrationValue 用于校准不同设备的测量误差
+ * - calibrationValue 表示“原始电流到实际功率”的换算倍率，负值同时承担方向反转语义
  *
  * @param powerW 原始功率值（记录文件中的原始数值）
  * @param dualCellEnabled 是否为双电芯设备，true 时功率值乘以 2
- * @param calibrationValue 校准系数，用于修正设备测量偏差，通常为 1
+ * @param calibrationValue 电流校准系数，同时决定方向与倍率
  * @return 格式化后的功率字符串，如 "12.5 W"
  */
 fun formatPower(
@@ -108,7 +108,7 @@ fun formatPower(
  *
  * @param powerW 原始功率值（纳瓦 nW）
  * @param dualCellEnabled 是否为双电芯设备
- * @param calibrationValue 校准系数
+ * @param calibrationValue 电流校准系数
  * @return 格式化后的功率字符串，如 "12 W"
  */
 fun formatPowerInt(

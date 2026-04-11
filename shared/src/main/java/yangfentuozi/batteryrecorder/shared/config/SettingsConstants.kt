@@ -37,7 +37,7 @@ object SettingsConstants {
             def = false
         )
 
-    /** 校准值 */
+    /** 电流校准值，统一用于功率与 mAh 换算。 */
     val calibrationValue =
         IntConfigItem(
             key = "calibration_value",
