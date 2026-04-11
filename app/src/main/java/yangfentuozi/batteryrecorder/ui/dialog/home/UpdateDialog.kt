@@ -28,12 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import kotlinx.coroutines.delay
 import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.ui.components.global.MarkdownText
 import yangfentuozi.batteryrecorder.ui.model.displayName
 import yangfentuozi.batteryrecorder.utils.AppDownloader
 import yangfentuozi.batteryrecorder.utils.AppUpdate
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,7 +129,7 @@ fun UpdateDialog(
                         if (AppDownloader.canRequestPackageInstalls(context)) {
                             startDownload()
                         } else {
-                            val intent = AppDownloader.createInstallPermissionIntent(context)
+                            val intent = AppDownloader.createInstallPermissionIntent()
                             installPermissionLauncher.launch(intent)
                         }
                     }) {

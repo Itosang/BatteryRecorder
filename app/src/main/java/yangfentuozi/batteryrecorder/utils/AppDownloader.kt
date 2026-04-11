@@ -4,11 +4,12 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import yangfentuozi.batteryrecorder.BuildConfig
 import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -21,37 +22,20 @@ private const val KEY_DOWNLOAD_ID = "download_id"
 object AppDownloader {
 
     fun canRequestPackageInstalls(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
+        return context.packageManager.canRequestPackageInstalls()
     }
 
-    fun createInstallPermissionIntent(context: Context): Intent {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${BuildConfig.APPLICATION_ID}")
-            )
-        } else {
-            Intent(
-                Settings.ACTION_SECURITY_SETTINGS
-            )
-        }
-    }
-
-    fun checkAndLogPermissionStatus(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val canInstall = canRequestPackageInstalls(context)
-            LoggerX.d(TAG, "[更新] 安装未知应用权限状态: canInstall=$canInstall")
-        }
+    fun createInstallPermissionIntent(): Intent {
+        return Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            "package:${BuildConfig.APPLICATION_ID}".toUri()
+        )
     }
 
     fun downloadApk(context: Context, downloadUrl: String, versionName: String) {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
-        val uri = Uri.parse(downloadUrl)
+        val uri = downloadUrl.toUri()
         val request = DownloadManager.Request(uri)
 
         request.setTitle("BatteryRecorder $versionName")
@@ -75,10 +59,9 @@ object AppDownloader {
     }
 
     private fun saveDownloadId(context: Context, downloadId: Long) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(KEY_DOWNLOAD_ID, downloadId)
-            .apply()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putLong(KEY_DOWNLOAD_ID, downloadId)
+        }
     }
 
     fun getDownloadId(context: Context): Long {
@@ -125,7 +108,7 @@ object AppDownloader {
                                             R.string.update_install_permission_required,
                                             Toast.LENGTH_LONG
                                         ).show()
-                                        val permissionIntent = createInstallPermissionIntent(context)
+                                        val permissionIntent = createInstallPermissionIntent()
                                         permissionIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                         try {
                                             context.startActivity(permissionIntent)
@@ -135,16 +118,12 @@ object AppDownloader {
                                         return false
                                     }
 
-                                    val apkUri = Uri.parse(uriString)
-                                    val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                        FileProvider.getUriForFile(
+                                    val apkUri = uriString.toUri()
+                                    val contentUri = FileProvider.getUriForFile(
                                             context,
                                             "${BuildConfig.APPLICATION_ID}.fileprovider",
                                             File(apkUri.path!!)
                                         )
-                                    } else {
-                                        apkUri
-                                    }
                                     installApk(context, contentUri)
                                     return true
                                 }
