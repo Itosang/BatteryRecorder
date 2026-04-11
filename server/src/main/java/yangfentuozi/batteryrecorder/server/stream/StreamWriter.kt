@@ -18,11 +18,15 @@ class StreamWriter(
         // version
         out.writeInt(StreamProtocol.VERSION)
 
-        fun writeChildWriterStatusData(childWriterStatusData: PowerRecordWriter.ChildWriterStatusData) {
-            out.writeUTF(childWriterStatusData.segmentFile)
-            out.writeLong(childWriterStatusData.startTime)
-            out.writeLong(childWriterStatusData.lastTime)
-            out.writeLong(childWriterStatusData.lastChangedStatusTime)
+        fun writeChildWriterStatusData(childWriterStatusData: PowerRecordWriter.ChildWriterStatusData?) {
+            // hasData
+            out.writeBoolean(childWriterStatusData != null)
+            if (childWriterStatusData != null) {
+                out.writeUTF(childWriterStatusData.segmentFile)
+                out.writeLong(childWriterStatusData.startTime)
+                out.writeLong(childWriterStatusData.lastTime)
+                out.writeLong(childWriterStatusData.lastChangedStatusTime)
+            }
         }
 
         out.writeInt(statusData.lastStatus.value)

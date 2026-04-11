@@ -326,13 +326,15 @@ class PowerRecordWriter(
             return segmentFile
         }
 
-        fun currWriterStatusAndClose(): ChildWriterStatusData {
-            val result = ChildWriterStatusData(
-                segmentFile = segmentFile!!.absolutePath,
-                startTime = startTime,
-                lastTime = lastTime,
-                lastChangedStatusTime = lastChangedStatusTime
-            )
+        fun currWriterStatusAndClose(): ChildWriterStatusData? {
+            val result = segmentFile?.let {
+                ChildWriterStatusData(
+                    segmentFile = it.absolutePath,
+                    startTime = startTime,
+                    lastTime = lastTime,
+                    lastChangedStatusTime = lastChangedStatusTime
+                )
+            }
             isClosed = true
             writer?.close()
             writer = null
@@ -356,7 +358,7 @@ class PowerRecordWriter(
 
     data class WriterStatusData(
         val lastStatus: BatteryStatus,
-        val chargeDataWriterStatusData: ChildWriterStatusData,
-        val dischargeDataWriterStatusData: ChildWriterStatusData,
+        val chargeDataWriterStatusData: ChildWriterStatusData?,
+        val dischargeDataWriterStatusData: ChildWriterStatusData?,
     )
 }
