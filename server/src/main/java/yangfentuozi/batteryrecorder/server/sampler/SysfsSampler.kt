@@ -12,7 +12,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipFile
 
 @Keep
-object SysfsSampler: Sampler {
+object SysfsSampler: Sampler() {
 
     private const val TAG = "SysfsSampler"
 
@@ -33,27 +33,6 @@ object SysfsSampler: Sampler {
 
     @JvmStatic
     external fun nativeGetTemp(): Int
-
-    /**
-     * 将 sysfs `voltage_now` 的返回值统一归一到 uV。
-     *
-     * 规范实现应直接返回 uV，例如 `4172000`；
-     * 但少数 OEM 设备会错误返回 mV，例如 `4172`，这里需要在采样阶段补齐。
-     *
-     * @param rawVoltage `voltage_now` 原始返回值
-     * @return 统一后的 uV 电压；非正数直接原样返回
-     */
-    private fun normalizeSysfsVoltageToMicroVolt(rawVoltage: Long): Long {
-        if (rawVoltage <= 0L) return rawVoltage
-        if (rawVoltage >= 100_000L) return rawVoltage
-
-        val normalizedVoltage = rawVoltage * 1_000L
-        LoggerX.w(
-            TAG,
-            "normalizeSysfsVoltageToMicroVolt: voltage_now 口径异常, raw=$rawVoltage normalized=$normalizedVoltage"
-        )
-        return normalizedVoltage
-    }
 
     @SuppressLint("UnsafeDynamicallyLoadedCode")
     fun init(appInfo: ApplicationInfo): Boolean {
@@ -82,9 +61,9 @@ object SysfsSampler: Sampler {
         }
     }
 
-    override fun sample(): Sampler.BatteryData {
-        return Sampler.BatteryData(
-            voltage = normalizeSysfsVoltageToMicroVolt(nativeGetVoltage()),
+    override fun sample(): BatteryData {
+        return BatteryData(
+            voltage = normalizeVoltageToMicroVolt(nativeGetVoltage()),
             current = nativeGetCurrent(),
             capacity = nativeGetCapacity(),
             status = when (nativeGetStatus().toChar()) {
