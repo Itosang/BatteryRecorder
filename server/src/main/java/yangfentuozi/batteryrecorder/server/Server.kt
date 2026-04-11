@@ -323,46 +323,23 @@ class Server internal constructor() : IService.Stub() {
         var writerStatusData: PowerRecordWriter.WriterStatusData? = null
 
         run {
-            var socket = LocalSocket()
-            try {
-                socket.connect(LocalSocketAddress(SOCKET_NAME))
-                LoggerX.i(tag, "已连接旧 server, 准备接收状态数据")
-                Thread.sleep(200)
-                StreamReader(socket.inputStream).use { streamReader ->
-                    repeat(5) {
-                        if (writerStatusData == null) {
-                            Thread.sleep(200)
-                            writerStatusData = streamReader.readNext()
+            LocalSocket().use { socket ->
+                runCatching {
+                    socket.connect(LocalSocketAddress(SOCKET_NAME))
+                    LoggerX.i(tag, "已连接旧 server, 准备接收状态数据")
+                    Thread.sleep(200)
+                    StreamReader(socket.inputStream).use { streamReader ->
+                        repeat(5) {
+                            if (writerStatusData == null) {
+                                Thread.sleep(200)
+                                writerStatusData = streamReader.readNext()
+                            }
                         }
+                        LoggerX.i(tag, "已接收状态数据: $writerStatusData")
                     }
-                    LoggerX.i(tag, "已接收状态数据: $writerStatusData")
                 }
-                Thread.sleep(10000)
-            } catch (_: Exception) {
-            } finally {
-                runCatching { socket.close() }
             }
         }
-
-        Thread({
-            try {
-                serverSocket = LocalServerSocket(SOCKET_NAME)
-            } catch (e: IOException) {
-                throw RuntimeException(e)
-            }
-            runCatching {
-                serverSocket?.let {
-                    val socket = it.accept()
-                    LoggerX.i(tag, "新 server 已启动, 准备发送状态数据然后退出")
-                    StreamWriter(socket.outputStream).use { streamWriter ->
-                        streamWriter.write(writer.currWriterStatusAndClose())
-                    }
-                    LoggerX.i(tag, "已发送状态数据")
-                    it.close()
-                    Handlers.main.postDelayed({ exitProcess(0) }, 100)
-                }
-            }
-        }, "ServerSocketThread").start()
 
         if (Os.getuid() == 0) {
             bridge = ChildServerBridge()
@@ -405,6 +382,27 @@ class Server internal constructor() : IService.Stub() {
 
         LoggerX.i(tag, "init: 初始化 BinderSender")
         BinderSender(::sendBinder)
+
+        Thread({
+            try {
+                serverSocket = LocalServerSocket(SOCKET_NAME)
+            } catch (e: IOException) {
+                throw RuntimeException(e)
+            }
+            runCatching {
+                serverSocket?.let {
+                    val socket = it.accept()
+                    LoggerX.i(tag, "新 server 已启动, 准备发送状态数据然后退出")
+                    StreamWriter(socket.outputStream).use { streamWriter ->
+                        streamWriter.write(writer.currWriterStatusAndClose())
+                    }
+                    LoggerX.i(tag, "已发送状态数据")
+                    socket.close()
+                    it.close()
+                    Handlers.main.postDelayed({ exitProcess(0) }, 100)
+                }
+            }
+        }, "ServerSocketThread").start()
 
         Thread({
             try {
