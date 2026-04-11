@@ -27,6 +27,10 @@
     <string name="update_check_failed">检测更新失败</string>
     <string name="update_found_new_version">发现新版本</string>
     <string name="update_download">下载更新</string>
+    <string name="update_open_in_browser">在浏览器打开</string>
+    <string name="update_download_started">开始下载…</string>
+    <string name="update_download_failed">下载失败</string>
+    <string name="update_install_failed">安装失败</string>
     <string name="update_channel_stable">稳定版</string>
     <string name="update_channel_prerelease">预发布</string>
 
