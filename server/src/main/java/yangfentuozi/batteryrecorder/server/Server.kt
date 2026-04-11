@@ -335,7 +335,11 @@ class Server internal constructor() : IService.Stub() {
         }
     }
 
+    private var onAppSourceDirChangedInvoked = false
+
     private fun onAppSourceDirChanged(appInfo: ApplicationInfo?) {
+        if (onAppSourceDirChangedInvoked) return
+        onAppSourceDirChangedInvoked = true
         if (appInfo == null || appInfo.sourceDir == null || appInfo.nativeLibraryDir == null) {
             LoggerX.i(tag, "onAppSourceDirChanged: App 已被卸载, 退出服务")
             stopService()
@@ -434,12 +438,6 @@ class Server internal constructor() : IService.Stub() {
             }
         }
 
-        Thread {
-            Thread.sleep(1000)
-            // 强制杀死状态异常的 server
-            Main.killOtherServersExceptSelf()
-        }.start()
-
         if (Os.getuid() == 0) {
             bridge = ChildServerBridge()
         }
@@ -483,6 +481,10 @@ class Server internal constructor() : IService.Stub() {
         BinderSender(::sendBinder)
 
         Thread({
+            Thread.sleep(1000)
+            // 强制杀死状态异常的 server
+            Main.killOtherServersExceptSelf()
+
             try {
                 serverSocket = LocalServerSocket(SOCKET_NAME)
             } catch (e: IOException) {
