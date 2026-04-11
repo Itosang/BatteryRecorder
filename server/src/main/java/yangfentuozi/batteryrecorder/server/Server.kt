@@ -342,6 +342,12 @@ class Server internal constructor() : IService.Stub() {
             }
         }
 
+        Thread {
+            Thread.sleep(1000)
+            // 强制杀死状态异常的 server
+            Main.killOtherServersExceptSelf()
+        }.start()
+
         if (Os.getuid() == 0) {
             bridge = ChildServerBridge()
         }
