@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
     <application
         android:name=".App"
         android:icon="@mipmap/ic_launcher"
@@ -49,8 +48,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <receiver
-            android:name=".utils.DownloadCompleteReceiver"
-            android:exported="true">
+            android:name=".utils.AppDownloader$DownloadCompleteReceiver"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>

@@ -1,6 +1,8 @@
 package yangfentuozi.batteryrecorder.ui.dialog.home
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -26,6 +33,7 @@ import yangfentuozi.batteryrecorder.ui.components.global.MarkdownText
 import yangfentuozi.batteryrecorder.ui.model.displayName
 import yangfentuozi.batteryrecorder.utils.AppDownloader
 import yangfentuozi.batteryrecorder.utils.AppUpdate
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +42,37 @@ fun UpdateDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    var downloadStarted by remember { mutableStateOf(false) }
+
+    val installPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+    }
+
+    LaunchedEffect(downloadStarted) {
+        if (!downloadStarted) return@LaunchedEffect
+        var checking = true
+        while (checking) {
+            delay(1500)
+            val downloadId = AppDownloader.getDownloadId(context)
+            if (downloadId == -1L) {
+                checking = false
+                continue
+            }
+            val installed = AppDownloader.checkAndInstallForId(context, downloadId)
+            if (installed) {
+                onDismiss()
+                checking = false
+            }
+        }
+    }
+
+    val startDownload = remember {
+        {
+            downloadStarted = true
+            AppDownloader.downloadApk(context, update.downloadUrl, update.versionName)
+        }
+    }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -87,8 +126,12 @@ fun UpdateDialog(
                         Text(stringResource(R.string.update_open_in_browser))
                     }
                     TextButton(onClick = {
-                        AppDownloader.downloadApk(context, update.downloadUrl, update.versionName)
-                        onDismiss()
+                        if (AppDownloader.canRequestPackageInstalls(context)) {
+                            startDownload()
+                        } else {
+                            val intent = AppDownloader.createInstallPermissionIntent(context)
+                            installPermissionLauncher.launch(intent)
+                        }
                     }) {
                         Text(stringResource(R.string.update_download))
                     }
