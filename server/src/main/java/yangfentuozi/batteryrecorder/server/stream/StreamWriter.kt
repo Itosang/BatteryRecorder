@@ -13,13 +13,13 @@ class StreamWriter(
     fun write(statusData: PowerRecordWriter.WriterStatusData) {
         // 标志位
         out.writeInt(StreamProtocol.MAGIC)
-        // version
-        out.writeInt(StreamProtocol.VERSION)
         // flag
         out.writeInt(StreamProtocol.FLAG_DATA)
+        // version
+        out.writeInt(StreamProtocol.VERSION)
 
         fun writeChildWriterStatusData(childWriterStatusData: PowerRecordWriter.ChildWriterStatusData) {
-            out.writeBytes(childWriterStatusData.segmentFile)
+            out.writeUTF(childWriterStatusData.segmentFile)
             out.writeLong(childWriterStatusData.startTime)
             out.writeLong(childWriterStatusData.lastTime)
             out.writeLong(childWriterStatusData.lastChangedStatusTime)

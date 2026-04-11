@@ -46,7 +46,7 @@ class StreamReader(
             return when(val ver = input.readInt()) {
                 StreamProtocol.VERSION -> {
                     fun readChildWriterStatusData(): PowerRecordWriter.ChildWriterStatusData {
-                        val segmentFile = String(input.readBytes())
+                        val segmentFile = input.readUTF()
                         val startTime = input.readLong()
                         val lastTime = input.readLong()
                         val lastChangedStatusTime = input.readLong()
