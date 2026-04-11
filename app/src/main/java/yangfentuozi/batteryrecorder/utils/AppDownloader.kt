@@ -1,6 +1,7 @@
 package yangfentuozi.batteryrecorder.utils
 
 import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -15,11 +16,39 @@ import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
 
-private const val TAG = "AppDownloader"
-private const val PREFS_NAME = "download_prefs"
-private const val KEY_DOWNLOAD_ID = "download_id"
-
 object AppDownloader {
+
+    private const val TAG = "AppDownloader"
+    private const val PREFS_NAME = "download_prefs"
+    private const val KEY_DOWNLOAD_ID = "download_id"
+
+    class DownloadCompleteReceiver : BroadcastReceiver() {
+        private val tag = "DownloadCompleteReceiver"
+
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != "android.intent.action.DOWNLOAD_COMPLETE") {
+                LoggerX.d(tag, "[更新] 无效action=${intent.action}，忽略")
+                return
+            }
+            LoggerX.d(tag, "[更新] 收到下载完成广播, action=${intent.action}")
+
+            if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) == -1L) {
+                LoggerX.d(tag, "[更新] 无下载ID，忽略")
+                return
+            }
+
+            val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
+            val savedDownloadId = getDownloadId(context)
+
+            if (downloadId != savedDownloadId) {
+                LoggerX.d(tag, "[更新] 下载完成，但不是我们的下载任务，忽略: downloadId=$downloadId savedId=$savedDownloadId")
+                return
+            }
+
+            LoggerX.i(tag, "[更新] 下载完成，准备安装 APK, downloadId=$downloadId")
+            checkAndInstallForId(context, downloadId)
+        }
+    }
 
     fun canRequestPackageInstalls(context: Context): Boolean {
         return context.packageManager.canRequestPackageInstalls()
