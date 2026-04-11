@@ -36,16 +36,16 @@ object AppDownloader {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
         val uri = downloadUrl.toUri()
-        val request = DownloadManager.Request(uri)
-
-        request.setTitle("BatteryRecorder $versionName")
-        request.setDescription(context.getString(R.string.update_download))
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        request.setDestinationInExternalPublicDir(
-            Environment.DIRECTORY_DOWNLOADS,
-            "batteryrecorder-v$versionName.apk"
-        )
-        request.setMimeType("application/vnd.android.package-archive")
+        val request = DownloadManager.Request(uri).apply {
+            setTitle("BatteryRecorder $versionName")
+            setDescription(context.getString(R.string.update_download))
+            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            setDestinationInExternalPublicDir(
+                Environment.DIRECTORY_DOWNLOADS,
+                "batteryrecorder-v$versionName.apk"
+            )
+            setMimeType("application/vnd.android.package-archive")
+        }
 
         try {
             val downloadId = downloadManager.enqueue(request)
