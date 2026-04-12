@@ -35,6 +35,9 @@ val finalVersionNameProvider = versionNameSuffixProvider.map { suffix ->
     baseVersionName + suffix
 }
 
+// pre-release更新位
+val prerelease: Int = 1
+
 android {
     namespace = "yangfentuozi.batteryrecorder"
     compileSdk = 36
