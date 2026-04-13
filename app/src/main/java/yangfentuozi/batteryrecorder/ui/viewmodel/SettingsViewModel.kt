@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import yangfentuozi.batteryrecorder.ipc.Service
+import yangfentuozi.batteryrecorder.shared.config.ServerSettingsCodec
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.config.dataclass.AppSettings
@@ -111,7 +112,7 @@ class SettingsViewModel : ViewModel() {
     private fun loadSettings() {
         val currentAppSettings = SharedSettings.readAppSettings(prefs)
         val currentStatisticsSettings = SharedSettings.readStatisticsSettings(prefs)
-        val currentServerSettings = SharedSettings.readServerSettings(prefs)
+        val currentServerSettings = ServerSettingsCodec.readFromPreferences(prefs)
 
         _appSettings.value = currentAppSettings
         _statisticsSettings.value = currentStatisticsSettings

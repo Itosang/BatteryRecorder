@@ -494,7 +494,7 @@ shared/src/main/
 - `NotificationServer` 依赖 `FakeContext` 获取可用 `Context` 与外部 Provider；修改通知链路时不要假设它运行在常规 Android `Application` 环境中
 - `LocalNotificationUtil` 当前通过复用 `Notification.Builder` 承担通知更新的性能优化；修改通知字段时不要无意退回到“每次更新都新建 Builder”的实现
 - `Server` 初始化末尾会创建 `BinderSender`；修改 Binder 建连或进程恢复逻辑时必须同时检查 ProcessObserver / UidObserver 重推行为
-- 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`SharedSettings.kt` 负责三类设置的 SharedPreferences 读写，以及 `logLevel` 编解码
+- 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`ServerSettingsCodec.kt` 是 `ServerSettings` 字段映射的唯一入口，`SharedSettings.kt` 负责三类设置的 SharedPreferences 读写入口，`ConfigUtil.kt` 只负责 root/shell 两条来源适配
 - `ServerSettings` 当前同时承载服务端运行参数与功率展示共用配置；`notificationEnabled`、`dualCellEnabled`、`calibrationValue` 都属于 `ServerSettings`，其中后两者由 App 展示侧直接复用；`calibrationValue` 当前语义是“原始电流到实际功率 / mAh 的换算倍率”，不是电流单位枚举
 - 更新检测通道属于 `AppSettings`，当前字段为 `AppSettings.updateChannel`，使用 `UpdateChannel` 枚举持久化
 - 更新下载链路当前通过 `AppDownloader` 统一封装；若修改更新安装流程，必须同时检查 `UpdateDialog`、`DownloadManager`、安装未知来源权限、下载完成广播与 `FileProvider`

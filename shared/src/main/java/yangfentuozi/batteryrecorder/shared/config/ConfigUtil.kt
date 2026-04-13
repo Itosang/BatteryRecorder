@@ -51,88 +51,7 @@ object ConfigUtil {
             FileInputStream(configFile).use { fis ->
                 val parser = Xml.newPullParser()
                 parser.setInput(fis, "UTF-8")
-
-                var eventType = parser.eventType
-                var notificationEnabled: Boolean? = null
-                var dualCellEnabled: Boolean? = null
-                var calibrationValue: Int? = null
-                var recordIntervalMs: Long? = null
-                var batchSize: Int? = null
-                var writeLatencyMs: Long? = null
-                var screenOffRecordEnabled: Boolean? = null
-                var segmentDurationMin: Long? = null
-                var maxHistoryDays: Long? = null
-                var logLevelPriority: Int? = null
-                var alwaysPollingScreenStatusEnabled: Boolean? = null
-
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    if (eventType == XmlPullParser.START_TAG) {
-                        val nameAttr = parser.getAttributeValue(null, "name")
-                        val valueAttr = parser.getAttributeValue(null, "value")
-                        val trimmedValue = valueAttr?.trim()
-
-                        when (nameAttr) {
-                            SettingsConstants.notificationEnabled.key ->
-                                notificationEnabled = trimmedValue?.toBooleanStrictOrNull()
-
-                            SettingsConstants.dualCellEnabled.key ->
-                                dualCellEnabled = trimmedValue?.toBooleanStrictOrNull()
-
-                            SettingsConstants.calibrationValue.key ->
-                                calibrationValue = trimmedValue?.toIntOrNull()
-
-                            SettingsConstants.recordIntervalMs.key ->
-                                recordIntervalMs = trimmedValue?.toLongOrNull()
-
-                            SettingsConstants.batchSize.key ->
-                                batchSize = trimmedValue?.toIntOrNull()
-
-                            SettingsConstants.writeLatencyMs.key ->
-                                writeLatencyMs = trimmedValue?.toLongOrNull()
-
-                            SettingsConstants.screenOffRecordEnabled.key ->
-                                screenOffRecordEnabled = trimmedValue?.toBooleanStrictOrNull()
-
-                            SettingsConstants.segmentDurationMin.key ->
-                                segmentDurationMin = trimmedValue?.toLongOrNull()
-
-                            SettingsConstants.logMaxHistoryDays.key ->
-                                maxHistoryDays = trimmedValue?.toLongOrNull()
-
-                            SettingsConstants.logLevel.key ->
-                                logLevelPriority = trimmedValue?.toIntOrNull()
-
-                            SettingsConstants.alwaysPollingScreenStatusEnabled.key ->
-                                alwaysPollingScreenStatusEnabled =
-                                    trimmedValue?.toBooleanStrictOrNull()
-                        }
-                    }
-                    eventType = parser.next()
-                }
-
-                val settings = ServerSettings(
-                    notificationEnabled =
-                        notificationEnabled ?: SettingsConstants.notificationEnabled.def,
-                    dualCellEnabled =
-                        dualCellEnabled ?: SettingsConstants.dualCellEnabled.def,
-                    calibrationValue =
-                        calibrationValue ?: SettingsConstants.calibrationValue.def,
-                    recordIntervalMs = recordIntervalMs ?: SettingsConstants.recordIntervalMs.def,
-                    batchSize = batchSize ?: SettingsConstants.batchSize.def,
-                    writeLatencyMs = writeLatencyMs ?: SettingsConstants.writeLatencyMs.def,
-                    screenOffRecordEnabled =
-                        screenOffRecordEnabled ?: SettingsConstants.screenOffRecordEnabled.def,
-                    segmentDurationMin =
-                        segmentDurationMin ?: SettingsConstants.segmentDurationMin.def,
-                    maxHistoryDays = maxHistoryDays ?: SettingsConstants.logMaxHistoryDays.def,
-                    logLevel = SharedSettings.decodeLogLevel(
-                        logLevelPriority
-                            ?: SharedSettings.encodeLogLevel(SettingsConstants.logLevel.def)
-                    ),
-                    alwaysPollingScreenStatusEnabled =
-                        alwaysPollingScreenStatusEnabled
-                            ?: SettingsConstants.alwaysPollingScreenStatusEnabled.def
-                )
+                val settings = ServerSettingsCodec.readFromStringValues(readXmlStringValues(parser))
                 logServerSettings("readServerSettingsByReading", settings)
                 settings
             }
@@ -146,6 +65,22 @@ object ConfigUtil {
             LoggerX.e(TAG, "readServerSettingsByReading: 解析配置文件失败", tr = e)
             null
         }
+    }
+
+    private fun readXmlStringValues(parser: XmlPullParser): Map<String, String> {
+        val values = LinkedHashMap<String, String>()
+        var eventType = parser.eventType
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                val nameAttr = parser.getAttributeValue(null, "name")
+                val valueAttr = parser.getAttributeValue(null, "value")
+                if (nameAttr != null && valueAttr != null) {
+                    values[nameAttr] = valueAttr.trim()
+                }
+            }
+            eventType = parser.next()
+        }
+        return values
     }
 
     /**

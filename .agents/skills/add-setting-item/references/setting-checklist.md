@@ -27,10 +27,10 @@
 ## ServerSettings
 
 - 补齐 `ServerSettings` 字段
-- 补齐 `SharedSettings.readServerSettings(...)`
-- 补齐 `SharedSettings.writeServerSettings(...)`
+- 补齐 `ServerSettingsCodec`
+- 检查 `SharedSettings.readServerSettings(...)` / `writeServerSettings(...)` 是否仍只做来源委托，不要重新展开字段映射
 - 检查 `ConfigProvider` 是否需要透传新字段
-- 检查 `ConfigUtil` 的 XML / ContentProvider 来源适配是否需要更新，保持它直接回到 `ServerSettings`
+- 检查 `ConfigUtil` 的 XML / ContentProvider 来源适配是否需要更新，保持它只做来源适配，不要重复维护字段清单
 - 检查 `SettingsViewModel.updateServerSettings(...)` 相关调用是否已接入新字段
 - 检查 `IService.aidl` 的 `ServerSettings` parcelable 是否已覆盖新字段
 - 检查 `Server.updateConfig()` 是否真正消费并应用了新字段
@@ -39,5 +39,6 @@
 
 - 搜索新 key / 新字段名，确认没有只改半条链路
 - 搜索 `ServerConfigDto`、`ServerSettingsMapper`、`normalizeServerSettings`、`serverSettingsFromStoredValues` 等旧入口引用，确认文档和实现都没有继续把它们当成当前推荐路径
+- 搜索新字段名，确认没有在 `SharedSettings` / `ConfigUtil` 里重新出现重复字段映射
 - 若设置链路或关键入口发生变化，同步更新 `AGENTS.md`
 - 不要自行 build Android 项目；改完后提示用户手动测试
