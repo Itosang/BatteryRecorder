@@ -273,4 +273,5 @@
     <string name="format_about_remaining_hm">About %1$dh%2$dm</string>
     <string name="format_about_remaining_h">About %1$dh</string>
     <string name="format_about_remaining_m">About %1$dm</string>
+    <string name="history_info_id">ID</string>
 </resources>

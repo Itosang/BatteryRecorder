@@ -273,4 +273,5 @@
     <string name="format_about_remaining_hm">约 %1$dh%2$dm</string>
     <string name="format_about_remaining_h">约 %1$dh</string>
     <string name="format_about_remaining_m">约 %1$dm</string>
+    <string name="history_info_id">记录ID</string>
 </resources>

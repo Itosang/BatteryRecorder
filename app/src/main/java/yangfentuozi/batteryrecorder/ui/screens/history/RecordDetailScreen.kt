@@ -523,7 +523,7 @@ fun RecordDetailScreen(
                                     stringResource(R.string.history_info_screen_off),
                                     screenOffText
                                 )
-                                InfoRow("记录ID", detailState.name.dropLast(4))
+                                InfoRow(stringResource(R.string.history_info_id), detailState.name.dropLast(4))
                             }
                         }
                     }
