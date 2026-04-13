@@ -6,6 +6,7 @@ import java.io.File
 object RecordFileParser {
     private const val TAG = "RecordFileParser"
     private const val TIMESTAMP_LENGTH = 13
+    private const val RECORD_COLUMN_COUNT = 8
 
     fun parseToList(file: File): List<LineRecord> {
         val records = mutableListOf<LineRecord>()
@@ -39,7 +40,7 @@ object RecordFileParser {
                 if (line.isEmpty()) return@forEach
 
                 val parts = line.split(",")
-                if (parts.size < 6) {
+                if (parts.size < RECORD_COLUMN_COUNT) {
                     logInvalidLine(
                         file = file,
                         lineNumber = lineNumber,
@@ -69,7 +70,6 @@ object RecordFileParser {
                 }
 
                 val previousTimestamp = previousParsedTimestamp
-                previousParsedTimestamp = record.timestamp
                 if (previousTimestamp != null && record.timestamp <= previousTimestamp) {
                     logInvalidLine(
                         file = file,
@@ -79,6 +79,7 @@ object RecordFileParser {
                     return@forEach
                 }
 
+                previousParsedTimestamp = record.timestamp
                 onRecord(record)
             }
         }

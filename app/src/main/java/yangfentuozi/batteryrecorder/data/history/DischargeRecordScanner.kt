@@ -2,10 +2,11 @@ package yangfentuozi.batteryrecorder.data.history
 
 import android.content.Context
 import yangfentuozi.batteryrecorder.BuildConfig
-import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
+import yangfentuozi.batteryrecorder.shared.data.LineRecord
+import yangfentuozi.batteryrecorder.shared.data.RecordFileParser
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
 import java.io.RandomAccessFile
@@ -106,16 +107,9 @@ object DischargeRecordScanner {
         recentFileCount: Int
     ): List<File> {
         val effectiveRecentFileCount = SettingsConstants.sceneStatsRecentFileCount.coerce(recentFileCount)
-        val dataDir = File(
-            File(context.dataDir, Constants.APP_POWER_DATA_PATH),
-            BatteryStatus.Discharging.dataDirName
-        )
-        if (!dataDir.isDirectory) return emptyList()
-        val files = dataDir.listFiles()
-            ?.filter { it.isFile }
-            ?.sortedByDescending { it.lastModified() }
-            ?.take(effectiveRecentFileCount)
-            ?: emptyList()
+        val files = HistoryRepository
+            .listRecordFiles(context, BatteryStatus.Discharging)
+            .take(effectiveRecentFileCount)
         LoggerX.d(TAG, 
             "[预测] 选择最近放电文件: requested=$recentFileCount effective=$effectiveRecentFileCount selected=${files.size}"
         )
@@ -234,69 +228,41 @@ object DischargeRecordScanner {
         var rawTotalDurationMs = 0L
         var rawTotalCapDrop = 0.0
 
-        var prevTs: Long? = null
-        var prevPower: Long? = null
-        var prevDisplay: Int? = null
-        var prevPkg: String? = null
-        var prevCap: Int? = null
+        var previousRecord: LineRecord? = null
 
-        file.bufferedReader().useLines { lines ->
-            lines.forEach { raw ->
-                val line = raw.trim()
-                if (line.isEmpty()) return@forEach
+        RecordFileParser.forEachValidRecord(file) { record ->
+            val previous = previousRecord
+            previousRecord = record
+            if (previous == null) return@forEachValidRecord
 
-                val parts = line.split(",")
-                if (parts.size < 6) return@forEach
+            val dt = record.timestamp - previous.timestamp
+            if (dt <= 0 || dt > maxGapMs) return@forEachValidRecord
 
-                val ts = parts[0].toLongOrNull() ?: return@forEach
-                val power = parts[1].toLongOrNull() ?: return@forEach
-                val pkg = parts[2]
-                val capacity = parts[3].toIntOrNull() ?: return@forEach
-                val displayOn = parts[4].toIntOrNull() ?: return@forEach
-
-                val pTs = prevTs
-                val pPower = prevPower
-                val pDisplay = prevDisplay
-                val pPkg = prevPkg
-                val pCap = prevCap
-
-                prevTs = ts
-                prevPower = power
-                prevDisplay = displayOn
-                prevPkg = pkg
-                prevCap = capacity
-
-                if (pTs == null || pPower == null || pDisplay == null || pCap == null) return@forEach
-
-                val dt = ts - pTs
-                if (dt <= 0 || dt > maxGapMs) return@forEach
-
-                val signedEnergyRawMs = (pPower.toDouble() + power.toDouble()) * 0.5 * dt.toDouble()
-                val energyMagnitudeRawMs = abs(signedEnergyRawMs)
-                val weight = if (isCurrentFile && fileEndTs != null) {
-                    val midTs = pTs + dt / 2
-                    computeTimeDecayWeight(
-                        endTs = fileEndTs,
-                        midTs = midTs,
-                        maxMultiplier = maxMultiplier,
-                        halfLifeMs = halfLifeMs
-                    )
-                } else {
-                    1.0
-                }
-                val capDrop = (pCap - capacity).coerceAtLeast(0).toDouble()
-                rawTotalEnergyMagnitudeRawMs += energyMagnitudeRawMs
-                rawTotalDurationMs += dt
-                rawTotalCapDrop += capDrop
-                intervals += PendingInterval(
-                    packageName = pPkg,
-                    isDisplayOn = pDisplay == 1,
-                    durationMs = dt,
-                    signedEnergyRawMs = signedEnergyRawMs,
-                    capDrop = capDrop,
-                    weight = weight
+            val signedEnergyRawMs = (previous.power.toDouble() + record.power.toDouble()) * 0.5 * dt.toDouble()
+            val energyMagnitudeRawMs = abs(signedEnergyRawMs)
+            val weight = if (isCurrentFile && fileEndTs != null) {
+                val midTs = previous.timestamp + dt / 2
+                computeTimeDecayWeight(
+                    endTs = fileEndTs,
+                    midTs = midTs,
+                    maxMultiplier = maxMultiplier,
+                    halfLifeMs = halfLifeMs
                 )
+            } else {
+                1.0
             }
+            val capDrop = (previous.capacity - record.capacity).coerceAtLeast(0).toDouble()
+            rawTotalEnergyMagnitudeRawMs += energyMagnitudeRawMs
+            rawTotalDurationMs += dt
+            rawTotalCapDrop += capDrop
+            intervals += PendingInterval(
+                packageName = previous.packageName,
+                isDisplayOn = previous.isDisplayOn == 1,
+                durationMs = dt,
+                signedEnergyRawMs = signedEnergyRawMs,
+                capDrop = capDrop,
+                weight = weight
+            )
         }
 
         if (rawTotalDurationMs <= 0L) {
