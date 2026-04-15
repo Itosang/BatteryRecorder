@@ -93,6 +93,9 @@ class HistoryViewModel : ViewModel() {
     private val _recordDetailPowerUiState = MutableStateFlow<RecordDetailPowerUiState?>(null)
     val recordDetailPowerUiState: StateFlow<RecordDetailPowerUiState?> =
         _recordDetailPowerUiState.asStateFlow()
+    private val _recordDetailReferenceVoltageV = MutableStateFlow<Double?>(null)
+    val recordDetailReferenceVoltageV: StateFlow<Double?> =
+        _recordDetailReferenceVoltageV.asStateFlow()
     private val _isRecordChartLoading = MutableStateFlow(false)
     val isRecordChartLoading: StateFlow<Boolean> = _isRecordChartLoading.asStateFlow()
 
@@ -303,6 +306,11 @@ class HistoryViewModel : ViewModel() {
                 applyRecordDetailDisplayConfig()
                 recordLineRecords = loadedState.lineRecords
                 recordPoints = points
+                _recordDetailReferenceVoltageV.value = loadedState.lineRecords
+                    .lastOrNull { lineRecord -> lineRecord.voltage > 0L }
+                    ?.voltage
+                    ?.toDouble()
+                    ?.div(1_000_000.0)
                 _recordAppDetailEntries.value = loadedState.appEntries
                 requestRecordChartUiStateRecompute(detailToken)
             } catch (e: CancellationException) {
@@ -827,6 +835,7 @@ class HistoryViewModel : ViewModel() {
         rawRecordDetailPowerStats = null
         _recordDetail.value = null
         _recordDetailPowerUiState.value = null
+        _recordDetailReferenceVoltageV.value = null
         recordPoints = emptyList()
         recordLineRecords = emptyList()
         _recordAppDetailEntries.value = emptyList()

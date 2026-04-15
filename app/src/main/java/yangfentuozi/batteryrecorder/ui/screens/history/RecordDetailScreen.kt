@@ -86,11 +86,13 @@ import yangfentuozi.batteryrecorder.ui.viewmodel.SettingsViewModel
 import yangfentuozi.batteryrecorder.utils.AppIconMemoryCache
 import yangfentuozi.batteryrecorder.utils.batteryRecorderScaffoldInsets
 import yangfentuozi.batteryrecorder.utils.computeEnergyWh
+import yangfentuozi.batteryrecorder.utils.formatChargeDetailBatteryInfo
 import yangfentuozi.batteryrecorder.utils.formatEnergyForDischargeDetail
 import yangfentuozi.batteryrecorder.utils.formatDateTime
 import yangfentuozi.batteryrecorder.utils.formatDetailDuration
 import yangfentuozi.batteryrecorder.utils.formatDurationHours
 import yangfentuozi.batteryrecorder.utils.formatPower
+import yangfentuozi.batteryrecorder.utils.readDeviceBatteryCapacityMah
 import yangfentuozi.batteryrecorder.utils.navigationBarBottomPadding
 import androidx.compose.ui.platform.LocalLocale
 
@@ -119,6 +121,7 @@ fun RecordDetailScreen(
     val chartUiState by viewModel.recordChartUiState.collectAsState()
     val recordAppDetailEntries by viewModel.recordAppDetailEntries.collectAsState()
     val recordDetailPowerUiState by viewModel.recordDetailPowerUiState.collectAsState()
+    val recordDetailReferenceVoltageV by viewModel.recordDetailReferenceVoltageV.collectAsState()
     val isRecordChartLoading by viewModel.isRecordChartLoading.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val appSettings by settingsViewModel.appSettings.collectAsState()
@@ -129,6 +132,22 @@ fun RecordDetailScreen(
     val recordScreenOffEnabled by settingsViewModel.screenOffRecord.collectAsState()
     val chartPrefs = remember(context) {
         context.getSharedPreferences(RECORD_DETAIL_CHART_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    val chargeDetailBatteryInfoText = remember(
+        context,
+        locale,
+        recordDetailReferenceVoltageV,
+        recordsFile.type
+    ) {
+        if (recordsFile.type != BatteryStatus.Charging) {
+            null
+        } else {
+            formatChargeDetailBatteryInfo(
+                locale = locale,
+                capacityMah = readDeviceBatteryCapacityMah(context),
+                referenceVoltageV = recordDetailReferenceVoltageV
+            )
+        }
     }
     // 这些是“详情页图表本地展示偏好”，不属于业务配置，因此直接放在页面本地状态里持久化。
     var powerCurveMode by remember(chartPrefs) {
@@ -448,12 +467,8 @@ fun RecordDetailScreen(
                                     )
                                 } else {
                                     InfoRow(
-                                        stringResource(R.string.history_info_average_power),
-                                        formatPower(
-                                            stats.averagePower,
-                                            dualCellEnabled,
-                                            calibrationValue
-                                        )
+                                        stringResource(R.string.history_info_battery_info),
+                                        chargeDetailBatteryInfoText ?: error("充电详情缺少电池信息")
                                     )
                                 }
                                 if (

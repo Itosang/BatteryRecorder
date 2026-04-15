@@ -207,6 +207,7 @@
     <string name="history_record_type_discharging">放电记录</string>
     <string name="history_info_time">时间</string>
     <string name="history_info_average_power">平均功率</string>
+    <string name="history_info_battery_info">电池信息</string>
     <string name="history_info_capacity_change">电量变化</string>
     <string name="history_info_screen_on">亮屏</string>
     <string name="history_info_screen_off">息屏</string>

@@ -207,6 +207,7 @@
     <string name="history_record_type_discharging">Discharging record</string>
     <string name="history_info_time">Time</string>
     <string name="history_info_average_power">Avg Power</string>
+    <string name="history_info_battery_info">Battery info</string>
     <string name="history_info_capacity_change">Battery change</string>
     <string name="history_info_screen_on">Screen on</string>
     <string name="history_info_screen_off">Screen off</string>

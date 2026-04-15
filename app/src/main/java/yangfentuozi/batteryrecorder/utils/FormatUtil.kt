@@ -8,7 +8,7 @@ import java.util.Locale
 
 const val POWER_SCALE_DIVISOR = 1_000_000_000_000.0
 private const val MILLISECONDS_PER_HOUR = 3_600_000.0
-private const val DISCHARGE_DETAIL_MAH_VOLTAGE = 3.85
+private const val DISCHARGE_DETAIL_MAH_VOLTAGE = 3.86
 
 /**
  * 将毫秒时长格式化为小时分钟字符串
