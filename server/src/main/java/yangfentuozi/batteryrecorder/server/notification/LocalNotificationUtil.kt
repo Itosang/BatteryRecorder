@@ -16,7 +16,8 @@ import yangfentuozi.hiddenapi.compat.NotificationManagerCompat
 import java.util.Locale
 
 class LocalNotificationUtil(
-    compatibilityModeEnabled: Boolean = SettingsConstants.notificationCompatModeEnabled.def
+    initialCompatibilityModeEnabled: Boolean =
+        SettingsConstants.notificationCompatModeEnabled.def
 ) : NotificationUtil {
 
     private val tag = "LocalNotificationUtil"
@@ -30,7 +31,7 @@ class LocalNotificationUtil(
     @Volatile
     private var channelCreated = false
     @Volatile
-    private var compatibilityModeEnabled = compatibilityModeEnabled
+    private var compatibilityModeEnabled = initialCompatibilityModeEnabled
 
     init {
         synchronized(lock) {

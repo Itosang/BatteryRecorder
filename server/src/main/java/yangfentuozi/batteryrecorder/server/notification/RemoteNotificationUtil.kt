@@ -43,6 +43,12 @@ class RemoteNotificationUtil(
         }
     }
 
+    /**
+     * 把兼容模式配置补发给当前连接的通知子进程。
+     *
+     * 子进程重连后会拿到新的 `StreamWriter`，即便配置值本身没变，也必须重新发一次；
+     * `compatibilityConfigDirty` 负责“值变了”的场景，`configuredWriter` 负责“连接换了”的场景。
+     */
     private fun flushCompatibilityConfigLocked() {
         val writer = bridge.writer ?: return
         if (!compatibilityConfigDirty && writer === configuredWriter) return
