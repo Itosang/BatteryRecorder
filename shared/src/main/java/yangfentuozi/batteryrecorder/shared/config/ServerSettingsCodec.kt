@@ -85,6 +85,10 @@ object ServerSettingsCodec {
             SettingsConstants.screenOffRecordEnabled.key,
             settings.screenOffRecordEnabled
         )
+        editor.putBoolean(
+            SettingsConstants.preciseScreenOffRecordEnabled.key,
+            settings.preciseScreenOffRecordEnabled
+        )
         editor.putLong(SettingsConstants.segmentDurationMin.key, settings.segmentDurationMin)
         editor.putLong(SettingsConstants.logMaxHistoryDays.key, settings.maxHistoryDays)
         editor.putInt(
@@ -123,6 +127,9 @@ object ServerSettingsCodec {
             screenOffRecordEnabled =
                 source.boolean(SettingsConstants.screenOffRecordEnabled.key)
                     ?: SettingsConstants.screenOffRecordEnabled.def,
+            preciseScreenOffRecordEnabled =
+                source.boolean(SettingsConstants.preciseScreenOffRecordEnabled.key)
+                    ?: SettingsConstants.preciseScreenOffRecordEnabled.def,
             segmentDurationMin =
                 source.long(SettingsConstants.segmentDurationMin.key)
                     ?: SettingsConstants.segmentDurationMin.def,

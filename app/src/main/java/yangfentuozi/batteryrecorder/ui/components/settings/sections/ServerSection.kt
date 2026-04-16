@@ -112,6 +112,15 @@ fun ServerSection(
 
         item {
             M3ESwitchWidget(
+                text = stringResource(R.string.settings_precise_screen_off_record),
+                summary = stringResource(R.string.settings_precise_screen_off_record_summary),
+                checked = state.preciseScreenOffRecordEnabled,
+                onCheckedChange = actions.setPreciseScreenOffRecordEnabled
+            )
+        }
+
+        item {
+            M3ESwitchWidget(
                 text = stringResource(R.string.settings_poll_screen_status),
                 checked = state.alwaysPollingScreenStatusEnabled,
                 onCheckedChange = actions.setAlwaysPollingScreenStatusEnabled

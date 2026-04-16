@@ -122,7 +122,7 @@ class SettingsViewModel : ViewModel() {
 
         LoggerX.d(
             TAG,
-            "[设置] loadSettings 完成: notification=${currentServerSettings.notificationEnabled} compatMode=${currentServerSettings.notificationCompatModeEnabled} dualCell=${currentServerSettings.dualCellEnabled} calibration=${currentServerSettings.calibrationValue} intervalMs=${currentServerSettings.recordIntervalMs} writeLatencyMs=${currentServerSettings.writeLatencyMs} batchSize=${currentServerSettings.batchSize} screenOffRecord=${currentServerSettings.screenOffRecordEnabled} polling=${currentServerSettings.alwaysPollingScreenStatusEnabled} logLevel=${currentServerSettings.logLevel}"
+            "[设置] loadSettings 完成: notification=${currentServerSettings.notificationEnabled} compatMode=${currentServerSettings.notificationCompatModeEnabled} dualCell=${currentServerSettings.dualCellEnabled} calibration=${currentServerSettings.calibrationValue} intervalMs=${currentServerSettings.recordIntervalMs} writeLatencyMs=${currentServerSettings.writeLatencyMs} batchSize=${currentServerSettings.batchSize} screenOffRecord=${currentServerSettings.screenOffRecordEnabled} preciseScreenOffRecord=${currentServerSettings.preciseScreenOffRecordEnabled} polling=${currentServerSettings.alwaysPollingScreenStatusEnabled} logLevel=${currentServerSettings.logLevel}"
         )
     }
 
@@ -233,6 +233,20 @@ class SettingsViewModel : ViewModel() {
             message = "[设置] 更新息屏记录并准备下发: enabled=$enabled"
         ) { current ->
             current.copy(screenOffRecordEnabled = enabled)
+        }
+    }
+
+    /**
+     * 更新精确息屏记录开关并下发到运行中的服务端。
+     *
+     * @param enabled `true` 表示允许 Server 在息屏记录阶段持有唤醒锁；`false` 表示恢复默认自然息屏采样。
+     * @return 无。
+     */
+    fun setPreciseScreenOffRecordEnabled(enabled: Boolean) {
+        updateServerSettings(
+            message = "[设置] 更新精确息屏记录并准备下发: enabled=$enabled"
+        ) { current ->
+            current.copy(preciseScreenOffRecordEnabled = enabled)
         }
     }
 

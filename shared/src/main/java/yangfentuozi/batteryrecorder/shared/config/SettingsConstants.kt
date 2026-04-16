@@ -87,6 +87,13 @@ object SettingsConstants {
             def = true
         )
 
+    /** 是否启用精确息屏记录；开启后 Server 会在息屏记录阶段持有唤醒锁。 */
+    val preciseScreenOffRecordEnabled =
+        BooleanConfigItem(
+            key = "precise_screen_off_record_enabled",
+            def = false
+        )
+
     /** 数据分段时长（分钟） */
     val segmentDurationMin =
         LongConfigItem(

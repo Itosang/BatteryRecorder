@@ -21,7 +21,7 @@ class App: Application() {
         val settings = SharedSettings.readServerSettings(this)
         LoggerX.d(TAG, 
             "[应用] SharedPreferences 配置读取完成: intervalMs=${settings.recordIntervalMs} " +
-                "screenOffRecord=${settings.screenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled}"
+                "screenOffRecord=${settings.screenOffRecordEnabled} preciseScreenOffRecord=${settings.preciseScreenOffRecordEnabled} polling=${settings.alwaysPollingScreenStatusEnabled}"
         )
         LoggerX.maxHistoryDays = settings.maxHistoryDays
         LoggerX.logLevel = settings.logLevel

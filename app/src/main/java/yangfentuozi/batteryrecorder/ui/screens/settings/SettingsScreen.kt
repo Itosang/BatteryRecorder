@@ -67,6 +67,7 @@ fun SettingsScreen(
                 setWriteLatencyMs = settingsViewModel::setWriteLatencyMs,
                 setBatchSize = settingsViewModel::setBatchSize,
                 setScreenOffRecordEnabled = settingsViewModel::setScreenOffRecordEnabled,
+                setPreciseScreenOffRecordEnabled = settingsViewModel::setPreciseScreenOffRecordEnabled,
                 setAlwaysPollingScreenStatusEnabled = settingsViewModel::setAlwaysPollingScreenStatusEnabled,
                 setSegmentDurationMin = settingsViewModel::setSegmentDurationMin,
                 setRootBootAutoStartEnabled = settingsViewModel::setRootBootAutoStartEnabled
@@ -101,6 +102,7 @@ fun SettingsScreen(
             writeLatencyMs = serverSettings.writeLatencyMs,
             batchSize = serverSettings.batchSize,
             recordScreenOffEnabled = serverSettings.screenOffRecordEnabled,
+            preciseScreenOffRecordEnabled = serverSettings.preciseScreenOffRecordEnabled,
             alwaysPollingScreenStatusEnabled = serverSettings.alwaysPollingScreenStatusEnabled,
             segmentDurationMin = serverSettings.segmentDurationMin,
             rootBootAutoStartEnabled = appSettings.rootBootAutoStartEnabled,

@@ -49,6 +49,8 @@ data class SettingsUiState(
     val batchSize: Int = ServerSettings().batchSize,
     /** 息屏记录 */
     val recordScreenOffEnabled: Boolean = ServerSettings().screenOffRecordEnabled,
+    /** 精确息屏记录 */
+    val preciseScreenOffRecordEnabled: Boolean = ServerSettings().preciseScreenOffRecordEnabled,
     /** 轮询获取息屏状态 */
     val alwaysPollingScreenStatusEnabled: Boolean = ServerSettings().alwaysPollingScreenStatusEnabled,
     /** 自动分段时间 */

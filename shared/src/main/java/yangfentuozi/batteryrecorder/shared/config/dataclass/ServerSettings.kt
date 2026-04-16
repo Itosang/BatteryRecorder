@@ -33,6 +33,9 @@ data class ServerSettings(
     val writeLatencyMs: Long = SettingsConstants.writeLatencyMs.def,
     /** 息屏后是否继续采样与记录。 */
     val screenOffRecordEnabled: Boolean = SettingsConstants.screenOffRecordEnabled.def,
+    /** 是否在息屏记录阶段持有唤醒锁，提升采样定时精度。 */
+    val preciseScreenOffRecordEnabled: Boolean =
+        SettingsConstants.preciseScreenOffRecordEnabled.def,
     /** 单个记录文件按时间自动分段的时长，单位分钟，0 表示不分段。 */
     val segmentDurationMin: Long = SettingsConstants.segmentDurationMin.def,
     /** 日志文件保留天数。 */
