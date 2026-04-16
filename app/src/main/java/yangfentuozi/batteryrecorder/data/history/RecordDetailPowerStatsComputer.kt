@@ -55,7 +55,7 @@ object RecordDetailPowerStatsComputer {
     ): RecordDetailPowerStats? {
         if (records.size < 2) return null
 
-        val confidenceThresholdMs = recordIntervalMs * 20L
+        val confidenceThresholdMs = recordIntervalMs * 30L
         var totalDurationMs = 0L
         var totalEnergyRawMs = 0.0
         var totalConfidentEnergyRawMs = 0.0
