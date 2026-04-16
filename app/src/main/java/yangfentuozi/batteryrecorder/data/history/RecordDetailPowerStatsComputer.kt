@@ -29,6 +29,9 @@ data class RecordDetailPowerStats(
     val averagePowerRaw: Double,
     val screenOnAveragePowerRaw: Double?,
     val screenOffAveragePowerRaw: Double?,
+    val totalConfidentEnergyRawMs: Double,
+    val screenOnConfidentEnergyRawMs: Double,
+    val screenOffConfidentEnergyRawMs: Double,
     val totalDurationMs: Long,
     val screenOnDurationMs: Long,
     val screenOffDurationMs: Long,
@@ -41,22 +44,28 @@ object RecordDetailPowerStatsComputer {
      * 按记录文件的真实采样区间计算详情页功耗统计。
      *
      * @param detailType 当前详情页记录类型，只接受充电和放电。
+     * @param recordIntervalMs 当前详情页采样间隔配置，超过 `20x` 的区间只参与原始统计，不参与 Wh 积分。
      * @param records 已通过解析得到的有效记录点列表，要求时间戳按文件原始顺序传入
      * @return 返回总平均、亮屏平均、息屏平均三项原始功率，以及总/亮屏/息屏时长和电量变化拆分；若有效区间不足则返回 null
      */
     fun compute(
         detailType: BatteryStatus,
+        recordIntervalMs: Long,
         records: List<LineRecord>
     ): RecordDetailPowerStats? {
         if (records.size < 2) return null
 
+        val confidenceThresholdMs = recordIntervalMs * 20L
         var totalDurationMs = 0L
         var totalEnergyRawMs = 0.0
+        var totalConfidentEnergyRawMs = 0.0
         var screenOnDurationMs = 0L
         var screenOnEnergyRawMs = 0.0
+        var screenOnConfidentEnergyRawMs = 0.0
         var screenOnCapacityDropPercent = 0
         var screenOffDurationMs = 0L
         var screenOffEnergyRawMs = 0.0
+        var screenOffConfidentEnergyRawMs = 0.0
         var screenOffCapacityDropPercent = 0
 
         var previous: LineRecord? = null
@@ -81,12 +90,20 @@ object RecordDetailPowerStatsComputer {
             if (previousRecord.isDisplayOn == 1) {
                 screenOnDurationMs += durationMs
                 screenOnEnergyRawMs += energyRawMs
+                if (durationMs <= confidenceThresholdMs) {
+                    totalConfidentEnergyRawMs += energyRawMs
+                    screenOnConfidentEnergyRawMs += energyRawMs
+                }
                 screenOnCapacityDropPercent += capacityDelta
                 return@forEach
             }
 
             screenOffDurationMs += durationMs
             screenOffEnergyRawMs += energyRawMs
+            if (durationMs <= confidenceThresholdMs) {
+                totalConfidentEnergyRawMs += energyRawMs
+                screenOffConfidentEnergyRawMs += energyRawMs
+            }
             screenOffCapacityDropPercent += capacityDelta
         }
 
@@ -105,6 +122,9 @@ object RecordDetailPowerStatsComputer {
             screenOffAveragePowerRaw = screenOffDurationMs.takeIf { it > 0L }?.let {
                 screenOffEnergyRawMs / it.toDouble()
             },
+            totalConfidentEnergyRawMs = totalConfidentEnergyRawMs,
+            screenOnConfidentEnergyRawMs = screenOnConfidentEnergyRawMs,
+            screenOffConfidentEnergyRawMs = screenOffConfidentEnergyRawMs,
             totalDurationMs = totalDurationMs,
             screenOnDurationMs = screenOnDurationMs,
             screenOffDurationMs = screenOffDurationMs,
@@ -112,7 +132,7 @@ object RecordDetailPowerStatsComputer {
         )
         LoggerX.d(
             TAG,
-            "[记录详情] 统计完成: totalDurationMs=${stats.totalDurationMs} screenOnDurationMs=${stats.screenOnDurationMs} screenOffDurationMs=${stats.screenOffDurationMs} totalCapacity=${stats.capacityChange.totalPercent} screenOnCapacity=${stats.capacityChange.screenOnPercent} screenOffCapacity=${stats.capacityChange.screenOffPercent}"
+            "[记录详情] 统计完成: totalDurationMs=${stats.totalDurationMs} screenOnDurationMs=${stats.screenOnDurationMs} screenOffDurationMs=${stats.screenOffDurationMs} totalCapacity=${stats.capacityChange.totalPercent} screenOnCapacity=${stats.capacityChange.screenOnPercent} screenOffCapacity=${stats.capacityChange.screenOffPercent} thresholdMs=$confidenceThresholdMs"
         )
         return stats
     }

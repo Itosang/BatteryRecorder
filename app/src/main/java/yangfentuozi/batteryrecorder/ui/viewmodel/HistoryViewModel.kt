@@ -281,7 +281,8 @@ class HistoryViewModel : ViewModel() {
                     val lineRecords = HistoryRepository.loadLineRecords(recordFile)
                     val powerStats = buildRecordDetailPowerStats(
                         detailType = recordsFile.type,
-                        lineRecords = lineRecords
+                        lineRecords = lineRecords,
+                        recordIntervalMs = recordDetailSamplingIntervalMs
                     )
                     val appEntries = buildRecordAppDetailEntries(
                         context = context.applicationContext,
@@ -347,25 +348,38 @@ class HistoryViewModel : ViewModel() {
 
         val context = recordDetailContext ?: return
         val detailType = _recordDetail.value?.type ?: return
-        if (detailType != BatteryStatus.Discharging || recordLineRecords.isEmpty()) {
-            _recordAppDetailEntries.value = emptyList()
+        if (recordLineRecords.isEmpty()) {
             return
         }
 
         viewModelScope.launch {
             try {
-                val entries = withContext(Dispatchers.IO) {
-                    buildRecordAppDetailEntries(
-                        context = context,
+                val lineRecords = recordLineRecords
+                val samplingIntervalMs = recordDetailSamplingIntervalMs
+                val result = withContext(Dispatchers.IO) {
+                    val powerStats = buildRecordDetailPowerStats(
                         detailType = detailType,
-                        lineRecords = recordLineRecords
+                        lineRecords = lineRecords,
+                        recordIntervalMs = samplingIntervalMs
                     )
+                    val appEntries = if (detailType == BatteryStatus.Discharging) {
+                        buildRecordAppDetailEntries(
+                            context = context,
+                            detailType = detailType,
+                            lineRecords = lineRecords
+                        )
+                    } else {
+                        emptyList()
+                    }
+                    powerStats to appEntries
                 }
-                _recordAppDetailEntries.value = entries
+                rawRecordDetailPowerStats = result.first
+                applyRecordDetailDisplayConfig()
+                _recordAppDetailEntries.value = result.second
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                LoggerX.e(TAG, "[记录详情] 重算应用详情失败", tr = e)
+                LoggerX.e(TAG, "[记录详情] 重算采样间隔相关统计失败", tr = e)
                 _recordAppDetailEntries.value = emptyList()
             }
         }
@@ -884,32 +898,31 @@ class HistoryViewModel : ViewModel() {
         } else {
             1.0
         }
+        val totalTransferredWh = computeEnergyWh(
+            rawPower = stats.totalConfidentEnergyRawMs,
+            durationMs = 1L,
+            dualCellEnabled = dualCellEnabled,
+            calibrationValue = calibrationValue
+        )
+        val screenOnConsumedWh = computeEnergyWh(
+            rawPower = stats.screenOnConfidentEnergyRawMs,
+            durationMs = 1L,
+            dualCellEnabled = dualCellEnabled,
+            calibrationValue = calibrationValue
+        )
+        val screenOffConsumedWh = computeEnergyWh(
+            rawPower = stats.screenOffConfidentEnergyRawMs,
+            durationMs = 1L,
+            dualCellEnabled = dualCellEnabled,
+            calibrationValue = calibrationValue
+        )
         return RecordDetailPowerUiState(
             averagePower = stats.averagePowerRaw * multiplier,
             screenOnAveragePower = stats.screenOnAveragePowerRaw?.times(multiplier),
             screenOffAveragePower = stats.screenOffAveragePowerRaw?.times(multiplier),
-            totalTransferredWh = computeEnergyWh(
-                rawPower = stats.averagePowerRaw,
-                durationMs = stats.totalDurationMs,
-                dualCellEnabled = dualCellEnabled,
-                calibrationValue = calibrationValue
-            ),
-            screenOnConsumedWh = stats.screenOnAveragePowerRaw?.let { screenOnAveragePowerRaw ->
-                computeEnergyWh(
-                    rawPower = screenOnAveragePowerRaw * multiplier,
-                    durationMs = stats.screenOnDurationMs,
-                    dualCellEnabled = dualCellEnabled,
-                    calibrationValue = calibrationValue
-                )
-            }?.let(::abs) ?: 0.0,
-            screenOffConsumedWh = stats.screenOffAveragePowerRaw?.let { screenOffAveragePowerRaw ->
-                computeEnergyWh(
-                    rawPower = screenOffAveragePowerRaw * multiplier,
-                    durationMs = stats.screenOffDurationMs,
-                    dualCellEnabled = dualCellEnabled,
-                    calibrationValue = calibrationValue
-                )
-            }?.let(::abs) ?: 0.0,
+            totalTransferredWh = abs(totalTransferredWh),
+            screenOnConsumedWh = abs(screenOnConsumedWh),
+            screenOffConsumedWh = abs(screenOffConsumedWh),
             capacityChange = stats.capacityChange
         )
     }
@@ -1024,11 +1037,13 @@ class HistoryViewModel : ViewModel() {
      *
      * @param detailType 当前详情页记录类型
      * @param lineRecords 当前详情页对应的有效记录点
+     * @param recordIntervalMs 当前详情页采样间隔配置，用于过滤低置信度长区间的 Wh 积分
      * @return 充电/放电记录都返回详情页统计，其它类型直接返回 null
      */
     private fun buildRecordDetailPowerStats(
         detailType: BatteryStatus,
-        lineRecords: List<LineRecord>
+        lineRecords: List<LineRecord>,
+        recordIntervalMs: Long
     ): RecordDetailPowerStats? {
         if (
             detailType != BatteryStatus.Discharging &&
@@ -1038,6 +1053,7 @@ class HistoryViewModel : ViewModel() {
         }
         return RecordDetailPowerStatsComputer.compute(
             detailType = detailType,
+            recordIntervalMs = recordIntervalMs,
             records = lineRecords
         )
     }
