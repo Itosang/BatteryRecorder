@@ -24,24 +24,8 @@
 -dontwarn androidx.window.extensions.**
 -dontwarn androidx.window.sidecar.**
 
-# Compose rememberSaveable 会通过 ParcelableSnapshotMutable*State 恢复状态。
-# Release 混淆后若 CREATOR 被裁剪，进程在后台被杀后恢复会抛 BadParcelableException。
--keepclassmembers class androidx.compose.runtime.ParcelableSnapshotMutableState {
-    public static final android.os.Parcelable$Creator CREATOR;
-}
-
--keepclassmembers class androidx.compose.runtime.ParcelableSnapshotMutableIntState {
-    public static final android.os.Parcelable$Creator CREATOR;
-}
-
--keepclassmembers class androidx.compose.runtime.ParcelableSnapshotMutableLongState {
-    public static final android.os.Parcelable$Creator CREATOR;
-}
-
--keepclassmembers class androidx.compose.runtime.ParcelableSnapshotMutableFloatState {
-    public static final android.os.Parcelable$Creator CREATOR;
-}
-
--keepclassmembers class androidx.compose.runtime.ParcelableSnapshotMutableDoubleState {
+# Compose 会把部分保存状态对象直接写进 Bundle，包括 runtime/foundation 内部 Parcelable。
+# Release 混淆后若这些类的 CREATOR 被裁剪，进程在后台被杀后恢复界面会抛 BadParcelableException。
+-keepclassmembers class androidx.compose.** implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator CREATOR;
 }
