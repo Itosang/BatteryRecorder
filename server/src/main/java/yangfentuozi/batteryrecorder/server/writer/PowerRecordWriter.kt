@@ -5,7 +5,6 @@ import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
-import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -119,9 +118,6 @@ class PowerRecordWriter(
         chargeDataWriter.flushBufferBlocking()
         dischargeDataWriter.flushBufferBlocking()
     }
-
-    fun listStableHistoryFiles(): List<File> =
-        RecordFileNames.listStableFiles(chargeDir) + RecordFileNames.listStableFiles(dischargeDir)
 
     inner class ChargeDataWriter(dir: File, statusData: ChildWriterStatusData?) : BaseDelayedRecordWriter(dir, statusData) {
         override fun needStartNewSegment(justChangedStatus: Boolean, nowTime: Long): Boolean {
@@ -317,16 +313,15 @@ class PowerRecordWriter(
         fun closeCurrentSegment() {
             flushBuffer()
             if (writer != null) {
-                val closedFile = segmentFile
                 try {
                     writer!!.close()
                 } catch (e: IOException) {
                     LoggerX.e(this@BaseDelayedRecordWriter.tag, "closeCurrentSegment: 关闭分段文件失败", tr = e)
                 }
                 writer = null
-                if (closedFile != null && needDeleteSegment(System.currentTimeMillis())) {
-                    LoggerX.v(this@BaseDelayedRecordWriter.tag, "closeCurrentSegment: 删除短分段, file=${closedFile.name}")
-                    closedFile.delete()
+                if (needDeleteSegment(System.currentTimeMillis())) {
+                    LoggerX.v(this@BaseDelayedRecordWriter.tag, "closeCurrentSegment: 删除短分段, file=${segmentFile?.name}")
+                    segmentFile!!.delete()
                 }
                 segmentFile = null
             }

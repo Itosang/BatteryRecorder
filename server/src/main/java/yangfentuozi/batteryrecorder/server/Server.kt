@@ -27,7 +27,6 @@ import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
-import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.sync.PfdFileSender
 import yangfentuozi.batteryrecorder.shared.util.Handlers
@@ -38,6 +37,7 @@ import yangfentuozi.hiddenapi.compat.ServiceManagerCompat
 import java.io.File
 import java.io.FileDescriptor
 import java.io.IOException
+import java.nio.file.Files
 import java.util.Scanner
 import kotlin.system.exitProcess
 
@@ -50,10 +50,8 @@ class Server internal constructor() : IService.Stub() {
     private var serverSocket: LocalServerSocket? = null
     private val appSourceDirObserver: AppSourceDirObserver
 
-    private var appDataDir: File
     private var appConfigFile: File
     private var appPowerDataDir: File
-    private var shellDataDir: File
     private var shellPowerDataDir: File
 
     override fun stopService() {
@@ -203,36 +201,25 @@ class Server internal constructor() : IService.Stub() {
                 val currDischargeDataPath =
                     if (writer.dischargeDataWriter.needStartNewSegment(writer.dischargeDataWriter.hasPendingStatusChange)) null
                     else writer.dischargeDataWriter.segmentFile?.toPath()
-                val protectedPaths = setOfNotNull(
-                    currChargeDataPath?.toAbsolutePath()?.toString(),
-                    currDischargeDataPath?.toAbsolutePath()?.toString()
-                )
-                val filesToSync = writer.listStableHistoryFiles()
                 var sentCount = 0
 
-                PfdFileSender.sendFiles(
+                PfdFileSender.sendFile(
                     writeEnd,
-                    shellPowerDataDir,
-                    filesToSync
+                    shellPowerDataDir
                 ) { file ->
                     sentCount += 1
                     LoggerX.d(tag, "@sendFileCallback: 文件已发送, file=${file.name}")
-                    val logicalName = RecordFileNames.logicalNameOrNull(file.name)
-                    val candidates = buildList {
-                        add(file)
-                        if (logicalName != null) {
-                            add(File(file.parentFile, logicalName))
-                            add(File(file.parentFile, "$logicalName.gz"))
-                        }
-                    }.distinctBy { it.absolutePath }
-                    candidates.forEach { candidate ->
-                        val candidatePath = candidate.toPath().toAbsolutePath().toString()
-                        if (candidatePath !in protectedPaths) {
-                            candidate.delete()
-                        }
-                    }
+                    if ((currChargeDataPath == null || !Files.isSameFile(
+                            file.toPath(),
+                            currChargeDataPath
+                        )) &&
+                        (currDischargeDataPath == null || !Files.isSameFile(
+                            file.toPath(),
+                            currDischargeDataPath
+                        ))
+                    ) file.delete()
                 }
-                LoggerX.i(tag, "sync: 同步完成, selected=${filesToSync.size} sentCount=$sentCount")
+                LoggerX.i(tag, "sync: 同步完成, sentCount=$sentCount")
             } catch (e: Exception) {
                 LoggerX.e(tag, "sync: 后台同步失败", tr = e)
                 try {
@@ -407,7 +394,6 @@ class Server internal constructor() : IService.Stub() {
         val appInfo = getAppInfo(Constants.APP_PACKAGE_NAME)
         Global.appSourceDir = appInfo.sourceDir
         Global.appUid = appInfo.uid
-        appDataDir = File(appInfo.dataDir)
         appConfigFile = File("${appInfo.dataDir}/shared_prefs/${SettingsConstants.PREFS_NAME}.xml")
         appPowerDataDir = File("${appInfo.dataDir}/${Constants.APP_POWER_DATA_PATH}")
 
@@ -417,7 +403,6 @@ class Server internal constructor() : IService.Stub() {
         val sampler = if (SysfsSampler.init(appInfo)) SysfsSampler else DumpsysSampler()
         LoggerX.i(tag, "init: 采样器选择完成, sampler=${sampler::class.java.simpleName}")
 
-        shellDataDir = File(Constants.SHELL_DATA_DIR_PATH)
         shellPowerDataDir =
             File("${Constants.SHELL_DATA_DIR_PATH}/${Constants.SHELL_POWER_DATA_PATH}")
 
