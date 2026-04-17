@@ -18,6 +18,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipEntry
+import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipOutputStream
 
 private const val TAG = "HistoryRepository"
@@ -84,6 +85,7 @@ private data class RecordCleanupTarget(
 object HistoryRepository {
 
     private const val NOT_ENOUGH_VALID_SAMPLES_PREFIX = "Not enough valid samples after filtering:"
+    private const val RECORD_COMPRESSION_BUFFER_SIZE = 64 * 1024
     private val CLEANUP_TARGET_TYPES = listOf(BatteryStatus.Charging, BatteryStatus.Discharging)
 
     // 逻辑记录名固定为“起始时间戳.txt”，物理文件允许是 `.txt` 或 `.txt.gz`。
@@ -329,6 +331,42 @@ object HistoryRepository {
             LoggerX.w(TAG, "[历史] 删除记录失败，文件不存在: ${recordsFile.name}")
         }
         return deleteRecordFile(context, sourceFile, recordsFile.type)
+    }
+
+    /**
+     * 压缩本地非活跃历史记录。
+     *
+     * @param context 应用上下文。
+     * @param activeRecordsFile 当前仍在写入的记录；会按逻辑记录名排除，不参与压缩。
+     * @return 返回成功压缩的记录数量。
+     */
+    fun compressHistoricalRecords(
+        context: Context,
+        activeRecordsFile: RecordsFile? = null
+    ): Int {
+        val activeLogicalName = activeRecordsFile?.name
+        var compressedCount = 0
+
+        CLEANUP_TARGET_TYPES.forEach { type ->
+            dataDir(context, type).listFiles()
+                ?.asSequence()
+                ?.filter { file ->
+                    val descriptor = RecordFileNames.parse(file.name) ?: return@filter false
+                    !descriptor.isCompressed && descriptor.logicalName != activeLogicalName
+                }
+                ?.sortedBy { it.name }
+                ?.forEach { file ->
+                    if (compressRecordFile(file)) {
+                        compressedCount += 1
+                    }
+                }
+        }
+
+        LoggerX.i(
+            TAG,
+            "[历史] 本地历史压缩完成: compressed=$compressedCount active=${activeLogicalName ?: "null"}"
+        )
+        return compressedCount
     }
 
     /**
@@ -714,5 +752,54 @@ object HistoryRepository {
         }.getOrDefault(false)
         runCatching { getPowerStatsCacheFile(cacheRoot, logicalName).delete() }
         return removedData
+    }
+
+    private fun compressRecordFile(sourceFile: File): Boolean {
+        val descriptor = RecordFileNames.parse(sourceFile.name) ?: return false
+        if (descriptor.isCompressed) return false
+
+        val parentDir = sourceFile.parentFile
+            ?: throw IOException("记录文件没有父目录: ${sourceFile.absolutePath}")
+        val gzipFile = File(parentDir, "${descriptor.logicalName}.gz")
+        val tempFile = File(parentDir, "${descriptor.logicalName}.gz${RecordFileNames.TEMP_SUFFIX}")
+
+        if (gzipFile.exists()) {
+            if (!sourceFile.delete()) {
+                throw IOException("删除重复明文记录失败: ${sourceFile.absolutePath}")
+            }
+            LoggerX.i(
+                TAG,
+                "[历史] 删除重复明文记录: source=${sourceFile.name} target=${gzipFile.name}"
+            )
+            return true
+        }
+
+        if (tempFile.exists() && !tempFile.delete()) {
+            throw IOException("删除压缩临时文件失败: ${tempFile.absolutePath}")
+        }
+
+        try {
+            sourceFile.inputStream().buffered(RECORD_COMPRESSION_BUFFER_SIZE).use { input ->
+                GZIPOutputStream(
+                    tempFile.outputStream().buffered(RECORD_COMPRESSION_BUFFER_SIZE)
+                ).use { output ->
+                    input.copyTo(output, RECORD_COMPRESSION_BUFFER_SIZE)
+                }
+            }
+            if (!tempFile.renameTo(gzipFile)) {
+                throw IOException("记录压缩临时文件改名失败: ${tempFile.absolutePath}")
+            }
+            if (!sourceFile.delete()) {
+                throw IOException("压缩完成后删除明文记录失败: ${sourceFile.absolutePath}")
+            }
+            LoggerX.i(
+                TAG,
+                "[历史] 本地历史压缩成功: source=${sourceFile.name} target=${gzipFile.name}"
+            )
+            return true
+        } catch (error: Throwable) {
+            tempFile.delete()
+            throw error
+        }
     }
 }

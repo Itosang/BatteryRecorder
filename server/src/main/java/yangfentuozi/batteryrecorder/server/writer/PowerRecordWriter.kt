@@ -11,12 +11,9 @@ import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.shared.writer.AdvancedWriter
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
-import java.util.concurrent.CountDownLatch
-import java.util.zip.GZIPOutputStream
 
 class PowerRecordWriter(
     powerDir: File,
@@ -24,7 +21,6 @@ class PowerRecordWriter(
     private val fixFileOwner: ((File) -> Unit)
 ) {
     private val tag = "PowerRecordWriter"
-    private val compressionHandler: Handler = Handlers.getHandler("RecordCompressionThread")
 
     /**
      * 单条采样写入结果。
@@ -78,7 +74,6 @@ class PowerRecordWriter(
         makeSureExists(powerDir)
         makeSureExists(chargeDir)
         makeSureExists(dischargeDir)
-        scheduleHistoricalCompressionBootstrap()
     }
 
     fun write(record: LineRecord): WriteResult {
@@ -113,7 +108,6 @@ class PowerRecordWriter(
     fun close() {
         chargeDataWriter.closeCurrentSegment()
         dischargeDataWriter.closeCurrentSegment()
-        awaitCompressionBlocking()
     }
 
     fun flushBuffer() {
@@ -126,96 +120,8 @@ class PowerRecordWriter(
         dischargeDataWriter.flushBufferBlocking()
     }
 
-    fun awaitCompressionBlocking() {
-        val latch = CountDownLatch(1)
-        compressionHandler.post { latch.countDown() }
-        latch.await()
-    }
-
     fun listStableHistoryFiles(): List<File> =
         RecordFileNames.listStableFiles(chargeDir) + RecordFileNames.listStableFiles(dischargeDir)
-
-    private fun scheduleCompression(file: File) {
-        compressionHandler.post {
-            compressHistoricalSegment(file)
-        }
-    }
-
-    /**
-     * 启动后回填压缩旧的历史明文分段。
-     *
-     * 当前活跃分段保持明文，不参与这轮回填；其余已遗留的 `.txt` 会在后台排队压缩。
-     *
-     * @return 无。
-     */
-    private fun scheduleHistoricalCompressionBootstrap() {
-        val activePaths = setOfNotNull(
-            chargeDataWriter.segmentFile?.absolutePath,
-            dischargeDataWriter.segmentFile?.absolutePath
-        )
-        listOf(chargeDir, dischargeDir).forEach { dir ->
-            dir.listFiles()
-                ?.asSequence()
-                ?.filter { file ->
-                    file.isFile &&
-                        !RecordFileNames.isCompressedFileName(file.name) &&
-                        !RecordFileNames.isTempFileName(file.name) &&
-                        RecordFileNames.parse(file.name) != null &&
-                        file.absolutePath !in activePaths
-                }
-                ?.sortedBy { it.name }
-                ?.forEach { file ->
-                    scheduleCompression(file)
-                }
-        }
-    }
-
-    /**
-     * 将已关闭分段压缩为 gzip。
-     *
-     * 保持当前活跃文件明文；历史分段压缩时通过 `.tmp` 临时文件收尾，
-     * 目录枚举侧若短暂同时看到 `.txt` 与 `.txt.gz`，会优先选择 gzip，避免重复记录。
-     *
-     * @param sourceFile 已关闭的历史明文分段。
-     * @return 无。
-     */
-    private fun compressHistoricalSegment(sourceFile: File) {
-        if (!sourceFile.exists()) return
-        val descriptor = RecordFileNames.parse(sourceFile.name) ?: return
-        if (descriptor.isCompressed) return
-
-        val gzipFile = File(sourceFile.parentFile, "${descriptor.logicalName}.gz")
-        val tempFile = File(sourceFile.parentFile, "${descriptor.logicalName}.gz${RecordFileNames.TEMP_SUFFIX}")
-        if (gzipFile.exists()) {
-            if (!sourceFile.delete()) {
-                LoggerX.w(tag, "compressHistoricalSegment: 旧明文分段删除失败, file=${sourceFile.absolutePath}")
-            }
-            return
-        }
-
-        try {
-            if (tempFile.exists() && !tempFile.delete()) {
-                throw IOException("Failed to delete temp file: ${tempFile.absolutePath}")
-            }
-            FileInputStream(sourceFile).use { input ->
-                GZIPOutputStream(FileOutputStream(tempFile)).use { output ->
-                    input.copyTo(output, 64 * 1024)
-                }
-            }
-            fixFileOwner(tempFile)
-            if (!tempFile.renameTo(gzipFile)) {
-                throw IOException("Failed to rename temp file: ${tempFile.absolutePath}")
-            }
-            fixFileOwner(gzipFile)
-            if (!sourceFile.delete()) {
-                LoggerX.w(tag, "compressHistoricalSegment: 明文分段删除失败, file=${sourceFile.absolutePath}")
-            }
-            LoggerX.d(tag, "compressHistoricalSegment: 历史分段压缩完成, source=${sourceFile.name} target=${gzipFile.name}")
-        } catch (e: Exception) {
-            tempFile.delete()
-            LoggerX.e(tag, "compressHistoricalSegment: 历史分段压缩失败, file=${sourceFile.absolutePath}", tr = e)
-        }
-    }
 
     inner class ChargeDataWriter(dir: File, statusData: ChildWriterStatusData?) : BaseDelayedRecordWriter(dir, statusData) {
         override fun needStartNewSegment(justChangedStatus: Boolean, nowTime: Long): Boolean {
@@ -421,8 +327,6 @@ class PowerRecordWriter(
                 if (closedFile != null && needDeleteSegment(System.currentTimeMillis())) {
                     LoggerX.v(this@BaseDelayedRecordWriter.tag, "closeCurrentSegment: 删除短分段, file=${closedFile.name}")
                     closedFile.delete()
-                } else if (closedFile != null) {
-                    scheduleCompression(closedFile)
                 }
                 segmentFile = null
             }

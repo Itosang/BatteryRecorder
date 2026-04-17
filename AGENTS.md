@@ -107,7 +107,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   `timestamp,power,packageName,capacity,isDisplayOn,temp,voltage,current`
 - 其中 `voltage` 列落盘单位为 4 位 `mV`；运行时 `LineRecord.voltage` 仍统一使用 `uV`
 - `LineRecord.status` 当前只用于运行时采样链路，不参与记录文件落盘；记录文件语义由目录类型（charge/discharge）与 8 列 CSV 本身共同决定
-- 当前活跃分段保持明文 `时间戳.txt`；已关闭历史分段会在后台压缩为 `时间戳.txt.gz`
+- 当前活跃分段保持明文 `时间戳.txt`；Server 侧已关闭历史分段继续保持明文，App 会在 `sync()` 编排入口压缩本地非活跃历史为 `时间戳.txt.gz`
 - 记录的逻辑名称仍固定为 `时间戳.txt`；历史列表、导航、删除、缓存与导出都按逻辑名称工作，物理层再解析到 `.txt` / `.txt.gz`
 
 ### 数据同步链路
@@ -115,8 +115,8 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - Server 以 shell 权限运行时，记录文件落在 `com.android.shell` 数据目录
 - App 通过 `sync()` AIDL 拿到 `ParcelFileDescriptor`
 - 传输协议由 `PfdFileSender` / `PfdFileReceiver` / `SyncConstants` 实现
-- `sync()` 当前会同步记录目录中的可识别记录文件；当前活跃分段也会发送到 App 侧，但 shell 侧删除时会排除活跃文件，压缩中的临时文件不会进入发送列表
-- 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理；App 侧接收完成后会预热本地 `power_stats` 缓存
+- `sync()` 当前会先读取当前活跃记录，再按需从 shell 侧拉取记录文件；不论 root 还是 shell，都会在 App 侧压缩本地非活跃历史并在最后预热本地 `power_stats` 缓存
+- 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理；App 侧压缩本地历史时通过 `.tmp` 临时文件收尾，目录枚举继续忽略临时文件
 
 ### 首页统计与预测链路
 
