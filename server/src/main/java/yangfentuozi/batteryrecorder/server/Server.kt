@@ -27,6 +27,7 @@ import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.dataclass.ServerSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Charging
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus.Discharging
+import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.sync.PfdFileSender
 import yangfentuozi.batteryrecorder.shared.util.Handlers
@@ -37,7 +38,6 @@ import yangfentuozi.hiddenapi.compat.ServiceManagerCompat
 import java.io.File
 import java.io.FileDescriptor
 import java.io.IOException
-import java.nio.file.Files
 import java.util.Scanner
 import kotlin.system.exitProcess
 
@@ -183,6 +183,7 @@ class Server internal constructor() : IService.Stub() {
 
     override fun sync(): ParcelFileDescriptor? {
         writer.flushBufferBlocking()
+        writer.awaitCompressionBlocking()
         if (Os.getuid() == 0) {
             LoggerX.d(tag, "sync: root 模式不需要同步文件, return null")
             return null
@@ -203,25 +204,38 @@ class Server internal constructor() : IService.Stub() {
                 val currDischargeDataPath =
                     if (writer.dischargeDataWriter.needStartNewSegment(writer.dischargeDataWriter.hasPendingStatusChange)) null
                     else writer.dischargeDataWriter.segmentFile?.toPath()
+                val protectedPaths = setOfNotNull(
+                    currChargeDataPath?.toAbsolutePath()?.toString(),
+                    currDischargeDataPath?.toAbsolutePath()?.toString()
+                )
+                val filesToSync = writer.listStableHistoryFiles().filter { file ->
+                    file.toPath().toAbsolutePath().toString() !in protectedPaths
+                }
                 var sentCount = 0
 
-                PfdFileSender.sendFile(
+                PfdFileSender.sendFiles(
                     writeEnd,
-                    shellPowerDataDir
+                    shellPowerDataDir,
+                    filesToSync
                 ) { file ->
                     sentCount += 1
                     LoggerX.d(tag, "@sendFileCallback: 文件已发送, file=${file.name}")
-                    if ((currChargeDataPath == null || !Files.isSameFile(
-                            file.toPath(),
-                            currChargeDataPath
-                        )) &&
-                        (currDischargeDataPath == null || !Files.isSameFile(
-                            file.toPath(),
-                            currDischargeDataPath
-                        ))
-                    ) file.delete()
+                    val logicalName = RecordFileNames.logicalNameOrNull(file.name)
+                    val candidates = buildList {
+                        add(file)
+                        if (logicalName != null) {
+                            add(File(file.parentFile, logicalName))
+                            add(File(file.parentFile, "$logicalName.gz"))
+                        }
+                    }.distinctBy { it.absolutePath }
+                    candidates.forEach { candidate ->
+                        val candidatePath = candidate.toPath().toAbsolutePath().toString()
+                        if (candidatePath !in protectedPaths) {
+                            candidate.delete()
+                        }
+                    }
                 }
-                LoggerX.i(tag, "sync: 同步完成, sentCount=$sentCount")
+                LoggerX.i(tag, "sync: 同步完成, selected=${filesToSync.size} sentCount=$sentCount")
             } catch (e: Exception) {
                 LoggerX.e(tag, "sync: 后台同步失败", tr = e)
                 try {

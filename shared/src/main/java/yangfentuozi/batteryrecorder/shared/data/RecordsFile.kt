@@ -11,9 +11,11 @@ data class RecordsFile(
 ) : Parcelable {
     companion object {
         fun fromFile(file: File): RecordsFile {
+            val logicalName = RecordFileNames.logicalNameOrNull(file.name)
+                ?: throw IllegalArgumentException("Invalid record file name: ${file.name}")
             return RecordsFile(
                 type = BatteryStatus.fromDataDirName(file.parentFile?.name),
-                name = file.name
+                name = logicalName
             )
         }
     }

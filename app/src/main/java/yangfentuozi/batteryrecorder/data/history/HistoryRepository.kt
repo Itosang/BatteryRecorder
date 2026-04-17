@@ -7,6 +7,8 @@ import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
+import yangfentuozi.batteryrecorder.shared.data.RecordFileIO
+import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordFileParser
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.data.RecordsStats
@@ -84,26 +86,24 @@ object HistoryRepository {
     private const val NOT_ENOUGH_VALID_SAMPLES_PREFIX = "Not enough valid samples after filtering:"
     private val CLEANUP_TARGET_TYPES = listOf(BatteryStatus.Charging, BatteryStatus.Discharging)
 
-    // 记录文件名由“起始时间戳.txt”组成；无法解析的文件必须显式告警并从记录链路中过滤。
+    // 逻辑记录名固定为“起始时间戳.txt”，物理文件允许是 `.txt` 或 `.txt.gz`。
     private fun recordFileTimestampOrNull(file: File): Long? =
-        file.name.substringBeforeLast('.').toLongOrNull()
+        RecordFileNames.timestampOrNull(file.name)
 
     private fun listSortedRecordFiles(dir: File): List<File> =
-        dir.listFiles()
-            ?.asSequence()
-            ?.filter { it.isFile }
-            ?.mapNotNull { file ->
-                val timestamp = recordFileTimestampOrNull(file)
-                if (timestamp == null) {
-                    LoggerX.w(TAG, "[记录] 跳过非法记录文件: ${file.absolutePath}")
-                    return@mapNotNull null
+        RecordFileNames.listStableFiles(dir).also {
+            dir.listFiles()
+                ?.asSequence()
+                ?.filter { it.isFile }
+                ?.forEach { file ->
+                    if (
+                        RecordFileNames.parse(file.name) == null &&
+                        !RecordFileNames.isTempFileName(file.name)
+                    ) {
+                        LoggerX.w(TAG, "[记录] 跳过非法记录文件: ${file.absolutePath}")
+                    }
                 }
-                file to timestamp
-            }
-            ?.sortedByDescending { it.second }
-            ?.map { it.first }
-            ?.toList()
-            ?: emptyList()
+        }
 
     fun RecordsFile.toFile(context: Context): File? {
         val dataDir = dataDir(context, type)
@@ -119,11 +119,15 @@ object HistoryRepository {
 
     // 验证文件有效性，返回 null 表示无效
     private fun validFile(dir: File, name: String): File? =
-        File(dir, name).takeIf { it.isFile }
+        RecordFileNames.resolvePhysicalFile(dir, name)
+
+    private fun logicalRecordName(file: File): String =
+        RecordFileNames.logicalNameOrNull(file.name)
+            ?: throw IllegalArgumentException("Invalid record file name: ${file.name}")
 
     private fun buildHistoryRecord(file: File, stats: RecordsStats): HistoryRecord {
         return HistoryRecord(
-            name = file.name,
+            name = logicalRecordName(file),
             type = BatteryStatus.fromDataDirName(file.parentFile?.name),
             stats = stats,
             lastModified = file.lastModified()
@@ -141,9 +145,9 @@ object HistoryRepository {
         file: File,
         needCaching: Boolean
     ): HistoryRecord? {
-        val cacheFile = getPowerStatsCacheFile(context.cacheDir, file.name)
+        val cacheFile = getPowerStatsCacheFile(context.cacheDir, logicalRecordName(file))
         LoggerX.v(TAG, 
-            "[历史] 加载记录统计: file=${file.name} needCaching=$needCaching cache=${cacheFile.name}"
+            "[历史] 加载记录统计: file=${logicalRecordName(file)} source=${file.name} needCaching=$needCaching cache=${cacheFile.name}"
         )
         val stats = runCatching {
             RecordsStats.getCachedStats(
@@ -182,7 +186,7 @@ object HistoryRepository {
     fun loadRecord(context: Context, file: File): HistoryRecord {
         val dataDir = file.parentFile!!
         val latestFile = listSortedRecordFiles(dataDir).firstOrNull()
-        val cacheFile = getPowerStatsCacheFile(context.cacheDir, file.name)
+        val cacheFile = getPowerStatsCacheFile(context.cacheDir, logicalRecordName(file))
         val stats = RecordsStats.getCachedStats(
             cacheFile = cacheFile,
             sourceFile = file,
@@ -237,7 +241,7 @@ object HistoryRepository {
             ?: return CurrentRecordLoadResult.Missing(recordsFile)
         val latestFile = listSortedRecordFiles(sourceFile.parentFile ?: return CurrentRecordLoadResult.Missing(recordsFile))
             .firstOrNull()
-        val cacheFile = getPowerStatsCacheFile(context.cacheDir, sourceFile.name)
+        val cacheFile = getPowerStatsCacheFile(context.cacheDir, recordsFile.name)
         val stats = runCatching {
             RecordsStats.getCachedStats(
                 cacheFile = cacheFile,
@@ -321,15 +325,10 @@ object HistoryRepository {
 
     /** 删除记录及其缓存文件 */
     fun deleteRecord(context: Context, recordsFile: RecordsFile): Boolean {
-
-        if (runCatching { recordsFile.toFile(context)!!.delete() }.getOrDefault(false)) {
-            // 同步删除缓存文件
-            runCatching { getPowerStatsCacheFile(context.cacheDir, recordsFile.name).delete() }
-            LoggerX.i(TAG, "[历史] 删除记录成功: ${recordsFile.name}")
-            return true
+        val sourceFile = recordsFile.toFile(context) ?: return false.also {
+            LoggerX.w(TAG, "[历史] 删除记录失败，文件不存在: ${recordsFile.name}")
         }
-        LoggerX.w(TAG, "[历史] 删除记录失败: ${recordsFile.name}")
-        return false
+        return deleteRecordFile(context, sourceFile, recordsFile.type)
     }
 
     /**
@@ -469,10 +468,8 @@ object HistoryRepository {
         val outputStream = context.contentResolver.openOutputStream(destinationUri, "w")
             ?: throw IOException("Failed to open destination: $destinationUri")
 
-        sourceFile.inputStream().use { input ->
-            outputStream.use { output ->
-                input.copyTo(output)
-            }
+        outputStream.use { output ->
+            RecordFileIO.copyAsPlainText(sourceFile, output)
         }
         LoggerX.i(TAG, "[历史] 导出记录成功: source=${recordsFile.name} destination=$destinationUri")
     }
@@ -499,16 +496,14 @@ object HistoryRepository {
                         ?: throw FileNotFoundException("Record file not found: ${recordsFile.name}")
                     LoggerX.d(
                         TAG,
-                        "[历史] 写入导出 ZIP 条目: file=${sourceFile.name} size=${sourceFile.length()} destination=$destinationUri"
+                        "[历史] 写入导出 ZIP 条目: file=${recordsFile.name} source=${sourceFile.name} size=${sourceFile.length()} destination=$destinationUri"
                     )
-                    zipOutput.putNextEntry(ZipEntry(sourceFile.name))
-                    sourceFile.inputStream().use { input ->
-                        input.copyTo(zipOutput)
-                    }
+                    zipOutput.putNextEntry(ZipEntry(recordsFile.name))
+                    RecordFileIO.copyAsPlainText(sourceFile, zipOutput)
                     zipOutput.closeEntry()
                     LoggerX.d(
                         TAG,
-                        "[历史] 导出 ZIP 条目写入完成: file=${sourceFile.name} destination=$destinationUri"
+                        "[历史] 导出 ZIP 条目写入完成: file=${recordsFile.name} destination=$destinationUri"
                     )
                 }
             }
@@ -564,7 +559,9 @@ object HistoryRepository {
                             if (entryName.contains('/') || entryName.contains('\\')) {
                                 throw IOException("ZIP 条目路径非法，不是一键导出格式: ${entry.name}")
                             }
-                            if (recordFileTimestampOrNull(File(entryName)) == null) {
+                            if (!entryName.endsWith(RecordFileNames.PLAIN_SUFFIX) ||
+                                recordFileTimestampOrNull(File(entryName)) == null
+                            ) {
                                 throw IOException("ZIP 条目文件名非法: ${entry.name}")
                             }
                             if (!seenNames.add(entryName)) {
@@ -591,6 +588,7 @@ object HistoryRepository {
                 throw IOException("ZIP 中没有可导入的记录文件")
             }
             stagedEntries.forEach { stagedFile ->
+                deleteRecordVariants(context.cacheDir, targetDir, stagedFile.name)
                 val destinationFile = File(targetDir, stagedFile.name)
                 stagedFile.copyTo(destinationFile, overwrite = true)
                 getPowerStatsCacheFile(context.cacheDir, stagedFile.name).delete()
@@ -625,11 +623,7 @@ object HistoryRepository {
      * @return 返回目录内全部文件，不做文件名与内容合法性过滤。
      */
     private fun listAllRecordFiles(context: Context, type: BatteryStatus): List<File> =
-        dataDir(context, type)
-            .listFiles()
-            ?.filter { it.isFile }
-            ?.toList()
-            ?: emptyList()
+        listSortedRecordFiles(dataDir(context, type))
 
     /**
      * 解析单条记录文件，供条件清理判断使用。
@@ -646,7 +640,7 @@ object HistoryRepository {
             LoggerX.w(TAG, "[记录清理] 文件名非法，按异常记录处理: ${file.absolutePath}")
             return RecordCleanupInspection.InvalidFileName
         }
-        val cacheFile = getPowerStatsCacheFile(context.cacheDir, file.name)
+        val cacheFile = getPowerStatsCacheFile(context.cacheDir, logicalRecordName(file))
         return runCatching {
             RecordsStats.getCachedStats(
                 cacheFile = cacheFile,
@@ -688,12 +682,37 @@ object HistoryRepository {
         file: File,
         type: BatteryStatus
     ): Boolean {
-        if (runCatching { file.delete() }.getOrDefault(false)) {
-            runCatching { getPowerStatsCacheFile(context.cacheDir, file.name).delete() }
-            LoggerX.i(TAG, "[记录清理] 删除记录成功: type=${type.dataDirName} file=${file.name}")
+        val logicalName = logicalRecordName(file)
+        val parentDir = file.parentFile ?: return false
+        if (runCatching {
+                deleteRecordVariants(context.cacheDir, parentDir, logicalName)
+            }.getOrDefault(false)
+        ) {
+            LoggerX.i(TAG, "[记录清理] 删除记录成功: type=${type.dataDirName} file=$logicalName")
             return true
         }
-        LoggerX.w(TAG, "[记录清理] 删除记录失败: type=${type.dataDirName} file=${file.name}")
+        LoggerX.w(TAG, "[记录清理] 删除记录失败: type=${type.dataDirName} file=$logicalName")
         return false
+    }
+
+    private fun deleteRecordVariants(
+        cacheRoot: File,
+        dataDir: File,
+        logicalName: String
+    ): Boolean {
+        val plainFile = File(dataDir, logicalName)
+        val gzipFile = File(dataDir, "$logicalName.gz")
+        val removedData = runCatching {
+            var removed = false
+            if (plainFile.exists()) {
+                removed = plainFile.delete() || removed
+            }
+            if (gzipFile.exists()) {
+                removed = gzipFile.delete() || removed
+            }
+            removed
+        }.getOrDefault(false)
+        runCatching { getPowerStatsCacheFile(cacheRoot, logicalName).delete() }
+        return removedData
     }
 }

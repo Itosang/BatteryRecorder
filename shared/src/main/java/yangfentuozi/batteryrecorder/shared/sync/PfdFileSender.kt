@@ -14,6 +14,40 @@ import java.nio.file.Path
 object PfdFileSender {
     private const val TAG = "PfdFileSender"
 
+    /**
+     * 发送指定文件列表。
+     *
+     * @param writePfd 写端管道。
+     * @param baseDir 作为相对路径基准的根目录。
+     * @param files 待发送文件列表。
+     * @param callback 单个文件发送完成后的回调。
+     * @return 无。
+     */
+    fun sendFiles(
+        writePfd: ParcelFileDescriptor,
+        baseDir: File,
+        files: List<File>,
+        callback: ((File) -> Unit)? = null
+    ) {
+        val basePath = baseDir.toPath()
+        LoggerX.i(TAG, "sendFiles: 开始发送文件列表, base=${baseDir.absolutePath} count=${files.size}")
+        var sentCount = 0
+        var sentBytes = 0L
+        ParcelFileDescriptor.AutoCloseOutputStream(writePfd).use { raw ->
+            BufferedOutputStream(raw, SyncConstants.BUF_SIZE).use { out ->
+                files.forEach { file ->
+                    sendSingleFile(out, file, basePath, callback) { size ->
+                        sentCount += 1
+                        sentBytes += size
+                    }
+                }
+                out.write(SyncConstants.CODE_FINISHED)
+                out.flush()
+            }
+        }
+        LoggerX.i(TAG, "sendFiles: 文件发送完成, count=$sentCount bytes=$sentBytes")
+    }
+
     fun sendFile(
         writePfd: ParcelFileDescriptor,
         file: File,
@@ -37,6 +71,41 @@ object PfdFileSender {
         LoggerX.i(TAG, "sendFile: 文件发送完成, count=$sentCount bytes=$sentBytes")
     }
 
+    private fun sendSingleFile(
+        out: OutputStream,
+        file: File,
+        basePath: Path,
+        callback: ((File) -> Unit)?,
+        onSent: (Long) -> Unit
+    ) {
+        if (!file.exists() || !file.isFile) return
+        val size = file.length()
+        if (size < 0) throw IOException("Invalid file size: $size")
+
+        out.write(SyncConstants.CODE_FILE)
+        out.write(basePath.relativize(file.toPath()).toString().toByteArray(Charsets.UTF_8))
+        out.write(SyncConstants.CODE_DELIM)
+        out.write(size.toString().toByteArray(Charsets.US_ASCII))
+        out.write(SyncConstants.CODE_DELIM)
+
+        BufferedInputStream(FileInputStream(file), SyncConstants.BUF_SIZE).use { fis ->
+            val buf = ByteArray(SyncConstants.BUF_SIZE)
+            var remaining = size
+            while (remaining > 0) {
+                val toRead = minOf(remaining, buf.size.toLong()).toInt()
+                val n = fis.read(buf, 0, toRead)
+                if (n < 0) throw EOFException("Unexpected EOF reading file: ${file.absolutePath}")
+                out.write(buf, 0, n)
+                remaining -= n.toLong()
+            }
+        }
+        out.flush()
+
+        LoggerX.d(TAG, "sendSingleFile: 发送文件, relative=${basePath.relativize(file.toPath())} size=$size")
+        onSent(size)
+        callback?.invoke(file)
+    }
+
     private fun sendFileInner(
         out: OutputStream,
         file: File,
@@ -50,41 +119,7 @@ object PfdFileSender {
                 sendFileInner(out, it, basePath, callback, onSent)
             }
         } else {
-            val size = file.length()
-            if (size < 0) throw IOException("Invalid file size: $size")
-
-            // 文件识别码
-            out.write(SyncConstants.CODE_FILE)
-
-            // 基于 basePath 的文件路径 (UTF-8)
-            out.write(basePath.relativize(file.toPath()).toString().toByteArray(Charsets.UTF_8))
-
-            // 00位
-            out.write(SyncConstants.CODE_DELIM)
-
-            // 文件大小 (ASCII 十进制)
-            out.write(size.toString().toByteArray(Charsets.US_ASCII))
-
-            // 00位
-            out.write(SyncConstants.CODE_DELIM)
-
-            // 文件内容：size: Long 字节
-            BufferedInputStream(FileInputStream(file), SyncConstants.BUF_SIZE).use { fis ->
-                val buf = ByteArray(SyncConstants.BUF_SIZE)
-                var remaining = size
-                while (remaining > 0) {
-                    val toRead = minOf(remaining, buf.size.toLong()).toInt()
-                    val n = fis.read(buf, 0, toRead)
-                    if (n < 0) throw EOFException("Unexpected EOF reading file: ${file.absolutePath}")
-                    out.write(buf, 0, n)
-                    remaining -= n.toLong()
-                }
-            }
-            out.flush()
-
-            LoggerX.d(TAG, "sendFileInner: 发送文件, relative=${basePath.relativize(file.toPath())} size=$size")
-            onSent(size)
-            callback?.invoke(file)
+            sendSingleFile(out, file, basePath, callback, onSent)
         }
     }
 }

@@ -107,13 +107,16 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   `timestamp,power,packageName,capacity,isDisplayOn,temp,voltage,current`
 - 其中 `voltage` 列落盘单位为 4 位 `mV`；运行时 `LineRecord.voltage` 仍统一使用 `uV`
 - `LineRecord.status` 当前只用于运行时采样链路，不参与记录文件落盘；记录文件语义由目录类型（charge/discharge）与 8 列 CSV 本身共同决定
+- 当前活跃分段保持明文 `时间戳.txt`；已关闭历史分段会在后台压缩为 `时间戳.txt.gz`
+- 记录的逻辑名称仍固定为 `时间戳.txt`；历史列表、导航、删除、缓存与导出都按逻辑名称工作，物理层再解析到 `.txt` / `.txt.gz`
 
 ### 数据同步链路
 
 - Server 以 shell 权限运行时，记录文件落在 `com.android.shell` 数据目录
 - App 通过 `sync()` AIDL 拿到 `ParcelFileDescriptor`
 - 传输协议由 `PfdFileSender` / `PfdFileReceiver` / `SyncConstants` 实现
-- 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理
+- `sync()` 当前只同步稳定历史记录文件，不会发送活跃分段或压缩中的临时文件
+- 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理；App 侧接收完成后会预热本地 `power_stats` 缓存
 
 ### 首页统计与预测链路
 
@@ -241,6 +244,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 
 - `AppStatsComputer`、`SceneStatsComputer` 与记录详情 `power_stats` 共用 `HistoryCacheVersions.HISTORY_STATS_CACHE_VERSION`
 - 缓存命名统一通过 `HistoryCacheNaming.kt`
+- `power_stats` 当前按逻辑记录名 `时间戳.txt` 命名，不直接跟随物理 `.txt.gz` 文件名；命中仍继续校验源文件 `lastModified()`
 - 具体缓存改动流程与检查清单已沉淀到项目 skill：`.agents/skills/history-stats-cache-change/`
 
 ## 目录索引
@@ -388,6 +392,8 @@ shared/src/main/
     ├── data/
     │   ├── BatteryStatus.kt
     │   ├── LineRecord.kt
+    │   ├── RecordFileIO.kt
+    │   ├── RecordFileNames.kt
     │   ├── RecordFileParser.kt
     │   ├── RecordsFile.kt
     │   └── RecordsStats.kt

@@ -31,7 +31,7 @@ object RecordFileParser {
         var lineNumber = 0
         var previousParsedTimestamp: Long? = null
 
-        file.bufferedReader().useLines { lines ->
+        RecordFileIO.openBufferedReader(file).useLines { lines ->
             lines.forEach { raw ->
                 lineNumber++
                 val line = raw.trim()

@@ -5,6 +5,7 @@ import yangfentuozi.batteryrecorder.BuildConfig
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
+import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
 import yangfentuozi.batteryrecorder.shared.data.RecordFileParser
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -344,6 +345,13 @@ object DischargeRecordScanner {
      * 从文件尾部反向读取最后一条有效记录时间戳，避免整文件扫描两遍。
      */
     private fun findFileEndTimestamp(file: File): Long? {
+        if (RecordFileNames.isCompressedFileName(file.name)) {
+            var lastTimestamp: Long? = null
+            RecordFileParser.forEachValidRecord(file) { record ->
+                lastTimestamp = record.timestamp
+            }
+            return lastTimestamp
+        }
         val length = file.length()
         if (length <= 0L) return null
 

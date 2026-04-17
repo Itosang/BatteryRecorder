@@ -10,5 +10,5 @@ internal fun getAppStatsCacheFile(cacheRoot: File, key: String): File =
 internal fun getSceneStatsCacheFile(cacheRoot: File, key: String): File =
     File(File(cacheRoot, "scene_stats/$CACHE_VERSION_DIR"), "$key.cache")
 
-internal fun getPowerStatsCacheFile(cacheRoot: File, sourceFileName: String): File =
-    File(File(cacheRoot, "power_stats/$CACHE_VERSION_DIR"), "$sourceFileName.cache")
+internal fun getPowerStatsCacheFile(cacheRoot: File, logicalRecordName: String): File =
+    File(File(cacheRoot, "power_stats/$CACHE_VERSION_DIR"), "$logicalRecordName.cache")
