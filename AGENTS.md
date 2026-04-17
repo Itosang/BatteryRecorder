@@ -115,7 +115,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - Server 以 shell 权限运行时，记录文件落在 `com.android.shell` 数据目录
 - App 通过 `sync()` AIDL 拿到 `ParcelFileDescriptor`
 - 传输协议由 `PfdFileSender` / `PfdFileReceiver` / `SyncConstants` 实现
-- `sync()` 当前只同步稳定历史记录文件，不会发送活跃分段或压缩中的临时文件
+- `sync()` 当前会同步记录目录中的可识别记录文件；当前活跃分段也会发送到 App 侧，但 shell 侧删除时会排除活跃文件，压缩中的临时文件不会进入发送列表
 - 同步结束后，已传输的 shell 侧旧文件会按当前文件排除规则清理；App 侧接收完成后会预热本地 `power_stats` 缓存
 
 ### 首页统计与预测链路

@@ -187,7 +187,6 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.d(tag, "sync: root 模式不需要同步文件, return null")
             return null
         }
-        writer.awaitCompressionBlocking()
 
         val pipe = ParcelFileDescriptor.createPipe()
         val readEnd = pipe[0]
