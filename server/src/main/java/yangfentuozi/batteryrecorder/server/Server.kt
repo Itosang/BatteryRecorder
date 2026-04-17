@@ -208,9 +208,7 @@ class Server internal constructor() : IService.Stub() {
                     currChargeDataPath?.toAbsolutePath()?.toString(),
                     currDischargeDataPath?.toAbsolutePath()?.toString()
                 )
-                val filesToSync = writer.listStableHistoryFiles().filter { file ->
-                    file.toPath().toAbsolutePath().toString() !in protectedPaths
-                }
+                val filesToSync = writer.listStableHistoryFiles()
                 var sentCount = 0
 
                 PfdFileSender.sendFiles(
