@@ -1,10 +1,16 @@
 package yangfentuozi.batteryrecorder.shared.data
 
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
+import java.io.BufferedInputStream
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.util.zip.GZIPInputStream
 
 object RecordFileParser {
     private const val TAG = "RecordFileParser"
+    private const val BUFFER_SIZE = 64 * 1024
 
     fun parseToList(file: File): List<LineRecord> {
         val records = mutableListOf<LineRecord>()
@@ -31,7 +37,7 @@ object RecordFileParser {
         var lineNumber = 0
         var previousParsedTimestamp: Long? = null
 
-        RecordFileIO.openBufferedReader(file).useLines { lines ->
+        openBufferedReader(file).useLines { lines ->
             lines.forEach { raw ->
                 lineNumber++
                 val line = raw.trim()
@@ -91,5 +97,15 @@ object RecordFileParser {
         LoggerX.w(TAG, 
             "logInvalidLine: 跳过损坏记录, file=${file.absolutePath} line=$lineNumber reason=$reason"
         )
+    }
+
+    private fun openBufferedReader(file: File): BufferedReader {
+        val rawInput = BufferedInputStream(FileInputStream(file), BUFFER_SIZE)
+        val input = if (RecordFileNames.isCompressedFileName(file.name)) {
+            GZIPInputStream(rawInput, BUFFER_SIZE)
+        } else {
+            rawInput
+        }
+        return BufferedReader(InputStreamReader(input, Charsets.UTF_8), BUFFER_SIZE)
     }
 }

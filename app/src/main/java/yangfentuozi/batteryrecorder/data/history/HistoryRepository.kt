@@ -7,18 +7,20 @@ import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.shared.Constants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
-import yangfentuozi.batteryrecorder.shared.data.RecordFileIO
 import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordFileParser
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.data.RecordsStats
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
+import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.util.zip.ZipInputStream
+import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.GZIPOutputStream
+import java.util.zip.GZIPInputStream
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 private const val TAG = "HistoryRepository"
@@ -85,7 +87,7 @@ private data class RecordCleanupTarget(
 object HistoryRepository {
 
     private const val NOT_ENOUGH_VALID_SAMPLES_PREFIX = "Not enough valid samples after filtering:"
-    private const val RECORD_COMPRESSION_BUFFER_SIZE = 64 * 1024
+    private const val RECORD_FILE_BUFFER_SIZE = 64 * 1024
     private val CLEANUP_TARGET_TYPES = listOf(BatteryStatus.Charging, BatteryStatus.Discharging)
 
     // 逻辑记录名固定为“起始时间戳.txt”，物理文件允许是 `.txt` 或 `.txt.gz`。
@@ -507,7 +509,7 @@ object HistoryRepository {
             ?: throw IOException("Failed to open destination: $destinationUri")
 
         outputStream.use { output ->
-            RecordFileIO.copyAsPlainText(sourceFile, output)
+            copyRecordAsPlainText(sourceFile, output)
         }
         LoggerX.i(TAG, "[历史] 导出记录成功: source=${recordsFile.name} destination=$destinationUri")
     }
@@ -537,7 +539,7 @@ object HistoryRepository {
                         "[历史] 写入导出 ZIP 条目: file=${recordsFile.name} source=${sourceFile.name} size=${sourceFile.length()} destination=$destinationUri"
                     )
                     zipOutput.putNextEntry(ZipEntry(recordsFile.name))
-                    RecordFileIO.copyAsPlainText(sourceFile, zipOutput)
+                    copyRecordAsPlainText(sourceFile, zipOutput)
                     zipOutput.closeEntry()
                     LoggerX.d(
                         TAG,
@@ -779,11 +781,11 @@ object HistoryRepository {
         }
 
         try {
-            sourceFile.inputStream().buffered(RECORD_COMPRESSION_BUFFER_SIZE).use { input ->
+            sourceFile.inputStream().buffered(RECORD_FILE_BUFFER_SIZE).use { input ->
                 GZIPOutputStream(
-                    tempFile.outputStream().buffered(RECORD_COMPRESSION_BUFFER_SIZE)
+                    tempFile.outputStream().buffered(RECORD_FILE_BUFFER_SIZE)
                 ).use { output ->
-                    input.copyTo(output, RECORD_COMPRESSION_BUFFER_SIZE)
+                    input.copyTo(output, RECORD_FILE_BUFFER_SIZE)
                 }
             }
             if (!tempFile.renameTo(gzipFile)) {
@@ -800,6 +802,21 @@ object HistoryRepository {
         } catch (error: Throwable) {
             tempFile.delete()
             throw error
+        }
+    }
+
+    private fun copyRecordAsPlainText(
+        file: File,
+        output: OutputStream
+    ) {
+        val rawInput = BufferedInputStream(file.inputStream(), RECORD_FILE_BUFFER_SIZE)
+        val input = if (RecordFileNames.isCompressedFileName(file.name)) {
+            GZIPInputStream(rawInput, RECORD_FILE_BUFFER_SIZE)
+        } else {
+            rawInput
+        }
+        input.use { stream ->
+            stream.copyTo(output, RECORD_FILE_BUFFER_SIZE)
         }
     }
 }
