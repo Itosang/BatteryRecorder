@@ -82,32 +82,43 @@ class Server internal constructor() : IService.Stub() {
         monitor.unregisterRecordListener(listener)
     }
 
+    /**
+     * 应用一份服务端配置到当前运行时实例。
+     *
+     * @param settings 要生效的服务端配置。
+     * @param source 本次配置应用来源，仅用于日志定位。
+     * @return 无。
+     */
+    private fun applyConfigInternal(settings: ServerSettings, source: String) {
+        LoggerX.d(
+            tag,
+            "$source: 应用配置, notification=${settings.notificationEnabled} compatMode=${settings.notificationCompatModeEnabled} dualCell=${settings.dualCellEnabled} calibration=${settings.calibrationValue} intervalMs=${settings.recordIntervalMs} writeLatencyMs=${settings.writeLatencyMs} batchSize=${settings.batchSize} screenOffRecord=${settings.screenOffRecordEnabled} preciseScreenOffRecord=${settings.preciseScreenOffRecordEnabled} segmentDurationMin=${settings.segmentDurationMin} logLevel=${settings.logLevel} polling=${settings.alwaysPollingScreenStatusEnabled}"
+        )
+        LoggerX.maxHistoryDays = settings.maxHistoryDays
+        LoggerX.logLevel = settings.logLevel
+
+        unlockOPlusSampleTimeLimit(settings.recordIntervalMs.coerceAtLeast(200))
+
+        monitor.notificationPowerMultiplier = computeNotificationPowerMultiplier(
+            dualCellEnabled = settings.dualCellEnabled,
+            calibrationValue = settings.calibrationValue,
+        )
+        monitor.setNotificationCompatModeEnabled(settings.notificationCompatModeEnabled)
+        monitor.setNotificationEnabled(settings.notificationEnabled)
+        monitor.alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
+        monitor.recordIntervalMs = settings.recordIntervalMs
+        monitor.screenOffRecord = settings.screenOffRecordEnabled
+        monitor.preciseScreenOffRecordEnabled = settings.preciseScreenOffRecordEnabled
+        monitor.notifyLock()
+
+        writer.flushIntervalMs = settings.writeLatencyMs
+        writer.batchSize = settings.batchSize
+        writer.maxSegmentDurationMs = settings.segmentDurationMin * 60 * 1000L
+    }
+
     override fun updateConfig(settings: ServerSettings) {
         Handlers.common.post {
-            LoggerX.d(
-                tag,
-                "updateConfig: 应用配置, notification=${settings.notificationEnabled} compatMode=${settings.notificationCompatModeEnabled} dualCell=${settings.dualCellEnabled} calibration=${settings.calibrationValue} intervalMs=${settings.recordIntervalMs} writeLatencyMs=${settings.writeLatencyMs} batchSize=${settings.batchSize} screenOffRecord=${settings.screenOffRecordEnabled} preciseScreenOffRecord=${settings.preciseScreenOffRecordEnabled} segmentDurationMin=${settings.segmentDurationMin} logLevel=${settings.logLevel} polling=${settings.alwaysPollingScreenStatusEnabled}"
-            )
-            LoggerX.maxHistoryDays = settings.maxHistoryDays
-            LoggerX.logLevel = settings.logLevel
-
-            unlockOPlusSampleTimeLimit(settings.recordIntervalMs.coerceAtLeast(200))
-
-            monitor.notificationPowerMultiplier = computeNotificationPowerMultiplier(
-                dualCellEnabled = settings.dualCellEnabled,
-                calibrationValue = settings.calibrationValue,
-            )
-            monitor.setNotificationCompatModeEnabled(settings.notificationCompatModeEnabled)
-            monitor.setNotificationEnabled(settings.notificationEnabled)
-            monitor.alwaysPollingScreenStatusEnabled = settings.alwaysPollingScreenStatusEnabled
-            monitor.recordIntervalMs = settings.recordIntervalMs
-            monitor.screenOffRecord = settings.screenOffRecordEnabled
-            monitor.preciseScreenOffRecordEnabled = settings.preciseScreenOffRecordEnabled
-            monitor.notifyLock()
-
-            writer.flushIntervalMs = settings.writeLatencyMs
-            writer.batchSize = settings.batchSize
-            writer.maxSegmentDurationMs = settings.segmentDurationMin * 60 * 1000L
+            applyConfigInternal(settings, "updateConfig")
         }
     }
 
@@ -474,7 +485,8 @@ class Server internal constructor() : IService.Stub() {
             LoggerX.i(tag, "init: 通过 ConfigProvider 读取配置")
             ConfigUtil.getServerSettingsByContentProvider()
         }
-        serverSettings?.let(::updateConfig) ?: LoggerX.w(tag, "init: 未读取到配置, 使用当前默认值")
+        serverSettings?.let { applyConfigInternal(it, "init") }
+            ?: LoggerX.w(tag, "init: 未读取到配置, 使用当前默认值")
 
         monitor.start()
         LoggerX.i(tag, "init: Monitor 已启动, 进入消息循环")
