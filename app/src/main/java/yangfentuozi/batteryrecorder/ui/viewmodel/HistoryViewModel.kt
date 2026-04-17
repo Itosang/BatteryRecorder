@@ -26,6 +26,7 @@ import yangfentuozi.batteryrecorder.data.model.normalizeRecordDetailChartPoints
 import yangfentuozi.batteryrecorder.shared.config.SettingsConstants
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.LineRecord
+import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.utils.computeEnergyWh
@@ -155,6 +156,11 @@ class HistoryViewModel : ViewModel() {
         // 目标不是“固定桶时长”，而是让不同记录长度大致映射到相近数量的趋势点。
         const val TARGET_TREND_BUCKET_COUNT = 240L
     }
+
+    // ViewModel 层只允许按逻辑记录名比较，避免 `.txt` / `.txt.gz` 的物理后缀变化污染列表状态。
+    private fun File.logicalRecordName(): String =
+        RecordFileNames.logicalNameOrNull(name)
+            ?: throw IllegalArgumentException("Invalid record file name: $name")
 
     /**
      * 加载历史列表。
@@ -398,8 +404,8 @@ class HistoryViewModel : ViewModel() {
                     val deletedSourceIndex = findSourceIndexByName(deletedName)
                     _records.value = _records.value.filter { it.asRecordsFile() != recordsFile }
                     if (currentListType == recordsFile.type) {
-                        // 删除后同步修正数据源、筛选缓存与游标，避免翻页跳过未显示项。
-                        listFiles = listFiles.filter { it.name != deletedName }
+                        // 删除后按逻辑名同步修正数据源、筛选缓存与游标，避免压缩后物理文件名不一致。
+                        listFiles = listFiles.filter { it.logicalRecordName() != deletedName }
                         latestListFile = listFiles.firstOrNull()
                         allListRecordsCache = allListRecordsCache?.filter { record ->
                             record.name != deletedName
@@ -682,13 +688,16 @@ class HistoryViewModel : ViewModel() {
         if (_chargeCapacityChangeFilter.value != null) return true
         if (listDischargeDisplayPositive != dischargeDisplayPositive) return true
         if (latestFiles.size != listFiles.size) return true
-        if (latestFiles.indices.any { index -> latestFiles[index].name != listFiles[index].name }) {
+        if (latestFiles.indices.any { index ->
+                latestFiles[index].logicalRecordName() != listFiles[index].logicalRecordName()
+            }
+        ) {
             return true
         }
 
         val latestFile = latestFiles.firstOrNull() ?: return _records.value.isNotEmpty()
         val currentFirstRecord = _records.value.firstOrNull() ?: return true
-        return currentFirstRecord.name != latestFile.name
+        return currentFirstRecord.name != latestFile.logicalRecordName()
     }
 
     /**
@@ -754,7 +763,7 @@ class HistoryViewModel : ViewModel() {
         if (sourceRecords != null) {
             return sourceRecords.indexOfFirst { record -> record.name == recordName }
         }
-        return listFiles.indexOfFirst { file -> file.name == recordName }
+        return listFiles.indexOfFirst { file -> file.logicalRecordName() == recordName }
     }
 
     private fun resolveCurrentExportRecords(type: BatteryStatus): List<RecordsFile>? {
