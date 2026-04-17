@@ -14,40 +14,6 @@ import java.nio.file.Path
 object PfdFileSender {
     private const val TAG = "PfdFileSender"
 
-    /**
-     * 发送指定文件列表。
-     *
-     * @param writePfd 写端管道。
-     * @param baseDir 作为相对路径基准的根目录。
-     * @param files 待发送文件列表。
-     * @param callback 单个文件发送完成后的回调。
-     * @return 无。
-     */
-    fun sendFiles(
-        writePfd: ParcelFileDescriptor,
-        baseDir: File,
-        files: List<File>,
-        callback: ((File) -> Unit)? = null
-    ) {
-        val basePath = baseDir.toPath()
-        LoggerX.i(TAG, "sendFiles: 开始发送文件列表, base=${baseDir.absolutePath} count=${files.size}")
-        var sentCount = 0
-        var sentBytes = 0L
-        ParcelFileDescriptor.AutoCloseOutputStream(writePfd).use { raw ->
-            BufferedOutputStream(raw, SyncConstants.BUF_SIZE).use { out ->
-                files.forEach { file ->
-                    sendSingleFile(out, file, basePath, callback) { size ->
-                        sentCount += 1
-                        sentBytes += size
-                    }
-                }
-                out.write(SyncConstants.CODE_FINISHED)
-                out.flush()
-            }
-        }
-        LoggerX.i(TAG, "sendFiles: 文件发送完成, count=$sentCount bytes=$sentBytes")
-    }
-
     fun sendFile(
         writePfd: ParcelFileDescriptor,
         file: File,

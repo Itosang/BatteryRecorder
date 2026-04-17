@@ -3,7 +3,9 @@ package yangfentuozi.batteryrecorder.data.history
 import android.content.Context
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.shared.Constants
+import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordFileNames
+import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.shared.data.RecordsStats
 import yangfentuozi.batteryrecorder.shared.sync.PfdFileReceiver
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -39,14 +41,22 @@ object SyncUtil {
                 .onFailure { error ->
                     LoggerX.e(TAG, "[SYNC] 读取服务端当前记录失败", tr = error)
                 }
+            val activeRecordsFile = if (activeRecordsFileResult.isSuccess) {
+                activeRecordsFileResult.getOrNull()
+            } else {
+                null
+            }
             val compressedCount = if (activeRecordsFileResult.isSuccess) {
                 HistoryRepository.compressHistoricalRecords(
                     context = context,
-                    activeRecordsFile = activeRecordsFileResult.getOrNull()
+                    activeRecordsFile = activeRecordsFile
                 )
             } else {
                 LoggerX.w(TAG, "[SYNC] 当前记录未知，跳过本地历史压缩")
                 0
+            }
+            if (readPfd == null && compressedCount > 0) {
+                preheatLocalHistoricalPowerStatsCaches(context, activeRecordsFile)
             }
             syncedTargets.values.forEach { (parentDir, logicalName) ->
                 preheatPowerStatsCache(context, parentDir, logicalName)
@@ -58,6 +68,21 @@ object SyncUtil {
         } catch (e: Exception) {
             LoggerX.e(TAG, "[SYNC] 本地历史整理失败", tr = e)
             return
+        }
+    }
+
+    private fun preheatLocalHistoricalPowerStatsCaches(
+        context: Context,
+        activeRecordsFile: RecordsFile?
+    ) {
+        val activeLogicalName = activeRecordsFile?.name
+        listOf(BatteryStatus.Charging, BatteryStatus.Discharging).forEach { type ->
+            HistoryRepository.listRecordFiles(context, type).forEach { file ->
+                val logicalName = RecordFileNames.logicalNameOrNull(file.name) ?: return@forEach
+                if (logicalName == activeLogicalName) return@forEach
+                val parentDir = file.parentFile ?: return@forEach
+                preheatPowerStatsCache(context, parentDir, logicalName)
+            }
         }
     }
 
