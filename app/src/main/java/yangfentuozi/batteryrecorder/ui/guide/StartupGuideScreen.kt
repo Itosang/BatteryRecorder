@@ -309,13 +309,6 @@ private fun StartServiceContent(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.startup_guide_start_subtitle),
-            fontSize = 15.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
         Spacer(Modifier.height(28.dp))
         Surface(
             modifier = Modifier.fillMaxWidth(),

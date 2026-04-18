@@ -103,7 +103,7 @@ internal fun StartupGuideBottomBar(
                     .fillMaxWidth()
                     .height(56.dp),
                 enabled = nextEnabled,
-                shape = AppShape.extraLarge
+                shape = AppShape.large
             ) {
                 Text(
                     text = stringResource(R.string.common_next),
@@ -125,7 +125,7 @@ internal fun StartupGuideBottomBar(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = AppShape.extraLarge
+                    shape = AppShape.large
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -140,7 +140,7 @@ internal fun StartupGuideBottomBar(
                         .weight(1f)
                         .height(56.dp),
                     enabled = nextEnabled,
-                    shape = AppShape.extraLarge
+                    shape = AppShape.large
                 ) {
                     val isLastStep = currentStep == StartupGuideStep.CALIBRATION
                     Text(
