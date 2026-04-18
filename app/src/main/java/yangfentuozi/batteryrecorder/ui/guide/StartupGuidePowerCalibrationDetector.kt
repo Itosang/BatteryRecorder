@@ -28,6 +28,13 @@ internal data class StartupPowerCalibrationUiState(
     val isCompleted: Boolean = false
 )
 
+internal fun StartupPowerCalibrationUiState.withObservedStatus(
+    status: BatteryStatus
+): StartupPowerCalibrationUiState {
+    if (lastStatus == status) return this
+    return copy(lastStatus = status)
+}
+
 /**
  * 解析当前自动探测 UI 应展示的阶段。
  *

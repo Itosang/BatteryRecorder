@@ -3,6 +3,10 @@ package yangfentuozi.batteryrecorder.ui.guide
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -56,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -96,6 +101,7 @@ fun StartupGuideScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val dualCellEnabled by settingsViewModel.dualCellEnabled.collectAsState()
@@ -112,6 +118,30 @@ fun StartupGuideScreen(
     }
     var calibrationDetectionState by remember {
         mutableStateOf(calibrationDetector.snapshot())
+    }
+
+    DisposableEffect(appContext) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val rawStatus = intent?.getIntExtra(
+                    BatteryManager.EXTRA_STATUS,
+                    BatteryManager.BATTERY_STATUS_UNKNOWN
+                ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
+                calibrationDetectionState = calibrationDetectionState.withObservedStatus(
+                    BatteryStatus.fromValue(rawStatus)
+                )
+            }
+        }
+        val initialIntent = ContextCompat.registerReceiver(
+            appContext,
+            receiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        receiver.onReceive(appContext, initialIntent)
+        onDispose {
+            appContext.unregisterReceiver(receiver)
+        }
     }
 
     val recordListener = remember(calibrationDetector, settingsViewModel, scope) {
