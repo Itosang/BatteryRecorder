@@ -8,6 +8,9 @@
     <string name="common_cancel">取消</string>
     <string name="common_delete">删除</string>
     <string name="common_save">保存</string>
+    <string name="common_next">下一步</string>
+    <string name="common_back">返回</string>
+    <string name="common_finish">完成</string>
     <string name="common_confirm">确定</string>
     <string name="common_not_selected">未选择</string>
     <string name="common_selected_count">已选 %1$d 个</string>
@@ -178,6 +181,27 @@
     <string name="adb_guide_step_run_command">2. 在终端中执行以下命令</string>
     <string name="adb_guide_copy_command">复制命令</string>
     <string name="adb_guide_copied">已复制到剪贴板</string>
+
+    <string name="startup_guide_intro_subtitle">专注电池记录&amp;预测</string>
+    <string name="startup_guide_feature_start_title">特权服务模式</string>
+    <string name="startup_guide_feature_start_desc">后台特权deamon，无需软件后台</string>
+    <string name="startup_guide_feature_record_title">实时记录与历史分析</string>
+    <string name="startup_guide_feature_record_desc">全面把控您的设备电量情况</string>
+    <string name="startup_guide_feature_calibration_title">精确续航预测</string>
+    <string name="startup_guide_feature_calibration_desc">基于历史记录和加权算法，掌握精确的续航时间预测</string>
+    <string name="startup_guide_open_docs">查看完整文档</string>
+    <string name="startup_guide_start_title">先把服务启动起来</string>
+    <string name="startup_guide_start_subtitle">你可以用 ROOT 直接拉起，也可以复制 ADB 命令到终端执行。页面会持续监听 Binder，服务连上后自动进入下一步。</string>
+    <string name="startup_guide_service_status_title">当前连接状态</string>
+    <string name="startup_guide_service_status_connected">服务已连接，可以进入下一步。</string>
+    <string name="startup_guide_service_status_waiting">等待服务连接。启动成功后这里会自动变成已连接。</string>
+    <string name="startup_guide_calibration_title">调整校准和双电芯</string>
+    <string name="startup_guide_calibration_subtitle">这两个设置会直接影响首页、历史详情和续航预测里的功率与 Wh 显示。</string>
+    <string name="startup_guide_dual_cell_summary">双电芯设备请开启。修改后会立即写入当前设置并下发到运行中的服务。</string>
+    <string name="startup_guide_calibration_current_value">当前校准值: %1$d</string>
+    <string name="startup_guide_calibration_connected_hint">服务已连接，打开后可以直接结合实时功率预览校准结果。</string>
+    <string name="startup_guide_calibration_disconnected_hint">服务当前未连接，仍可先修改设置；下次服务连接后会自动生效。</string>
+    <string name="startup_guide_adjust_calibration">调整电流校准</string>
 
     <string name="docs_intro_title">首次使用请先看文档</string>
     <string name="docs_intro_message">请先阅读使用说明，再继续使用应用。\n文档包含启动方式、校准、排除高负载 App、续航预测、历史记录手势和图表交互说明。</string>

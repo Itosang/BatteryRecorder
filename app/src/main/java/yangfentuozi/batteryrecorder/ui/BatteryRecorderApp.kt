@@ -17,8 +17,8 @@ import androidx.navigation.compose.rememberNavController
 import yangfentuozi.batteryrecorder.BuildConfig
 import yangfentuozi.batteryrecorder.R
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
-import yangfentuozi.batteryrecorder.ui.dialog.home.DocsIntroDialog
 import yangfentuozi.batteryrecorder.ui.dialog.home.UpdateDialog
+import yangfentuozi.batteryrecorder.ui.guide.StartupGuideScreen
 import yangfentuozi.batteryrecorder.ui.navigation.BatteryRecorderNavHost
 import yangfentuozi.batteryrecorder.ui.viewmodel.MainViewModel
 import yangfentuozi.batteryrecorder.ui.viewmodel.SettingsViewModel
@@ -29,7 +29,7 @@ import yangfentuozi.batteryrecorder.utils.UpdateUtils
 private const val TAG = "BatteryRecorderApp"
 
 private const val STARTUP_PROMPT_PREFS = "startup_prompt"
-private const val KEY_DOCS_INTRO_SHOWN = "docs_intro_shown"
+private const val KEY_STARTUP_GUIDE_COMPLETED_V2 = "startup_guide_completed_v2"
 
 @Composable
 fun BatteryRecorderApp(
@@ -41,17 +41,14 @@ fun BatteryRecorderApp(
     val initialized by settingsViewModel.initialized.collectAsState()
     var hasCheckedUpdateOnStartup by rememberSaveable { mutableStateOf(false) }
     var pendingUpdate by remember { mutableStateOf<AppUpdate?>(null) }
-    var showDocsIntro by rememberSaveable { mutableStateOf(false) }
+    var showStartupGuide by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(settingsViewModel, context) {
         settingsViewModel.init(context)
         val startupPrefs = context.getSharedPreferences(STARTUP_PROMPT_PREFS, Context.MODE_PRIVATE)
-        val docsIntroShown = startupPrefs.getBoolean(KEY_DOCS_INTRO_SHOWN, false)
-        if (!docsIntroShown) {
-            LoggerX.v(TAG, "首次进入，展示使用文档引导弹窗")
-            showDocsIntro = true
-        }
-
+        val startupGuideCompleted = startupPrefs.getBoolean(KEY_STARTUP_GUIDE_COMPLETED_V2, false)
+        showStartupGuide = !startupGuideCompleted
+        LoggerX.v(TAG, "首次启动引导状态: completed=$startupGuideCompleted")
     }
 
     LaunchedEffect(
@@ -92,31 +89,35 @@ fun BatteryRecorderApp(
         pendingUpdate = update
     }
 
-    val navController = rememberNavController()
-    BatteryRecorderNavHost(
-        navController = navController,
-        mainViewModel = mainViewModel,
-        settingsViewModel = settingsViewModel
-    )
+    val shouldShowStartupGuide = showStartupGuide
+    if (shouldShowStartupGuide == null) return
 
-    pendingUpdate?.let { update ->
-        if (showDocsIntro) return@let
-        UpdateDialog(
-            update = update,
-            onDismiss = { pendingUpdate = null }
+    if (shouldShowStartupGuide) {
+        StartupGuideScreen(
+            settingsViewModel = settingsViewModel,
+            onGuideCompleted = {
+                context.getSharedPreferences(STARTUP_PROMPT_PREFS, Context.MODE_PRIVATE)
+                    .edit {
+                        putBoolean(KEY_STARTUP_GUIDE_COMPLETED_V2, true)
+                    }
+                LoggerX.i(TAG, "[引导] 首次启动引导已完成")
+                showStartupGuide = false
+            }
+        )
+    } else {
+        val navController = rememberNavController()
+        BatteryRecorderNavHost(
+            navController = navController,
+            mainViewModel = mainViewModel,
+            settingsViewModel = settingsViewModel
         )
     }
 
-    if (showDocsIntro) {
-        DocsIntroDialog(
-            onOpenDocs = {
-                context.getSharedPreferences(STARTUP_PROMPT_PREFS, Context.MODE_PRIVATE)
-                    .edit {
-                        putBoolean(KEY_DOCS_INTRO_SHOWN, true)
-                    }
-                LoggerX.v(TAG, "已打开使用文档，关闭首次引导弹窗")
-                showDocsIntro = false
-            }
+    pendingUpdate?.let { update ->
+        if (shouldShowStartupGuide == true) return@let
+        UpdateDialog(
+            update = update,
+            onDismiss = { pendingUpdate = null }
         )
     }
 }

@@ -8,6 +8,9 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_delete">Delete</string>
     <string name="common_save">Save</string>
+    <string name="common_next">Next</string>
+    <string name="common_back">Back</string>
+    <string name="common_finish">Finish</string>
     <string name="common_confirm">Confirm</string>
     <string name="common_not_selected">Not selected</string>
     <string name="common_selected_count">Selected %1$d</string>
@@ -178,6 +181,27 @@
     <string name="adb_guide_step_run_command">2. Run the following command in a terminal</string>
     <string name="adb_guide_copy_command">Copy command</string>
     <string name="adb_guide_copied">Copied to clipboard</string>
+
+    <string name="startup_guide_intro_subtitle">Focused on battery recording &amp; prediction</string>
+    <string name="startup_guide_feature_start_title">ROOT / ADB startup</string>
+    <string name="startup_guide_feature_start_desc">Start the background sampler directly with the method that matches your device.</string>
+    <string name="startup_guide_feature_record_title">Live recording and history analysis</string>
+    <string name="startup_guide_feature_record_desc">Use Home for the current record and History for charts, app stats, and prediction.</string>
+    <string name="startup_guide_feature_calibration_title">Dual-cell and current calibration</string>
+    <string name="startup_guide_feature_calibration_desc">Adjust them right after startup so power and Wh values are not distorted.</string>
+    <string name="startup_guide_open_docs">Open full documentation</string>
+    <string name="startup_guide_start_title">Start the service first</string>
+    <string name="startup_guide_start_subtitle">Use ROOT to launch directly, or copy an ADB command into a terminal. This page keeps listening for Binder and moves on automatically after the service connects.</string>
+    <string name="startup_guide_service_status_title">Current connection state</string>
+    <string name="startup_guide_service_status_connected">Service connected. You can continue to the next step.</string>
+    <string name="startup_guide_service_status_waiting">Waiting for the service to connect. This changes automatically after startup succeeds.</string>
+    <string name="startup_guide_calibration_title">Adjust calibration and dual-cell mode</string>
+    <string name="startup_guide_calibration_subtitle">These two settings directly affect power and Wh shown on Home, record details, and prediction.</string>
+    <string name="startup_guide_dual_cell_summary">Enable this for dual-cell devices. Changes are written immediately and pushed to the running service.</string>
+    <string name="startup_guide_calibration_current_value">Current calibration value: %1$d</string>
+    <string name="startup_guide_calibration_connected_hint">The service is connected. Open calibration to verify the result with live power preview.</string>
+    <string name="startup_guide_calibration_disconnected_hint">The service is not connected right now. You can still update the setting and it will apply after the next connection.</string>
+    <string name="startup_guide_adjust_calibration">Adjust current calibration</string>
 
     <string name="docs_intro_title">Read the docs before first use</string>
     <string name="docs_intro_message">Please read the user guide before continuing.\nThe docs cover startup methods, calibration, excluding high-load apps, prediction, history gestures, and chart interactions.</string>
