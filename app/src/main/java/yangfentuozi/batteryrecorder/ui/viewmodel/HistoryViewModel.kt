@@ -920,7 +920,7 @@ class HistoryViewModel : ViewModel() {
             calibrationValue = calibrationValue
         )
         val screenOffConsumedWh = computeEnergyWh(
-            rawPower = stats.screenOffConfidentEnergyRawMs,
+            rawPower = stats.screenOffDisplayEnergyRawMs,
             durationMs = 1L,
             dualCellEnabled = dualCellEnabled,
             calibrationValue = calibrationValue
