@@ -280,8 +280,8 @@ class HistoryViewModel : ViewModel() {
                 )
                 rawRecordDetail = loadedState.detail
                 rawRecordDetailPowerStats = loadedState.powerStats
-                applyRecordDetailDisplayConfig()
                 recordLineRecords = loadedState.lineRecords
+                applyRecordDetailDisplayConfig()
                 recordPoints = points
                 _recordDetailReferenceVoltageV.value = loadedState.lineRecords
                     .lastOrNull { lineRecord -> lineRecord.voltage > 0L }
@@ -842,6 +842,7 @@ class HistoryViewModel : ViewModel() {
      */
     private fun applyRecordDetailDisplayConfig() {
         val detail = rawRecordDetail
+        val appSwitchCount = buildRecordDetailAppSwitchCount(recordLineRecords)
         _recordDetail.value = detail?.let {
             mapHistoryRecordForDisplay(it, detailDischargeDisplayPositive)
         }
@@ -850,7 +851,8 @@ class HistoryViewModel : ViewModel() {
                 mapRecordDetailPowerUiState(
                     detailType = detailType,
                     stats = stats,
-                    dischargeDisplayPositive = detailDischargeDisplayPositive
+                    dischargeDisplayPositive = detailDischargeDisplayPositive,
+                    appSwitchCount = appSwitchCount
                 )
             }
         }
@@ -867,7 +869,8 @@ class HistoryViewModel : ViewModel() {
     private fun mapRecordDetailPowerUiState(
         detailType: BatteryStatus,
         stats: RecordDetailPowerStats,
-        dischargeDisplayPositive: Boolean
+        dischargeDisplayPositive: Boolean,
+        appSwitchCount: Int
     ): RecordDetailPowerUiState {
         val multiplier = if (
             detailType == BatteryStatus.Discharging &&
@@ -902,7 +905,8 @@ class HistoryViewModel : ViewModel() {
             totalTransferredWh = abs(totalTransferredWh),
             screenOnConsumedWh = abs(screenOnConsumedWh),
             screenOffConsumedWh = abs(screenOffConsumedWh),
-            capacityChange = stats.capacityChange
+            capacityChange = stats.capacityChange,
+            appSwitchCount = appSwitchCount
         )
     }
 
@@ -1035,6 +1039,30 @@ class HistoryViewModel : ViewModel() {
             records = lineRecords
         )
     }
+
+    private fun buildRecordDetailAppSwitchCount(
+        lineRecords: List<LineRecord>
+    ): Int {
+        if (lineRecords.size < 2) return 0
+        var appSwitchCount = 0
+        var previousRecord: LineRecord? = null
+        lineRecords.forEach { currentRecord ->
+            val previous = previousRecord
+            previousRecord = currentRecord
+            if (previous == null) return@forEach
+            if (
+                previous.packageName.isMeaningfulPackageName() &&
+                currentRecord.packageName.isMeaningfulPackageName() &&
+                previous.packageName != currentRecord.packageName
+            ) {
+                appSwitchCount++
+            }
+        }
+        return appSwitchCount
+    }
+
+    private fun String?.isMeaningfulPackageName(): Boolean =
+        !this.isNullOrBlank()
 
     private fun resolveAppLabel(
         packageManager: android.content.pm.PackageManager,

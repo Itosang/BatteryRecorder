@@ -164,6 +164,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   - 应用维度详情统计
   - 充电记录在稳定阶段检测到负功率后切换为双向功率轴
 - 充电记录额外展示电量变化 `% + Wh`
+- 放电记录摘要区当前还展示“应用切换次数”，位置在“记录ID”上方；该值来自 `RecordDetailPowerUiState.appSwitchCount`
 
 ### 应用预测详情链路
 
@@ -198,6 +199,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - `RecordAppStatsComputer` 负责单条放电记录内的应用维度统计
 - `RecordDetailPowerStatsComputer` 负责记录详情页平均功耗统计
 - `RecordDetailPowerStatsComputer` 当前负责基于真实采样区间计算原始平均功率与亮屏/息屏时长；记录详情页统一展示 `Wh`
+- 放电记录详情的“应用切换次数”当前由 `HistoryViewModel` 基于详情页 `LineRecord` 序列临时计算；统计口径是相邻有效采样点前后台包名都非空且发生变化时计 1 次
 - 记录详情缓存命中时，必须校验缓存内 `sourceLastModified` 与源文件 `lastModified()` 一致
 
 ### 图标缓存

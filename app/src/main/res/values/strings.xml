@@ -246,6 +246,8 @@
     <string name="history_info_average_power">Avg Power</string>
     <string name="history_info_battery_info">Battery info</string>
     <string name="history_info_capacity_change">Battery change</string>
+    <string name="history_info_app_switch_count">App switches</string>
+    <string name="history_info_app_switch_count_value">%1$d times</string>
     <string name="history_info_screen_on">Screen on</string>
     <string name="history_info_screen_off">Screen off</string>
     <string name="history_chart_section_title">Power / Battery curve</string>

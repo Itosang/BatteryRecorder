@@ -41,5 +41,6 @@ data class RecordDetailPowerUiState(
     val totalTransferredWh: Double,
     val screenOnConsumedWh: Double,
     val screenOffConsumedWh: Double,
-    val capacityChange: CapacityChange
+    val capacityChange: CapacityChange,
+    val appSwitchCount: Int
 )

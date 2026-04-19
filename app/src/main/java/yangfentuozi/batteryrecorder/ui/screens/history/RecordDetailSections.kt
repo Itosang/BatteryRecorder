@@ -228,6 +228,7 @@ private fun DischargingRecordSummaryContent(
     locale: Locale
 ) {
     val stats = detail.stats
+    // 用let是为了获取没有null可能的数据
     powerUiState?.let {
         RecordDetailPowerSection(
             powerUiState = it,
@@ -255,6 +256,15 @@ private fun DischargingRecordSummaryContent(
             locale = locale
         )
     )
+    powerUiState?.let {
+        InfoRow(
+            stringResource(R.string.history_info_app_switch_count),
+            stringResource(
+                R.string.history_info_app_switch_count_value,
+                it.appSwitchCount
+            )
+        )
+    }
 }
 
 /**

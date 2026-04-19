@@ -246,6 +246,8 @@
     <string name="history_info_average_power">平均功率</string>
     <string name="history_info_battery_info">电池信息</string>
     <string name="history_info_capacity_change">电量变化</string>
+    <string name="history_info_app_switch_count">应用切换</string>
+    <string name="history_info_app_switch_count_value">%1$d 次</string>
     <string name="history_info_screen_on">亮屏</string>
     <string name="history_info_screen_off">息屏</string>
     <string name="history_chart_section_title">功耗/电量曲线</string>
