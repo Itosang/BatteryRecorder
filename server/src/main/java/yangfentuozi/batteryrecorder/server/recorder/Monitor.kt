@@ -5,6 +5,7 @@ import android.app.IActivityTaskManager
 import android.app.ITaskStackListener
 import android.app.TaskInfo
 import android.app.TaskStackListener
+import android.graphics.Rect
 import android.hardware.display.IDisplayManager
 import android.hardware.display.IDisplayManagerCallback
 import android.os.Handler
@@ -46,7 +47,7 @@ class Monitor(
     private val taskStackListener: ITaskStackListener = object : TaskStackListener() {
         @Keep
         override fun onTaskMovedToFront(taskInfo: RunningTaskInfo) {
-            onFocusedAppChanged(taskInfo)
+            onFocusedAppChanged(taskInfo, "task-moved")
         }
     }
 
@@ -59,6 +60,8 @@ class Monitor(
 
     @Volatile
     private var currForegroundApp: String? = null
+    @Volatile
+    private var lastSampleLoggedForegroundApp: String? = null
 
     @Volatile
     private var isInteractive = true
@@ -146,6 +149,14 @@ class Monitor(
                     val power = sample.voltage * sample.current
                     val status = sample.status
                     val temp = sample.temp
+                    val foregroundApp = currForegroundApp
+                    if (foregroundApp != lastSampleLoggedForegroundApp) {
+                        LoggerX.v(
+                            tag,
+                            "foreground:sample-foreground-changed timestamp=$timestamp pkg=$foregroundApp"
+                        )
+                        lastSampleLoggedForegroundApp = foregroundApp
+                    }
                     if (alwaysPollingScreenStatusEnabled) {
                         val oldIsInteractive = isInteractive
                         val latestIsInteractive = iPowerManager.isInteractive
@@ -158,7 +169,7 @@ class Monitor(
                     val record = LineRecord(
                         timestamp,
                         power,
-                        currForegroundApp,
+                        foregroundApp,
                         sample.capacity,
                         if (isInteractive) 1 else 0,
                         sample.status,
@@ -252,7 +263,7 @@ class Monitor(
         }
 
         try {
-            onFocusedAppChanged(iActivityTaskManager.getFocusedRootTaskInfo())
+            onFocusedAppChanged(iActivityTaskManager.getFocusedRootTaskInfo(), "init")
         } catch (e: RemoteException) {
             throw RuntimeException("start: 获取当前焦点任务信息失败", e)
         }
@@ -342,11 +353,134 @@ class Monitor(
         callbacks.unregister(callback)
     }
 
-    private fun onFocusedAppChanged(taskInfo: TaskInfo) {
-        val componentName = taskInfo.topActivity ?: return
+    /**
+     * 记录当前聚焦任务对应的前台应用诊断日志，并在满足记录条件时更新缓存包名。
+     *
+     * @param taskInfo 当前收到的任务栈信息，用于提取任务 ID 与顶部 Activity。
+     * @param source 本次前台变更的事件来源，便于区分初始化与任务切换场景。
+     * @return 无；当顶部 Activity 为空或命中小窗规则时仅输出日志，不更新当前前台应用缓存。
+     */
+    private fun onFocusedAppChanged(taskInfo: TaskInfo, source: String) {
+        val oldForegroundApp = currForegroundApp
+        val componentName = taskInfo.topActivity
+        val bounds = readTaskWindowConfigurationRectProperty(
+            taskInfo,
+            methodName = "getBounds",
+            fieldName = "bounds"
+        )
+        val maxBounds = readTaskWindowConfigurationRectProperty(
+            taskInfo,
+            methodName = "getMaxBounds",
+            fieldName = "maxBounds"
+        )
+        val boundsText = formatRect(bounds)
+        val maxBoundsText = formatRect(maxBounds)
+        if (componentName == null) {
+            LoggerX.v(
+                tag,
+                "foreground:top-null source=$source taskId=${taskInfo.taskId} bounds=$boundsText maxBounds=$maxBoundsText old=$oldForegroundApp"
+            )
+            return
+        }
         val packageName = componentName.packageName
-
+        val className = componentName.className
+        if (isSmallWindow(bounds, maxBounds)) {
+            LoggerX.i(
+                tag,
+                "foreground:small-window-ignored source=$source taskId=${taskInfo.taskId} pkg=$packageName cls=$className bounds=$boundsText maxBounds=$maxBoundsText old=$oldForegroundApp new=$packageName"
+            )
+            return
+        }
+        LoggerX.v(
+            tag,
+            "foreground:$source taskId=${taskInfo.taskId} pkg=$packageName cls=$className bounds=$boundsText maxBounds=$maxBoundsText old=$oldForegroundApp new=$packageName"
+        )
         currForegroundApp = packageName
+    }
+
+    /**
+     * 当前只把“窗口左上角不贴边，且右下角也没有铺满最大边界”的任务视为小窗。
+     *
+     * 这个规则是为当前 ROM 的小窗形态收敛出来的，不额外兼顾分屏或其他多窗口模式。
+     *
+     * @param bounds 任务当前窗口边界。
+     * @param maxBounds 任务可达到的最大窗口边界。
+     * @return 命中小窗规则返回 `true`，否则返回 `false`。
+     */
+    private fun isSmallWindow(bounds: Rect?, maxBounds: Rect?): Boolean {
+        if (bounds == null || maxBounds == null) return false
+        return bounds.left != 0 &&
+            bounds.top != 0 &&
+            bounds.right != maxBounds.right &&
+            bounds.bottom != maxBounds.bottom
+    }
+
+    /**
+     * 将窗口边界格式化为紧凑坐标串，便于日志对比与脚本处理。
+     *
+     * @param rect 要格式化的窗口边界。
+     * @return 成功时返回 `[left,top,right,bottom]`，为空时返回 `unavailable`。
+     */
+    private fun formatRect(rect: Rect?): String {
+        if (rect == null) return "unavailable"
+        return "[${rect.left},${rect.top},${rect.right},${rect.bottom}]"
+    }
+
+    /**
+     * 通过 `TaskInfo -> Configuration -> WindowConfiguration` 反射读取窗口配置对象上的 `Rect` 属性。
+     *
+     * @param taskInfo 当前任务栈信息。
+     * @param methodName 优先尝试调用的 WindowConfiguration getter 方法名。
+     * @param fieldName getter 不可用时尝试读取的 WindowConfiguration 字段名。
+     * @return 成功时返回窗口边界；成员不存在或类型不符返回 `null`。
+     */
+    private fun readTaskWindowConfigurationRectProperty(
+        taskInfo: TaskInfo,
+        methodName: String,
+        fieldName: String
+    ): Rect? {
+        val configuration = readProperty(taskInfo, "getConfiguration", "configuration")
+            ?: return null
+        val windowConfiguration =
+            readProperty(configuration, "getWindowConfiguration", "windowConfiguration")
+                ?: return null
+        return readProperty(windowConfiguration, methodName, fieldName) as? Rect
+    }
+
+    /**
+     * 通过反射读取对象属性，优先 getter，其次字段；同时兼容 public 与 declared 成员。
+     *
+     * @param target 要读取属性的对象。
+     * @param methodName 优先尝试调用的 getter 方法名。
+     * @param fieldName getter 不可用时尝试读取的字段名。
+     * @return 读取成功返回属性值，否则返回 `null`。
+     */
+    private fun readProperty(target: Any, methodName: String, fieldName: String): Any? {
+        try {
+            return target.javaClass.getMethod(methodName).invoke(target)
+        } catch (_: NoSuchMethodException) {
+        }
+
+        try {
+            val method = target.javaClass.getDeclaredMethod(methodName)
+            method.isAccessible = true
+            return method.invoke(target)
+        } catch (_: NoSuchMethodException) {
+        }
+
+        try {
+            return target.javaClass.getField(fieldName).get(target)
+        } catch (_: NoSuchFieldException) {
+        }
+
+        try {
+            val field = target.javaClass.getDeclaredField(fieldName)
+            field.isAccessible = true
+            return field.get(target)
+        } catch (_: NoSuchFieldException) {
+        }
+
+        return null
     }
 
     // 耗时操作

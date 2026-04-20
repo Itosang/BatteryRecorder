@@ -101,7 +101,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - `Sampler` 是采样抽象
 - `SysfsSampler` 负责加载 JNI 动态库并读取 `/sys/class/power_supply/battery/`
 - `DumpsysSampler` 是 sysfs/JNI 不可用时的回退实现，JNI 侧同时依赖 `dump_parser.cpp`
-- `Monitor` 按配置间隔循环采样，并监听前台应用与屏幕状态
+- `Monitor` 按配置间隔循环采样，并监听前台应用与屏幕状态；前台应用当前取自聚焦任务 `topActivity.packageName`，但会忽略“`bounds` 左上角都非 0 且右下角都未铺满 `maxBounds`”的小窗切换，避免把悬浮小窗直接记入采样记录
 - `PowerRecordWriter` 分充电/放电两路写入 CSV，支持批量缓冲、延迟 flush、分段落盘，以及基于 `WriterStatusData` 的跨进程续接
 - 当前记录格式：
   `timestamp,power,packageName,capacity,isDisplayOn,temp,voltage,current`
