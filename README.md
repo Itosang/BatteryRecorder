@@ -38,7 +38,7 @@
 - [x] 电池温度信息 `/sys/class/power_supply/battery/temp` 记录
 - ~~[ ] 亮屏判断改为以屏幕亮度为准~~
 - [x] 日志导出
-- [ ] 优化 needDeleteSegment 判断
+- [x] 优化 needDeleteSegment 判断
 
 ### ext
 
