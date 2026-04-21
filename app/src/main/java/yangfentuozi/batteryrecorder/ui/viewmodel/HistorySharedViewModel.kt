@@ -431,15 +431,18 @@ class HistorySharedViewModel : ViewModel() {
             )
             return
         }
-        val token = listLoadToken + 1
-        listLoadToken = token
-        resetListLoadingState(clearDisplayedRecords = false)
         viewModelScope.launch {
+            var reloadToken: Long? = null
             _isImportExporting.value = true
             try {
                 val importResult = withContext(Dispatchers.IO) {
                     HistoryRepository.importRecordsZip(context, type, sourceUri)
                 }
+                _isLoading.value = true
+                val token = listLoadToken + 1
+                reloadToken = token
+                listLoadToken = token
+                resetListLoadingState(clearDisplayedRecords = false)
                 val result = LoadHistoryListUseCase.reload(
                     context = context,
                     type = type,
@@ -471,6 +474,9 @@ class HistorySharedViewModel : ViewModel() {
                 )
                 _userMessage.value = appString(R.string.toast_import_failed)
             } finally {
+                if (reloadToken != null && reloadToken == listLoadToken) {
+                    _isLoading.value = false
+                }
                 _isImportExporting.value = false
             }
         }
