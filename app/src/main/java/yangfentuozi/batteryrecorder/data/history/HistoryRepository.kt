@@ -174,7 +174,8 @@ object HistoryRepository {
                 needCaching = needCaching
             )
         }.onFailure { error ->
-            LoggerX.e(TAG, "[历史] 加载记录统计失败: ${file.absolutePath}", tr = error)
+            val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
+            LoggerX.e(TAG, "[历史] 加载记录统计失败: file=${file.absolutePath} reason=$detail")
         }.getOrNull() ?: return null
 
         return buildHistoryRecord(file, stats)
@@ -273,7 +274,8 @@ object HistoryRepository {
                 )
                 return CurrentRecordLoadResult.InsufficientSamples(recordsFile)
             }
-            LoggerX.e(TAG, "[历史] 加载当前记录失败: ${sourceFile.absolutePath}", tr = error)
+            val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
+            LoggerX.e(TAG, "[历史] 加载当前记录失败: file=${sourceFile.absolutePath} reason=$detail")
             return CurrentRecordLoadResult.Failed(recordsFile, error)
         }
         return CurrentRecordLoadResult.Success(buildHistoryRecord(sourceFile, stats))

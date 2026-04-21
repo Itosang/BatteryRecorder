@@ -230,7 +230,8 @@ class HistorySharedViewModel : ViewModel() {
                 throw e
             } catch (e: Exception) {
                 if (detailToken != detailLoadToken) return@launch
-                LoggerX.e(TAG, "[记录详情] 加载失败: ${recordsFile.name}", tr = e)
+                val detail = e.message?.takeIf { it.isNotBlank() } ?: e::class.java.simpleName
+                LoggerX.e(TAG, "[记录详情] 加载失败: file=${recordsFile.name} reason=$detail")
                 _userMessage.value = appString(R.string.toast_load_record_detail_failed)
                 clearRecordDetailState()
                 _isRecordChartLoading.value = false
