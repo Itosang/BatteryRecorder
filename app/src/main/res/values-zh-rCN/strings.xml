@@ -243,7 +243,8 @@
     <string name="history_export_record">导出记录</string>
     <string name="history_save_long_screenshot">保存长截图</string>
     <string name="capture_header_title">BatteryRecorder\n专业电池记录工具</string>
-    <string name="capture_header_device">来自设备：%1$s</string>
+    <string name="capture_header_device">设备：%1$s</string>
+    <string name="capture_header_version">版本号：%1$s</string>
     <string name="history_view_chart_guide">查看图表说明</string>
     <string name="history_record_type_charging">充电记录</string>
     <string name="history_record_type_discharging">放电记录</string>

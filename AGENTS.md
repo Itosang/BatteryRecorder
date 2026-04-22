@@ -17,7 +17,7 @@ BatteryRecorder 是一个 Android 电池功率记录 App。
 - 采样优先走 JNI sysfs 读取；不可用时回退到 dumpsys/batteryproperties 方案
 - root 模式下主 `Server` 会额外派生独立的 `NotificationServer` 子进程，并通过本地 socket 转发实时通知
 - App 更新时，root 模式 `Server` 会监听 APK sourceDir 变化并自动拉起新的 `libstarter.so`；新旧 `Server` 会尝试交接当前记录写入状态以续接记录
-- 历史数据支持图表查看、应用维度统计、场景维度统计、记录详情统计与续航预测
+- 历史数据支持图表查看、应用维度统计、场景维度统计、记录详情统计、记录详情长截图导出与续航预测
 - 应用启动阶段还负责首次启动引导、文档引导与更新检查；启动引导与文档引导是两条独立链路，前者由 `StartupGuideScreen` 承载，后者应保持独立弹窗形态；更新检查当前支持“稳定版 / 预发布”两种通道，更新弹窗支持浏览器打开或走系统 `DownloadManager` 下载安装；首页同时提供 Root/ADB 启动入口与日志导出，历史列表页顶部菜单负责记录清理以及历史导入/导出
 
 ## 构建约束
@@ -153,12 +153,13 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
 - `HistorySharedViewModel` 在 `BatteryRecorderNavHost` 中创建单个共享实例，供 `HistoryListScreen` 与 `RecordDetailScreen` 共用
 - `HistorySharedViewModel` 当前统一产出 `recordDetail`、`recordChartUiState`、`recordAppDetailEntries` 与 `recordDetailSummaryUiState`，分别驱动详情页基础信息、图表、应用明细与功耗摘要
 - 历史列表主链路当前已下沉到 `usecase/history/LoadHistoryListUseCase.kt`；`HistorySharedViewModel` 主要负责列表令牌隔离、瞬时 UI 状态与结果回写，不再直接维护旧版散落的分页实现
-- `RecordDetailScreen` 当前主要负责页面编排、全屏图表切换、详情页本地图表偏好持久化，以及导出/删除/说明弹窗入口
+- `RecordDetailScreen` 当前主要负责页面编排、全屏图表切换、详情页本地图表偏好持久化，以及导出/保存长截图/说明入口
 - 详情页摘要区、图表区、应用明细区等分区组件统一落在 `ui/screens/history/RecordDetailSections.kt`
 - 记录详情页共享 UI 模型统一定义在 `ui/model/RecordDetailUiModels.kt`
 - `RecordDetailPowerStatsComputer` 负责记录详情页功耗统计
 - 记录详情原始加载链路当前已下沉到 `usecase/history/LoadRecordDetailUseCase.kt`；文件读取、`LineRecord` 解析、功耗统计、应用明细、应用切换次数与参考电压都在该 usecase 内完成
 - 记录详情图表派生链路当前已下沉到 `usecase/history/BuildRecordDetailChartUiStateUseCase.kt`；展示点映射、息屏过滤、趋势分桶与 viewport 计算都统一收敛在该 usecase
+- 记录详情页长截图的通用滚动捕获与图片保存当前收敛在 `utils/CaptureUtil.kt`；记录详情专属的截图头部绘制与文件名规则收敛在 `utils/RecordDetailCaptureUtil.kt`
 - 详情页图表偏好通过独立的 `record_detail_chart` SharedPreferences 持久化，不进入业务配置
 - 详情页同时支持：
   - 原始/趋势/隐藏三种功率曲线模式
@@ -166,7 +167,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   - 选中点显示绝对时间，以及精确到秒的相对时间
   - 图表说明弹窗
   - 单记录导出
-  - 单记录删除
+  - 详情内容长截图保存；导出图顶部会追加应用标识与 `Build.DEVICE`
   - 应用维度详情统计
   - 充电记录在稳定阶段检测到负功率后切换为双向功率轴
 - 充电记录额外展示电量变化 `% + Wh`
@@ -291,6 +292,8 @@ docs/
 | 记录详情页                     | `app/.../ui/screens/history/RecordDetailScreen.kt`                                                               |
 | 记录详情分区组件                  | `app/.../ui/screens/history/RecordDetailSections.kt`                                                             |
 | 记录详情 UI 模型                | `app/.../ui/model/RecordDetailUiModels.kt`                                                                       |
+| 记录详情长截图通用工具               | `app/.../utils/CaptureUtil.kt`                                                                                   |
+| 记录详情长截图专用工具               | `app/.../utils/RecordDetailCaptureUtil.kt`                                                                       |
 | 历史列表加载 usecase              | `app/.../usecase/history/LoadHistoryListUseCase.kt`                                                              |
 | 历史记录清理 usecase              | `app/.../usecase/history/CleanupHistoryRecordsUseCase.kt`                                                        |
 | 记录详情加载 usecase              | `app/.../usecase/history/LoadRecordDetailUseCase.kt`                                                             |

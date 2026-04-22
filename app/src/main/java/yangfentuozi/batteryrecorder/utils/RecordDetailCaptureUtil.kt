@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
@@ -34,6 +36,7 @@ fun appendRecordDetailScreenshotHeader(
     val horizontalPadding = density.dpToPx(20f)
     val topPadding = density.dpToPx(20f)
     val titleSubtitleSpacing = density.dpToPx(8f)
+    val subtitleLineSpacing = density.dpToPx(4f)
     val bottomPadding = density.dpToPx(10f)
     val textWidth = (sourceBitmap.width - horizontalPadding * 2).coerceAtLeast(1)
 
@@ -52,7 +55,12 @@ fun appendRecordDetailScreenshotHeader(
         width = textWidth
     )
     val subtitleLayout = buildStaticLayout(
-        text = context.getString(R.string.capture_header_device, Build.DEVICE),
+        text = context.getString(R.string.capture_header_device, Build.MODEL),
+        textPaint = subtitlePaint,
+        width = textWidth
+    )
+    val versionLayout = buildStaticLayout(
+        text = context.getString(R.string.capture_header_version, readVersionName(context)),
         textPaint = subtitlePaint,
         width = textWidth
     )
@@ -60,6 +68,8 @@ fun appendRecordDetailScreenshotHeader(
         titleLayout.height +
         titleSubtitleSpacing +
         subtitleLayout.height +
+        subtitleLineSpacing +
+        versionLayout.height +
         bottomPadding
     val resultBitmap = createBitmap(sourceBitmap.width, sourceBitmap.height + headerHeight)
     val canvas = AndroidCanvas(resultBitmap)
@@ -68,6 +78,8 @@ fun appendRecordDetailScreenshotHeader(
         titleLayout.draw(this)
         translate(0f, (titleLayout.height + titleSubtitleSpacing).toFloat())
         subtitleLayout.draw(this)
+        translate(0f, (subtitleLayout.height + subtitleLineSpacing).toFloat())
+        versionLayout.draw(this)
     }
     canvas.drawBitmap(sourceBitmap, 0f, headerHeight.toFloat(), null)
     return resultBitmap
@@ -122,4 +134,23 @@ private fun android.util.DisplayMetrics.dpToPx(value: Float): Int {
  */
 private fun android.util.DisplayMetrics.spToPx(value: Float): Float {
     return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, this)
+}
+
+/**
+ * 读取当前应用的版本号文本。
+ *
+ * @param context 应用上下文。
+ * @return 当前安装包的 `versionName`。
+ */
+private fun readVersionName(context: Context): String {
+    val packageInfo = if (SDK_INT >= VERSION_CODES.TIRAMISU) {
+        context.packageManager.getPackageInfo(
+            context.packageName,
+            android.content.pm.PackageManager.PackageInfoFlags.of(0)
+        )
+    } else {
+        @Suppress("DEPRECATION")
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    }
+    return requireNotNull(packageInfo.versionName) { "versionName 为空" }
 }

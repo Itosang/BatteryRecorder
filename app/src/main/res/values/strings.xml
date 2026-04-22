@@ -243,7 +243,8 @@
     <string name="history_export_record">Export record</string>
     <string name="history_save_long_screenshot">Save long screenshot</string>
     <string name="capture_header_title">BatteryRecorder\nProfessional battery recording tool</string>
-    <string name="capture_header_device">From device: %1$s</string>
+    <string name="capture_header_device">Device: %1$s</string>
+    <string name="capture_header_version">Version: %1$s</string>
     <string name="history_view_chart_guide">View chart guide</string>
     <string name="history_record_type_charging">Charging record</string>
     <string name="history_record_type_discharging">Discharging record</string>
