@@ -81,6 +81,7 @@ object RecordDetailPowerStatsComputer {
         var screenOffConfidentDurationMs = 0L
         var screenOffCapacityDropPercent = 0
         val screenOffShortIntervalPowers = mutableListOf<WeightedPowerSample>()
+        val screenOffLongIntervals = mutableListOf<LongIntervalEnergySample>()
 
         var previous: LineRecord? = null
         records.forEach { current ->
@@ -120,6 +121,11 @@ object RecordDetailPowerStatsComputer {
                     powerMagnitudeRaw = abs(energyRawMs / durationMs.toDouble()),
                     durationMs = durationMs
                 )
+            } else {
+                screenOffLongIntervals += LongIntervalEnergySample(
+                    signedEnergyRawMs = energyRawMs,
+                    durationMs = durationMs
+                )
             }
             screenOffCapacityDropPercent += capacityDelta
         }
@@ -131,7 +137,8 @@ object RecordDetailPowerStatsComputer {
             screenOffEnergyRawMs = screenOffEnergyRawMs,
             screenOffConfidentDurationMs = screenOffConfidentDurationMs,
             screenOffConfidentEnergyRawMs = screenOffConfidentEnergyRawMs,
-            screenOffShortIntervalPowers = screenOffShortIntervalPowers
+            screenOffShortIntervalPowers = screenOffShortIntervalPowers,
+            screenOffLongIntervals = screenOffLongIntervals
         )
         val screenOnDisplayEnergyRawMs = screenOnConfidentEnergyRawMs
         val totalDisplayEnergyRawMs = screenOnDisplayEnergyRawMs + screenOffWhDisplayEnergyRawMs
@@ -175,14 +182,19 @@ object RecordDetailPowerStatsComputer {
         val durationMs: Long
     )
 
+    private data class LongIntervalEnergySample(
+        val signedEnergyRawMs: Double,
+        val durationMs: Long
+    )
+
     /**
      * 计算息屏 Wh 展示使用的原始能量。
      *
      * 设计依据：
      * 纯 confident 积分会系统性低估长间隔记录，而旧版整段补算又会系统性高估。
-     * 这里对长间隔只做覆盖率缩放后的弱外推，且基线分位会随 confident 质量
+     * 这里对每个长间隔按自身方向做覆盖率缩放后的弱外推，且基线分位会随 confident 质量
      * 在 `P30~P50` 之间自适应变化。覆盖率越低，允许使用的基线分位越保守：
-     * `confidentEnergy + baselinePower * longGapDuration * confidentCoverage`。
+     * `confidentEnergy + Σ(intervalDirection * baselinePower * intervalDuration * confidentCoverage)`。
      *
      * @param screenOffDurationMs 当前记录的总息屏时长。
      * @param screenOffEnergyRawMs 当前记录的总息屏积分能量，作为无 confident 区间时的回退值。
@@ -196,13 +208,13 @@ object RecordDetailPowerStatsComputer {
         screenOffEnergyRawMs: Double,
         screenOffConfidentDurationMs: Long,
         screenOffConfidentEnergyRawMs: Double,
-        screenOffShortIntervalPowers: List<WeightedPowerSample>
+        screenOffShortIntervalPowers: List<WeightedPowerSample>,
+        screenOffLongIntervals: List<LongIntervalEnergySample>
     ): Double {
         if (screenOffDurationMs <= 0L) return 0.0
         if (screenOffConfidentDurationMs <= 0L) return screenOffEnergyRawMs
 
-        val longGapDurationMs = screenOffDurationMs - screenOffConfidentDurationMs
-        if (longGapDurationMs <= 0L) return screenOffConfidentEnergyRawMs
+        if (screenOffLongIntervals.isEmpty()) return screenOffConfidentEnergyRawMs
 
         val confidenceScore = computeScreenOffConfidenceScore(
             screenOffConfidentDurationMs = screenOffConfidentDurationMs,
@@ -222,11 +234,13 @@ object RecordDetailPowerStatsComputer {
 
         val confidentCoverage =
             screenOffConfidentDurationMs.toDouble() / screenOffDurationMs.toDouble()
-        val extrapolatedLongGapEnergyRawMs =
-            observedEnergyDirection(screenOffConfidentEnergyRawMs, screenOffEnergyRawMs) *
-                baselinePowerRaw *
-                longGapDurationMs.toDouble() *
-                confidentCoverage
+        var extrapolatedLongGapEnergyRawMs = 0.0
+        screenOffLongIntervals.forEach { interval ->
+            extrapolatedLongGapEnergyRawMs += observedEnergyDirection(
+                primaryEnergy = interval.signedEnergyRawMs,
+                fallbackEnergy = screenOffConfidentEnergyRawMs
+            ) * baselinePowerRaw * interval.durationMs.toDouble() * confidentCoverage
+        }
         return screenOffConfidentEnergyRawMs + extrapolatedLongGapEnergyRawMs
     }
 
