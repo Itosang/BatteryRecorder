@@ -283,7 +283,8 @@ internal object LoadHomeStatsUseCase {
                 return@let null
             }
             val confidence = prediction.confidenceScore / 100.0
-            historicalFullHours * 3600.0 * (0.75 + 0.25 * confidence)
+            historicalFullHours * 3600.0 *
+                (0.75 + 0.25 * (2.0 * confidence - confidence * confidence))
         }
         val score = rawHistoricalScore?.let { rawScore ->
             val prefs = context.applicationContext.getSharedPreferences(
