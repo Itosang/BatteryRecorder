@@ -16,7 +16,7 @@ BatteryRecorder 是一个 Android 电池功率记录 App。
 - Root/ADB 启动当前统一通过原生 `libstarter.so` 拉起 `app_process`；root 启动会显式传入 APK 路径，ADB/shell 启动可回退到 `pm path` 解析 APK 路径
 - 采样优先走 JNI sysfs 读取；不可用时回退到 dumpsys/batteryproperties 方案
 - root 模式下主 `Server` 会额外派生独立的 `NotificationServer` 子进程，并通过本地 socket 转发实时通知
-- App 更新时，root 模式 `Server` 会监听 APK sourceDir 变化并自动拉起新的 `libstarter.so`；新旧 `Server` 会尝试交接当前记录写入状态以续接记录
+- App 更新时，root 模式 `Server` 会同时依赖 `AppSourceDirObserver` 的被动监听、`BinderSender` 在 Binder 重推前的主动检查，以及 `IService` 入口前的主动检查；命中更新后会自动拉起新的 `libstarter.so`，新旧 `Server` 会尝试交接当前记录写入状态以续接记录
 - 历史数据支持图表查看、应用维度统计、场景维度统计、记录详情统计、记录详情长截图导出与续航预测
 - 应用启动阶段还负责首次启动引导、文档引导与更新检查；启动引导与文档引导是两条独立链路，前者由 `StartupGuideScreen` 承载，后者应保持独立弹窗形态；更新检查当前支持“稳定版 / 预发布”两种通道，更新弹窗支持浏览器打开或走系统 `DownloadManager` 下载安装；首页同时提供 Root/ADB 启动入口与日志导出，历史列表页顶部菜单负责记录清理以及历史导入/导出
 
@@ -74,8 +74,8 @@ App 进程 (UI)  <->  AIDL Binder  <->  Server 进程 (root/shell)
 - 进程入口为 `server/.../Main.kt`
 - `Main.kt` 会根据启动参数区分主 `Server` 与 `NotificationServer`，并负责设置进程名、`oom_score_adj` 与 cgroup
 - Server 启动后通过 `ActivityManagerCompat.contentProviderCall()` 将 Binder 推送给 App 的 `BinderProvider`
-- `BinderSender` 会注册 Process/Uid 观察者，在 App 进程重新活跃时持续重推 Binder，减少冷启动和被系统回收后的连接丢失
-- App 通过 `IService` AIDL 与 Server 通信，核心能力包括停止服务、注册监听、更新配置、同步数据
+- `BinderSender` 会注册 Process/Uid 观察者，在 App 进程重新活跃时持续重推 Binder；真正推送前会先执行 `Server.checkAppReinstall(...)`，减少冷启动和被系统回收后的连接丢失，同时更早发现 App 更新或卸载
+- App 通过 `IService` AIDL 与 Server 通信，核心能力包括停止服务、注册监听、更新配置、同步数据；服务端各入口在执行业务前都会先执行 `Server.checkAppReinstall(...)`
 - Server 读取配置时：
   - root 权限：直接读 App 的 SharedPreferences XML
   - shell 权限：通过 `ConfigProvider`
@@ -85,7 +85,7 @@ App 进程 (UI)  <->  AIDL Binder  <->  Server 进程 (root/shell)
 - 首页 Root 启动、开机 ROOT 自启动、ADB 引导当前都统一指向 `libstarter.so`
 - `RootServerStarter` 会构造 `libstarter.so --apk=<sourceDir>` 命令；ADB 引导文案默认展示直接执行 `libstarter.so` 的命令
 - `starter.cpp` 负责校验调用 UID、解析 APK 路径、设置 `CLASSPATH`，再用 `app_process` 拉起 `yangfentuozi.batteryrecorder.server.Main`
-- `Server` 初始化时会启动 `AppSourceDirObserver` 监听 `Global.appSourceDir`；检测到 APK 更新后会直接拉起新 `libstarter.so`，检测到卸载则退出当前服务
+- `Server` 初始化时会启动 `AppSourceDirObserver` 监听 `Global.appSourceDir`；该监听、`BinderSender` 重推前检查以及 `IService` 入口前检查当前都统一收口到 `Server.checkAppReinstall(...)`，检测到 APK 更新后会直接拉起新 `libstarter.so`，检测到卸载则退出当前服务
 - 新旧 `Server` 之间会通过 `BatteryRecorder_Server` 本地 socket 交接 `PowerRecordWriter.WriterStatusData`；旧进程在退出前发送当前 writer 状态，新进程启动后优先尝试续接原分段文件
 - root 模式下，`Server` 初始化时会创建 `ChildServerBridge`，再派生 `NotificationServer`
 - `NotificationServer` 启动后会降权到 shell uid 2000，等待 `notification` / `activity` 服务可用，并用 `LocalServerSocket` 接收主 `Server` 发来的通知流
@@ -374,12 +374,12 @@ docs/
 - 页面级沉浸规则是：`Scaffold` 只吃顶部/水平安全区，底部手势区由内容层自行处理
 - 页面外层 margin 当前统一按 16.dp 收敛；若看到 24.dp，需要先确认那是不是组件内部排版或图表绘制留白，而不是页面 margin
 - ROOT 启动统一经过 `RootServerStarter.start(context, source)`
-- root 模式下 `Server` 会启动 `AppSourceDirObserver` 监听 APK 路径变化；修改启动/更新链路时必须同时检查自动重启与卸载退出行为
+- root 模式下 `Server` 会通过 `AppSourceDirObserver`、`BinderSender` 重推前检查和 `IService` 入口前检查共同监测 App 安装态变化；修改启动/更新链路时必须同时检查自动重启与卸载退出行为，以及 `Server.checkAppReinstall(...)` 的统一判定口径
 - App 更新后的自动续接记录依赖 `server/stream/*` 与 `PowerRecordWriter.WriterStatusData`；修改当前记录分段、关闭逻辑或 writer 状态字段时必须同步检查这条交接链路
 - root 模式下主 `Server` 会派生 `NotificationServer` 子进程处理通知；通知相关改动必须同时检查 `ChildServerBridge`、socket 协议与 `LocalNotificationUtil`
 - `NotificationServer` 依赖 `FakeContext` 获取可用 `Context` 与外部 Provider；修改通知链路时不要假设它运行在常规 Android `Application` 环境中
 - `LocalNotificationUtil` 当前通过复用 `Notification.Builder` 承担通知更新的性能优化；修改通知字段时不要无意退回到“每次更新都新建 Builder”的实现
-- `Server` 初始化末尾会创建 `BinderSender`；修改 Binder 建连或进程恢复逻辑时必须同时检查 ProcessObserver / UidObserver 重推行为
+- `Server` 初始化末尾会创建 `BinderSender`；修改 Binder 建连或进程恢复逻辑时必须同时检查 ProcessObserver / UidObserver 重推行为，以及重推前的 `Server.checkAppReinstall(...)`
 - 当前设置系统按 `AppSettings`、`StatisticsSettings`、`ServerSettings` 分层；`ServerSettingsCodec.kt` 是 `ServerSettings` 字段映射的唯一入口，`SharedSettings.kt` 负责三类设置的 SharedPreferences 读写入口，`ConfigUtil.kt` 只负责 root/shell 两条来源适配
 - `ServerSettings` 当前同时承载服务端运行参数与功率展示共用配置；`notificationEnabled`、`dualCellEnabled`、`calibrationValue` 都属于 `ServerSettings`，其中后两者由 App 展示侧直接复用；`calibrationValue` 当前语义是“原始电流到实际功率 / Wh 的换算倍率”，不是电流单位枚举
 - 更新检测通道属于 `AppSettings`，当前字段为 `AppSettings.updateChannel`，使用 `UpdateChannel` 枚举持久化
