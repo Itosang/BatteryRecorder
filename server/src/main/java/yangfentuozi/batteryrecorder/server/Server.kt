@@ -339,10 +339,10 @@ class Server internal constructor() : IService.Stub() {
         val appInfo = try {
             PackageManagerCompat.getApplicationInfo(Constants.APP_PACKAGE_NAME, 0L, 0)
         } catch (e: RemoteException) {
-            LoggerX.e(tag, "$trigger: 查询 App 安装信息失败，跳过本次重装检查", tr = e)
+            LoggerX.e(tag, "$trigger: 查询 App 安装信息失败, 跳过本次重装检查", tr = e)
             return true
         } catch (e: PackageManager.NameNotFoundException) {
-            LoggerX.w(tag, "$trigger: 查询 App 安装信息失败，按已卸载处理", tr = e)
+            LoggerX.w(tag, "$trigger: 查询 App 安装信息失败, 按已卸载处理", tr = e)
             onAppSourceDirChanged(null)
             return false
         }
@@ -350,7 +350,7 @@ class Server internal constructor() : IService.Stub() {
         if (appInfo.sourceDir == null || appInfo.nativeLibraryDir == null) {
             LoggerX.w(
                 tag,
-                "$trigger: App 安装信息不完整，按已卸载处理 sourceDir=${appInfo.sourceDir} nativeLibraryDir=${appInfo.nativeLibraryDir}"
+                "$trigger: App 安装信息不完整, 按已卸载处理 sourceDir=${appInfo.sourceDir} nativeLibraryDir=${appInfo.nativeLibraryDir}"
             )
             onAppSourceDirChanged(appInfo)
             return false
