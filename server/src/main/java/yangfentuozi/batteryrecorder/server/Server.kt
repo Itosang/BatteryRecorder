@@ -39,6 +39,7 @@ import java.io.FileDescriptor
 import java.io.IOException
 import java.nio.file.Files
 import java.util.Scanner
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess
 
 class Server internal constructor() : IService.Stub() {
@@ -55,7 +56,6 @@ class Server internal constructor() : IService.Stub() {
     private var shellPowerDataDir: File
 
     override fun stopService() {
-        ensureAppReady("stopService")
         stopServiceInternal("stopService")
     }
 
@@ -420,11 +420,10 @@ class Server internal constructor() : IService.Stub() {
         }
     }
 
-    private var onAppSourceDirChangedInvoked = false
+    private val onAppSourceDirChangedInvoked = AtomicBoolean(false)
 
     private fun onAppSourceDirChanged(appInfo: ApplicationInfo?) {
-        if (onAppSourceDirChangedInvoked) return
-        onAppSourceDirChangedInvoked = true
+        if (!onAppSourceDirChangedInvoked.compareAndSet(false, true)) return
         if (appInfo == null || appInfo.sourceDir == null || appInfo.nativeLibraryDir == null) {
             LoggerX.i(tag, "onAppSourceDirChanged: App 已被卸载, 退出服务")
             stopServiceInternal("onAppSourceDirChanged")
