@@ -1,11 +1,19 @@
 package android.app;
 
+import android.graphics.Rect;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 public class ActivityTaskManager {
 
     public static class RootTaskInfo extends TaskInfo implements Parcelable {
+        public Rect bounds;
+        public int[] childTaskIds;
+        public String[] childTaskNames;
+        public Rect[] childTaskBounds;
+        public int[] childTaskUserIds;
+        public boolean visible;
+        public int position;
 
         protected RootTaskInfo(Parcel in) {
         }
