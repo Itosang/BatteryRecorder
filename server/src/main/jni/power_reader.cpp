@@ -145,6 +145,34 @@ static jint native_get_status(JNIEnv *env __attribute__((unused)), jclass clazz 
 
     int ch = fgetc(fp);
     if (ch != EOF) {
+        // 部分设备的 status 节点可能短暂返回 Unknown，重开节点后再取一次真实状态。
+        if (ch == 'U') {
+            fclose(g_cache.status_fp);
+            g_cache.status_fp = fopen("/sys/class/power_supply/battery/status", "r");
+            if (!g_cache.status_fp) {
+                LOGE("%s: Failed to reopen status", __func__);
+                return 0;
+            }
+            fp = g_cache.status_fp;
+            rewind(fp);
+            fflush(fp);
+            ch = fgetc(fp);
+            return ch != EOF ? ch : 0;
+        }
+        return ch;
+    }
+
+    fclose(g_cache.status_fp);
+    g_cache.status_fp = fopen("/sys/class/power_supply/battery/status", "r");
+    if (!g_cache.status_fp) {
+        LOGE("%s: Failed to reopen status", __func__);
+        return 0;
+    }
+    fp = g_cache.status_fp;
+    rewind(fp);
+    fflush(fp);
+    ch = fgetc(fp);
+    if (ch != EOF) {
         return ch;
     }
 

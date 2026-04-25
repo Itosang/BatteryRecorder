@@ -1,230 +1,83 @@
 package yangfentuozi.hiddenapi.compat;
 
+import android.app.ActivityTaskManager;
+import android.app.IActivityTaskManager;
 import android.app.TaskInfo;
 import android.graphics.Rect;
-import android.util.Log;
+import android.os.RemoteException;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-
 public final class TaskInfoCompat {
-    private static final String TAG = "TaskInfoCompat";
-
-    @Nullable
-    private static volatile Accessor accessor;
-
-    private static final class Accessor {
-        @Nullable
-        final Method taskInfoGetConfigurationMethod;
-        @Nullable
-        final Field taskInfoConfigurationField;
-        @Nullable
-        final Field configurationWindowConfigurationField;
-        @Nullable
-        final Method windowConfigurationGetBoundsMethod;
-        @Nullable
-        final Field windowConfigurationBoundsField;
-        @Nullable
-        final Method windowConfigurationGetMaxBoundsMethod;
-        @Nullable
-        final Field windowConfigurationMaxBoundsField;
-
-        private Accessor(
-                @Nullable Method taskInfoGetConfigurationMethod,
-                @Nullable Field taskInfoConfigurationField,
-                @Nullable Field configurationWindowConfigurationField,
-                @Nullable Method windowConfigurationGetBoundsMethod,
-                @Nullable Field windowConfigurationBoundsField,
-                @Nullable Method windowConfigurationGetMaxBoundsMethod,
-                @Nullable Field windowConfigurationMaxBoundsField
-        ) {
-            this.taskInfoGetConfigurationMethod = taskInfoGetConfigurationMethod;
-            this.taskInfoConfigurationField = taskInfoConfigurationField;
-            this.configurationWindowConfigurationField = configurationWindowConfigurationField;
-            this.windowConfigurationGetBoundsMethod = windowConfigurationGetBoundsMethod;
-            this.windowConfigurationBoundsField = windowConfigurationBoundsField;
-            this.windowConfigurationGetMaxBoundsMethod = windowConfigurationGetMaxBoundsMethod;
-            this.windowConfigurationMaxBoundsField = windowConfigurationMaxBoundsField;
-        }
-    }
-
     private TaskInfoCompat() {
     }
 
     /**
      * 读取任务当前窗口边界；任务为空时返回空。
      *
+     * @param activityTaskManager ActivityTaskManager Binder 接口，用于按任务 ID 读取普通任务边界。
      * @param taskInfo 任务信息。
+     * @param focusedRootTaskInfo 当前聚焦 RootTask 信息；仅在 RootTaskInfo 缺少子任务边界时作为后备。
      * @return 成功返回窗口当前边界，任务为空时返回 `null`。
      */
     @Nullable
-    public static Rect getBoundsOrNull(@Nullable TaskInfo taskInfo) {
+    public static Rect getBoundsOrNull(
+            IActivityTaskManager activityTaskManager,
+            @Nullable TaskInfo taskInfo,
+            @Nullable ActivityTaskManager.RootTaskInfo focusedRootTaskInfo
+    ) throws RemoteException {
         if (taskInfo == null) {
             return null;
         }
-        final Accessor currentAccessor = getAccessor();
-        final Object windowConfiguration = readWindowConfiguration(taskInfo, currentAccessor);
-        if (windowConfiguration == null) {
-            return null;
+        if (taskInfo instanceof ActivityTaskManager.RootTaskInfo) {
+            return getTopChildBoundsOrRootBounds(
+                    (ActivityTaskManager.RootTaskInfo) taskInfo,
+                    focusedRootTaskInfo
+            );
         }
-        return readRect(
-                windowConfiguration,
-                currentAccessor.windowConfigurationGetBoundsMethod,
-                currentAccessor.windowConfigurationBoundsField
-        );
+        return activityTaskManager.getTaskBounds(taskInfo.taskId);
     }
 
     /**
      * 读取任务可达到的最大窗口边界；任务为空时返回空。
      *
-     * @param taskInfo 任务信息。
+     * @param focusedRootTaskInfo 当前聚焦 RootTask 信息，用于提供最大窗口边界。
      * @return 成功返回窗口最大边界，任务为空时返回 `null`。
      */
     @Nullable
-    public static Rect getMaxBoundsOrNull(@Nullable TaskInfo taskInfo) {
-        if (taskInfo == null) {
+    public static Rect getMaxBoundsOrNull(@Nullable ActivityTaskManager.RootTaskInfo focusedRootTaskInfo) {
+        if (focusedRootTaskInfo == null) {
             return null;
         }
-        final Accessor currentAccessor = getAccessor();
-        final Object windowConfiguration = readWindowConfiguration(taskInfo, currentAccessor);
-        if (windowConfiguration == null) {
-            return null;
-        }
-        return readRect(
-                windowConfiguration,
-                currentAccessor.windowConfigurationGetMaxBoundsMethod,
-                currentAccessor.windowConfigurationMaxBoundsField
-        );
+        return focusedRootTaskInfo.bounds;
     }
 
-    @NonNull
-    private static Accessor getAccessor() {
-        final Accessor cached = accessor;
-        if (cached != null) {
-            return cached;
-        }
-        final Accessor created = new Accessor(
-                findMethod(TaskInfo.class, "getConfiguration"),
-                findField(TaskInfo.class, "configuration"),
-                findField("android.content.res.Configuration", "windowConfiguration"),
-                findMethod("android.app.WindowConfiguration", "getBounds"),
-                findField("android.app.WindowConfiguration", "bounds"),
-                findMethod("android.app.WindowConfiguration", "getMaxBounds"),
-                findField("android.app.WindowConfiguration", "maxBounds")
-        );
-        accessor = created;
-        return created;
-    }
-
+    /**
+     * 从 RootTaskInfo 的顶部子任务读取当前任务边界。
+     *
+     * @param rootTaskInfo 当前任务对应的 RootTask 信息。
+     * @param fallbackRootTaskInfo 后备 RootTask 信息，仅在当前 RootTask 缺少边界时使用。
+     * @return 优先返回顶部子任务边界；缺失时返回 RootTask 自身边界。
+     */
     @Nullable
-    private static Object readWindowConfiguration(
-            @NonNull TaskInfo taskInfo,
-            @NonNull Accessor accessor
+    private static Rect getTopChildBoundsOrRootBounds(
+            ActivityTaskManager.RootTaskInfo rootTaskInfo,
+            @Nullable ActivityTaskManager.RootTaskInfo fallbackRootTaskInfo
     ) {
-        final Object configuration = readObject(
-                taskInfo,
-                accessor.taskInfoGetConfigurationMethod,
-                accessor.taskInfoConfigurationField
-        );
-        if (configuration == null || accessor.configurationWindowConfigurationField == null) {
+        final Rect[] childTaskBounds = rootTaskInfo.childTaskBounds;
+        if (childTaskBounds != null && childTaskBounds.length > 0) {
+            return childTaskBounds[childTaskBounds.length - 1];
+        }
+        if (rootTaskInfo.bounds != null) {
+            return rootTaskInfo.bounds;
+        }
+        if (fallbackRootTaskInfo == null) {
             return null;
         }
-        return readFieldValue(configuration, accessor.configurationWindowConfigurationField);
-    }
-
-    @Nullable
-    private static Rect readRect(
-            @NonNull Object target,
-            @Nullable Method method,
-            @Nullable Field field
-    ) {
-        final Object value = readObject(target, method, field);
-        return value instanceof Rect ? (Rect) value : null;
-    }
-
-    @Nullable
-    private static Object readObject(
-            @NonNull Object target,
-            @Nullable Method method,
-            @Nullable Field field
-    ) {
-        if (method != null) {
-            try {
-                return method.invoke(target);
-            } catch (Throwable ignored) {
-            }
+        final Rect[] fallbackChildTaskBounds = fallbackRootTaskInfo.childTaskBounds;
+        if (fallbackChildTaskBounds != null && fallbackChildTaskBounds.length > 0) {
+            return fallbackChildTaskBounds[fallbackChildTaskBounds.length - 1];
         }
-        if (field != null) {
-            return readFieldValue(target, field);
-        }
-        return null;
-    }
-
-    @Nullable
-    private static Object readFieldValue(@NonNull Object target, @NonNull Field field) {
-        try {
-            return field.get(target);
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
-    @Nullable
-    private static Method findMethod(@NonNull Class<?> type, @NonNull String name) {
-        try {
-            return type.getMethod(name);
-        } catch (NoSuchMethodException ignored) {
-        }
-        try {
-            final Method method = type.getDeclaredMethod(name);
-            method.setAccessible(true);
-            return method;
-        } catch (Throwable e) {
-            Log.w(TAG, "查找隐藏方法失败: " + type.getName() + "#" + name, e);
-            return null;
-        }
-    }
-
-    @Nullable
-    private static Method findMethod(@NonNull String className, @NonNull String name) {
-        final Class<?> type = findClass(className);
-        return type == null ? null : findMethod(type, name);
-    }
-
-    @Nullable
-    private static Field findField(@NonNull Class<?> type, @NonNull String name) {
-        try {
-            return type.getField(name);
-        } catch (NoSuchFieldException ignored) {
-        }
-        try {
-            final Field field = type.getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (NoSuchFieldException ignored) {
-            return null;
-        } catch (Throwable e) {
-            Log.w(TAG, "查找隐藏字段失败: " + type.getName() + "#" + name, e);
-            return null;
-        }
-    }
-
-    @Nullable
-    private static Field findField(@NonNull String className, @NonNull String name) {
-        final Class<?> type = findClass(className);
-        return type == null ? null : findField(type, name);
-    }
-
-    @Nullable
-    private static Class<?> findClass(@NonNull String className) {
-        try {
-            return Class.forName(className);
-        } catch (Throwable e) {
-            Log.w(TAG, "查找隐藏类失败: " + className, e);
-            return null;
-        }
+        return fallbackRootTaskInfo.bounds;
     }
 }

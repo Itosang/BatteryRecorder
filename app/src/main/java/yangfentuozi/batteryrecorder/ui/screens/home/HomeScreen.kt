@@ -399,17 +399,13 @@ fun HomeScreen(
                         }
                     }
 
-                    val isDischarging = currentRecordUiState.displayStatus == BatteryStatus.Discharging
-
-                    // 应用预测仅在放电语义下成立，充电记录不展示入口。
-                    if (isDischarging) {
-                        item {
-                            PredictionCard(
-                                predictionDisplay = predictionDisplay,
-                                onClick = onNavigateToPredictionDetail
-                            )
-                        }
+                    item {
+                        PredictionCard(
+                            predictionDisplay = predictionDisplay,
+                            onClick = onNavigateToPredictionDetail
+                        )
                     }
+
                     item {
                         SceneStatsCard(
                             sceneStats = sceneStats,

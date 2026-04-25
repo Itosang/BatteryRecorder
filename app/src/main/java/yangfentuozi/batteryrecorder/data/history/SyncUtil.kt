@@ -46,6 +46,12 @@ object SyncUtil {
             } else {
                 null
             }
+            LoggerX.i(
+                TAG,
+                "[SYNC] 服务端当前记录: %s/%s",
+                activeRecordsFile?.type,
+                activeRecordsFile?.name
+            )
             val compressedCount = if (activeRecordsFileResult.isSuccess) {
                 HistoryRepository.compressHistoricalRecords(
                     context = context,

@@ -135,7 +135,7 @@ object LoggerX {
         val base = if (args.isEmpty()) msg.toString() else String.format(
             Locale.ENGLISH,
             msg ?: "null",
-            args
+            *args
         )
         val content = if (tr == null) base else "$base\n${Log.getStackTraceString(tr)}"
         println(tag, level, content, notWrite)

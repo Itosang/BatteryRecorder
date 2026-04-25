@@ -239,6 +239,7 @@ Sampler -> SysfsSampler / DumpsysSampler -> Monitor -> PowerRecordWriter -> CSV
   - 记录时长不少于 10 分钟
   - 掉电不少于 2%
 - `endTs` 取自当前文件最后一条有效记录时间戳，不使用 `System.currentTimeMillis()`
+- 充电状态下只能使用历史放电模型与当前电量计算预测；不得把充电记录或最近放电记录作为当前放电文件传入 `currentDischargeFileName`，否则会错误触发当次记录加权
 - 当前设置项已从旧的“当次记录加权 + 最大倍率/半衰期”切换为：
   - `pred_weighted_algorithm_enabled`
   - `pred_weighted_algorithm_alpha_max_x100`

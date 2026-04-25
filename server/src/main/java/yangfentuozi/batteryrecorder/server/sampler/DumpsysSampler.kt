@@ -52,6 +52,7 @@ class DumpsysSampler : Sampler() {
         var current: Long = 0
         var capacity = 0
         var status: BatteryStatus = BatteryStatus.Unknown
+        var rawStatus = BatteryManager.BATTERY_STATUS_UNKNOWN
         var temp = 0
         var readSideAutoClosed = false
         try {
@@ -60,7 +61,8 @@ class DumpsysSampler : Sampler() {
             registrar.getProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY, prop)
             capacity = prop.long.toInt()
             registrar.getProperty(BatteryManager.BATTERY_PROPERTY_STATUS, prop)
-            status = BatteryStatus.fromValue(prop.long.toInt())
+            rawStatus = prop.long.toInt()
+            status = BatteryStatus.fromValue(rawStatus)
 
             try {
                 val result = nativeParseBatteryDumpPfd(readSide)
@@ -111,6 +113,17 @@ class DumpsysSampler : Sampler() {
             capacity = capacity,
             status = status,
             temp = temp
-        )
+        ).also { data ->
+            LoggerX.v(
+                tag,
+                "sample: 采样诊断 rawStatus=%d status=%s voltage=%d current=%d capacity=%d temp=%d",
+                rawStatus,
+                status,
+                data.voltage,
+                current,
+                capacity,
+                temp
+            )
+        }
     }
 }

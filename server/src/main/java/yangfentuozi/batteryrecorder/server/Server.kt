@@ -66,13 +66,23 @@ class Server internal constructor() : IService.Stub() {
 
     override fun getCurrRecordsFile(): RecordsFile? {
         ensureAppReady("getCurrRecordsFile")
-        return RecordsFile.fromFile(
-            when (writer.lastStatus) {
-                Charging -> writer.chargeDataWriter.getCurrFile(writer.chargeDataWriter.hasPendingStatusChange)
-                Discharging -> writer.dischargeDataWriter.getCurrFile(writer.dischargeDataWriter.hasPendingStatusChange)
-                else -> null
-            } ?: return null
-        )
+        val lastStatus = writer.lastStatus
+        val file = when (lastStatus) {
+            Charging -> writer.chargeDataWriter.getCurrFile(writer.chargeDataWriter.hasPendingStatusChange)
+            Discharging -> writer.dischargeDataWriter.getCurrFile(writer.dischargeDataWriter.hasPendingStatusChange)
+            else -> null
+        }
+        if (file == null) {
+            LoggerX.w(
+                tag,
+                "getCurrRecordsFile: 当前记录文件为空, lastStatus=%s chargeFile=%s dischargeFile=%s",
+                lastStatus,
+                writer.chargeDataWriter.segmentFile?.name,
+                writer.dischargeDataWriter.segmentFile?.name
+            )
+            return null
+        }
+        return RecordsFile.fromFile(file)
     }
 
     override fun registerRecordListener(listener: IRecordListener) {

@@ -100,6 +100,17 @@ class PowerRecordWriter(
 
             else -> WriteResult.Rejected
         }
+        if (result == WriteResult.Rejected) {
+            LoggerX.w(
+                tag,
+                "write: 拒绝写入采样, status=%s power=%d current=%d voltage=%d capacity=%d",
+                record.status,
+                record.power,
+                record.current,
+                record.voltage,
+                record.capacity
+            )
+        }
         lastStatus = record.status
         return result
     }

@@ -68,7 +68,7 @@ class MainViewModel : ViewModel() {
     private val _sceneStats = MutableStateFlow<SceneStats?>(null)
     val sceneStats: StateFlow<SceneStats?> = _sceneStats.asStateFlow()
 
-    // 仅在成功拿到可解析的放电当前记录后更新；其他场景保留最近一次有效放电预测。
+    // 仅在拿到当前电量后更新；充电态仍只使用历史放电模型。
     private val _prediction = MutableStateFlow<PredictionResult?>(null)
     val prediction: StateFlow<PredictionResult?> = _prediction.asStateFlow()
 

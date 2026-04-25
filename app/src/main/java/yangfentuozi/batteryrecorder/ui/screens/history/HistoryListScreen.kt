@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
@@ -122,11 +124,17 @@ fun HistoryListScreen(
     val chargeCapacityChangeFilter by viewModel.chargeCapacityChangeFilter.collectAsState()
     // 列表滚动状态（用于计算是否接近列表底部）
     val listState = rememberLazyListState()
+    val lastOpenedRecordBackgroundColor = if (isSystemInDarkTheme()) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     val historyListPrefs = remember(context) {
         context.getSharedPreferences(HISTORY_LIST_PREFS_NAME, Context.MODE_PRIVATE)
     }
     var openRecordName by remember { mutableStateOf<String?>(null) }
+    var lastOpenedRecordName by rememberSaveable(batteryStatus) { mutableStateOf<String?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showRecordCleanupDialog by remember { mutableStateOf(false) }
     var cleanupDialogInitialRequest by remember { mutableStateOf<RecordCleanupRequest?>(null) }
@@ -358,6 +366,7 @@ fun HistoryListScreen(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     itemsIndexed(records, key = { _, record -> record.name }) { index, record ->
+                        val isLastOpenedRecord = lastOpenedRecordName == record.name
                         SwipeRevealRow(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             isOpen = openRecordName == record.name,
@@ -415,6 +424,11 @@ fun HistoryListScreen(
                                         tint = MaterialTheme.colorScheme.onError
                                     )
                                 }
+                            },
+                            contentBackgroundColor = if (isLastOpenedRecord) {
+                                lastOpenedRecordBackgroundColor
+                            } else {
+                                MaterialTheme.colorScheme.surfaceBright
                             },
                             content = {
                                 val stats = record.stats
@@ -504,6 +518,7 @@ fun HistoryListScreen(
                                 }
                             },
                             onContentClick = {
+                                lastOpenedRecordName = record.name
                                 onNavigateToRecordDetail(record.type, record.name)
                             }
                         )

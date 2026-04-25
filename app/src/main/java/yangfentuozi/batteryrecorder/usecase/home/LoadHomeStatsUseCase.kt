@@ -1,6 +1,9 @@
 package yangfentuozi.batteryrecorder.usecase.home
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import yangfentuozi.batteryrecorder.R
@@ -17,11 +20,14 @@ import yangfentuozi.batteryrecorder.shared.config.SharedSettings
 import yangfentuozi.batteryrecorder.shared.config.dataclass.StatisticsSettings
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
+import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import yangfentuozi.batteryrecorder.ui.mapper.PowerDisplayMapper
 import yangfentuozi.batteryrecorder.ui.model.HomePredictionDisplay
 import yangfentuozi.batteryrecorder.ui.model.PredictionConfidenceLevel
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
+private const val TAG = "LoadHomeStatsUseCase"
 private const val PREDICTION_DISPLAY_SCORE_OFFSET = 5
 private const val PREDICTION_CONFIDENCE_LOW_MAX = 44
 private const val PREDICTION_CONFIDENCE_MEDIUM_MAX = 74
@@ -113,6 +119,18 @@ internal object LoadHomeStatsUseCase {
             expectedCurrentRecordsFile != null -> expectedCurrentRecordsFile
             else -> serviceCurrentRecordsFile
         }
+        LoggerX.i(
+            TAG,
+            "[首页] 当前记录目标: pending=%s/%s expected=%s/%s service=%s/%s target=%s/%s",
+            pendingCurrentRecordsFile?.type,
+            pendingCurrentRecordsFile?.name,
+            expectedCurrentRecordsFile?.type,
+            expectedCurrentRecordsFile?.name,
+            serviceCurrentRecordsFile?.type,
+            serviceCurrentRecordsFile?.name,
+            targetRecordsFile?.type,
+            targetRecordsFile?.name
+        )
 
         val currentRecordResult = targetRecordsFile?.let {
             loadCurrentRecordForDisplay(
@@ -155,11 +173,13 @@ internal object LoadHomeStatsUseCase {
                 currentDischargeFileName = currentSceneDischargeFileName
             )
         }
-        val shouldRefreshPrediction = resolvedCurrentRecord?.type == BatteryStatus.Discharging
-        val prediction = if (shouldRefreshPrediction) {
+        val currentPredictionSoc = readCurrentBatteryCapacityPercent(context)
+            ?: resolvedCurrentRecord?.stats?.endCapacity
+        val shouldRefreshPrediction = currentPredictionSoc != null
+        val prediction = if (currentPredictionSoc != null) {
             BatteryPredictor.predict(
                 stats.homePredictionInputs,
-                resolvedCurrentRecord.stats.endCapacity
+                currentPredictionSoc
             )
         } else {
             null
@@ -238,6 +258,23 @@ internal object LoadHomeStatsUseCase {
     ): String {
         val detail = error.message?.takeIf { it.isNotBlank() } ?: error::class.java.simpleName
         return appString(R.string.toast_current_record_load_failed, recordsFile.name, detail)
+    }
+
+    /**
+     * 读取系统当前电量百分比。
+     *
+     * @param context 应用上下文。
+     * @return 当前电量百分比；系统广播缺少 level 或 scale 时返回空值。
+     */
+    private fun readCurrentBatteryCapacityPercent(context: Context): Int? {
+        val intent: Intent = context.applicationContext.registerReceiver(
+            null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        ) ?: return null
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) return null
+        return (level * 100f / scale).roundToInt()
     }
 
     /**
