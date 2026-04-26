@@ -134,49 +134,50 @@ static jint native_get_capacity(JNIEnv *env __attribute__((unused)), jclass claz
     return read_int(g_cache.capacity_fp);
 }
 
-static jint native_get_status(JNIEnv *env __attribute__((unused)), jclass clazz __attribute__((unused))) {
+static jstring native_get_status(JNIEnv *env, jclass clazz __attribute__((unused))) {
     if (!g_cache.initialized || !g_cache.status_fp) {
-        return 0;
+        return env->NewStringUTF("");
     }
 
     FILE *fp = g_cache.status_fp;
     rewind(fp);
     fflush(fp);
 
-    int ch = fgetc(fp);
-    if (ch != EOF) {
+    char buffer[MAX_LINE_LENGTH];
+    if (fgets(buffer, MAX_LINE_LENGTH, fp)) {
         // 部分设备的 status 节点可能短暂返回 Unknown，重开节点后再取一次真实状态。
-        if (ch == 'U') {
+        if (buffer[0] == 'U') {
             fclose(g_cache.status_fp);
             g_cache.status_fp = fopen("/sys/class/power_supply/battery/status", "r");
             if (!g_cache.status_fp) {
                 LOGE("%s: Failed to reopen status", __func__);
-                return 0;
+                return env->NewStringUTF("");
             }
             fp = g_cache.status_fp;
             rewind(fp);
             fflush(fp);
-            ch = fgetc(fp);
-            return ch != EOF ? ch : 0;
+            if (fgets(buffer, MAX_LINE_LENGTH, fp)) {
+                return env->NewStringUTF(buffer);
+            }
+            return env->NewStringUTF("");
         }
-        return ch;
+        return env->NewStringUTF(buffer);
     }
 
     fclose(g_cache.status_fp);
     g_cache.status_fp = fopen("/sys/class/power_supply/battery/status", "r");
     if (!g_cache.status_fp) {
         LOGE("%s: Failed to reopen status", __func__);
-        return 0;
+        return env->NewStringUTF("");
     }
     fp = g_cache.status_fp;
     rewind(fp);
     fflush(fp);
-    ch = fgetc(fp);
-    if (ch != EOF) {
-        return ch;
+    if (fgets(buffer, MAX_LINE_LENGTH, fp)) {
+        return env->NewStringUTF(buffer);
     }
 
-    return 0;
+    return env->NewStringUTF("");
 }
 
 static jint native_get_temp(JNIEnv *env __attribute__((unused)), jclass clazz __attribute__((unused))) {
@@ -199,7 +200,7 @@ int register_sysfs_native_methods(JNIEnv* env) {
             {"nativeGetVoltage", "()J", reinterpret_cast<void*>(native_get_voltage)},
             {"nativeGetCurrent", "()J", reinterpret_cast<void*>(native_get_current)},
             {"nativeGetCapacity", "()I", reinterpret_cast<void*>(native_get_capacity)},
-            {"nativeGetStatus", "()I", reinterpret_cast<void*>(native_get_status)},
+            {"nativeGetStatus", "()Ljava/lang/String;", reinterpret_cast<void*>(native_get_status)},
             {"nativeGetTemp", "()I", reinterpret_cast<void*>(native_get_temp)},
     };
     if (env->RegisterNatives(clazz, methods, sizeof(methods) / sizeof(methods[0])) < 0) {

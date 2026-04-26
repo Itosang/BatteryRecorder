@@ -29,7 +29,7 @@ object SysfsSampler: Sampler() {
     external fun nativeGetCapacity(): Int
 
     @JvmStatic
-    external fun nativeGetStatus(): Int
+    external fun nativeGetStatus(): String
 
     @JvmStatic
     external fun nativeGetTemp(): Int
@@ -62,17 +62,21 @@ object SysfsSampler: Sampler() {
     }
 
     override fun sample(): BatteryData {
+        val rawStatus = nativeGetStatus().trim()
+        val status = when (rawStatus.firstOrNull()) {
+            'C' -> BatteryStatus.Charging
+            'D' -> BatteryStatus.Discharging
+            'N' -> BatteryStatus.NotCharging
+            'F' -> BatteryStatus.Full
+            else -> BatteryStatus.Unknown.also {
+                LoggerX.v(TAG, "sample: 未识别 sysfs 电池状态, rawStatus=$rawStatus")
+            }
+        }
         return BatteryData(
             voltage = normalizeVoltageToMicroVolt(nativeGetVoltage()),
             current = nativeGetCurrent(),
             capacity = nativeGetCapacity(),
-            status = when (nativeGetStatus().toChar()) {
-                'C' -> BatteryStatus.Charging
-                'D' -> BatteryStatus.Discharging
-                'N' -> BatteryStatus.NotCharging
-                'F' -> BatteryStatus.Full
-                else -> BatteryStatus.Unknown
-            },
+            status = status,
             temp = nativeGetTemp()
         )
     }
