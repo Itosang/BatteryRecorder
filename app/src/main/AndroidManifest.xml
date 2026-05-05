@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <application
         android:name=".App"
         android:icon="@mipmap/ic_launcher"
@@ -15,13 +18,16 @@
         android:theme="@style/Theme.BatteryRecorder">
         <activity
             android:name=".ui.MainActivity"
-            android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".server.appservice.RecordService"
+            android:exported="false" />
         <receiver
             android:name=".startup.BootCompletedReceiver"
             android:enabled="true"
@@ -30,16 +36,17 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
         <provider
             android:name=".ipc.BinderProvider"
             android:authorities="yangfentuozi.batteryrecorder.binderProvider"
             android:exported="true"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <provider
             android:name=".ipc.ConfigProvider"
             android:authorities="yangfentuozi.batteryrecorder.configProvider"
             android:exported="true"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -49,6 +56,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
         <receiver
             android:name=".utils.AppDownloader$DownloadCompleteReceiver"
             android:exported="true"

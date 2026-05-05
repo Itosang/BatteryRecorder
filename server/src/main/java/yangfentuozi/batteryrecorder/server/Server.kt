@@ -14,6 +14,7 @@ import yangfentuozi.batteryrecorder.shared.util.Handlers
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 
 private const val TAG = "Server"
 
@@ -23,6 +24,10 @@ abstract class Server(
     fixFileOwner: ((File) -> Unit),
     sampler: Sampler
 ): IService.Stub() {
+
+    enum class State { NEW, RUNNING, STOPPED }
+
+    private val state = AtomicReference(State.NEW)
 
     var monitor: Monitor
         private set
@@ -77,6 +82,10 @@ abstract class Server(
     }
 
     fun onStop() {
+        if (!state.compareAndSet(State.RUNNING, State.STOPPED)) {
+            return
+        }
+
         monitor.onStop()
 
         try {
@@ -110,6 +119,10 @@ abstract class Server(
     }
 
     fun onStart() {
+        if (!state.compareAndSet(State.NEW, State.RUNNING)) {
+            return
+        }
+
         monitor.start()
         LoggerX.i(TAG, "init: Server 已启动")
     }
