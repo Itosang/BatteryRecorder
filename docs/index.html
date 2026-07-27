@@ -9,15 +9,96 @@
     <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/vue.css">
 </head>
 <body class="loading">
+    <nav>
+        <a data-docs-language="en" href="#/en/">English</a>
+    </nav>
     <div id="app"></div>
     <script>
+        /**
+         * 规范化 Docsify 当前路由，保证首页和子页面使用统一的绝对路径格式。
+         *
+         * @param {string} path Docsify 提供的当前页面路径。
+         * @returns {string} 以斜杠开头的规范化路由。
+         */
+        function normalizeDocsRoute(path) {
+            if (!path || path === "/") {
+                return "/";
+            }
+            const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+            if (normalizedPath === "/README" || normalizedPath === "/README.md") {
+                return "/";
+            }
+            if (
+                normalizedPath === "/en" ||
+                normalizedPath === "/en/README" ||
+                normalizedPath === "/en/README.md"
+            ) {
+                return "/en/";
+            }
+            return normalizedPath;
+        }
+
+        /**
+         * 计算当前页面在另一种语言下的对应路由。
+         *
+         * @param {string} path 当前规范化路由。
+         * @param {boolean} isEnglish 当前页面是否为英文文档。
+         * @returns {string} 对应语言下的同名页面路由。
+         */
+        function getCounterpartDocsRoute(path, isEnglish) {
+            if (isEnglish) {
+                const chinesePath = path.replace(/^\/en(?=\/|$)/, "");
+                return chinesePath || "/";
+            }
+            return path === "/" ? "/en/" : `/en${path}`;
+        }
+
+        /**
+         * 在 Docsify 每次完成页面渲染后同步语言入口和网页元信息。
+         *
+         * @param {object} hook Docsify 插件生命周期钩子。
+         * @param {object} vm Docsify 当前实例。
+         * @returns {void}
+         */
+        function docsLanguagePlugin(hook, vm) {
+            hook.doneEach(function () {
+                const currentPath = normalizeDocsRoute(vm.route.path);
+                const isEnglish = currentPath === "/en/" || currentPath.startsWith("/en/");
+                const counterpartPath = getCounterpartDocsRoute(currentPath, isEnglish);
+                const languageLink = document.querySelector("[data-docs-language]");
+                if (languageLink) {
+                    languageLink.setAttribute("href", `#${counterpartPath}`);
+                    languageLink.setAttribute("hreflang", isEnglish ? "zh-CN" : "en");
+                    languageLink.textContent = isEnglish ? "简体中文" : "English";
+                }
+
+                const siteTitle = isEnglish
+                    ? "BatteryRecorder User Guide"
+                    : "BatteryRecorder 使用说明";
+                const pageTitle = document.querySelector(".markdown-section h1")
+                    ?.textContent
+                    ?.trim();
+                const description = isEnglish
+                    ? "BatteryRecorder user guide and documentation"
+                    : "BatteryRecorder 使用说明文档";
+
+                document.documentElement.lang = isEnglish ? "en" : "zh-CN";
+                document.title = pageTitle && pageTitle !== siteTitle
+                    ? `${pageTitle} - ${siteTitle}`
+                    : siteTitle;
+                document.querySelector('meta[name="description"]')
+                    ?.setAttribute("content", description);
+            });
+        }
+
         window.$docsify = {
-            name: "BatteryRecorder 使用说明",
+            name: "BatteryRecorder",
             homepage: "README.md",
             loadSidebar: true,
             subMaxLevel: 2,
             auto2top: true,
-            relativePath: true
+            relativePath: true,
+            plugins: [docsLanguagePlugin]
         };
     </script>
     <!-- 引入 script -->

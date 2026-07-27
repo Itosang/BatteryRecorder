@@ -1,4 +1,4 @@
-[English](README.en.md) | [简体中文](README.md)
+English | [简体中文](README.md)
 
 # BatteryRecorder
 
@@ -15,7 +15,7 @@ A battery power recording app designed to capture more accurate power data with 
 
 ## Documentation
 
-- [Docs](https://battrec.itosang.com/)
+- [Docs](https://battrec.itosang.com/#/en/)
 
 ## ToDo
 
