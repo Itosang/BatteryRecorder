@@ -69,7 +69,11 @@ fun M3ESwitchWidget(
                     )
                 }
             } else null,
-            onCheckedChange = null
+            onCheckedChange = null,
+            colors = SwitchDefaults.colors(
+                checkedIconColor = MaterialTheme.colorScheme.primary,
+                uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            )
         )
     }
 }
