@@ -5,3 +5,4 @@
 * [续航预测说明](prediction.md)
 * [历史记录操作](history.md)
 * [记录详情图表说明](record-detail.md)
+* [设置 Provider](settings-provider.md)

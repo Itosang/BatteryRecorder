@@ -5,3 +5,4 @@
 * [Battery Life Prediction](prediction.md)
 * [History](history.md)
 * [Record Detail Charts](record-detail.md)
+* [Settings Provider](settings-provider.md)
