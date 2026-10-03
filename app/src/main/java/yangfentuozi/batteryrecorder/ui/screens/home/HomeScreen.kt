@@ -8,11 +8,13 @@ import android.os.BatteryManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -45,6 +47,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.data.bh.BhFeature
 import yangfentuozi.batteryrecorder.ipc.Service
 import yangfentuozi.batteryrecorder.server.recorder.IRecordListener
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
@@ -143,7 +146,8 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToHistoryList: (BatteryStatus) -> Unit = {},
     onNavigateToRecordDetail: (BatteryStatus, String) -> Unit = { _, _ -> },
-    onNavigateToPredictionDetail: () -> Unit = {}
+    onNavigateToPredictionDetail: () -> Unit = {},
+    onNavigateToBhRecords: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val serviceConnected by viewModel.serviceConnected.collectAsState()
@@ -168,6 +172,10 @@ fun HomeScreen(
     var prevServiceConnected by remember { mutableStateOf(false) }
     var currentCapacityPercent by remember { mutableStateOf<Int?>(null) }
     var currentVoltageRaw by remember { mutableStateOf<Int?>(null) }
+    // 「查看厂商系统原生日志」可用性（设置开关 + 澎湃OS + battery-history 数据检测）。
+    // 初次组合与每次回到前台（ON_START）时重查，保证在设置页切换开关后返回即时生效。
+    var vendorLogTick by remember { mutableStateOf(0) }
+    var vendorLogEnabled by remember { mutableStateOf(false) }
 
     // 首页续航卡片与场景卡片共用同一批统计结果。
     val sceneStats by viewModel.sceneStats.collectAsState()
@@ -258,6 +266,11 @@ fun HomeScreen(
         viewModel.consumeUserMessage()
     }
 
+    // 「查看厂商系统原生日志」可用性查询：初次组合与 ON_START（vendorLogTick++）时重查
+    LaunchedEffect(vendorLogTick) {
+        vendorLogEnabled = BhFeature.isEnabled(context)
+    }
+
     // 监听生命周期事件
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -270,6 +283,7 @@ fun HomeScreen(
                             recordIntervalMs = latestRecordIntervalMs
                         )
                     }
+                    vendorLogTick++
                     Service.service?.registerRecordListener(listener)
                 }
 
@@ -413,6 +427,29 @@ fun HomeScreen(
                             calibrationValue = calibrationValue,
                             dischargeDisplayPositive = dischargeDisplayPositive
                         )
+                    }
+
+                    // 电池事件全量记录（静默同步入库，按时间轴查看；仅在检测可用时开放）
+                    if (vendorLogEnabled) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .clickable(onClick = onNavigateToBhRecords)
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.home_battery_events_title),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    stringResource(R.string.home_battery_events_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }

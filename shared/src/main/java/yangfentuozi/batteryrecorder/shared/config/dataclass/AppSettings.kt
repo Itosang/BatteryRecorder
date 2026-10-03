@@ -17,5 +17,7 @@ data class AppSettings(
     /** 放电详情页能量单位是否显示为 mAh。 */
     val dischargeDetailUseMah: Boolean = SettingsConstants.dischargeDetailUseMah.def,
     /** 开机后是否尝试 ROOT 自启动。 */
-    val rootBootAutoStartEnabled: Boolean = SettingsConstants.rootBootAutoStartEnabled.def
+    val rootBootAutoStartEnabled: Boolean = SettingsConstants.rootBootAutoStartEnabled.def,
+    /** 是否查看厂商系统原生日志（仅在检测到可用数据源时生效）。 */
+    val vendorSystemLogEnabled: Boolean = SettingsConstants.vendorSystemLogEnabled.def
 )

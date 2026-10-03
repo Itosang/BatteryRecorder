@@ -59,6 +59,8 @@ data class SettingsUiState(
     val segmentDurationMin: Long = ServerSettings().segmentDurationMin,
     /** 开机自启 */
     val rootBootAutoStartEnabled: Boolean = AppSettings().rootBootAutoStartEnabled,
+    /** 查看厂商系统原生日志 */
+    val vendorSystemLogEnabled: Boolean = AppSettings().vendorSystemLogEnabled,
     /** 日志保留天数 */
     val maxHistoryDays: Long = ServerSettings().maxHistoryDays,
     /** 日志级别 */

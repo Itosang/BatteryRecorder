@@ -306,6 +306,16 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    fun setVendorSystemLogEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            _appSettings.value = UpdateAppSettingsUseCase.updateVendorSystemLogEnabled(
+                prefs = prefs,
+                current = _appSettings.value,
+                enabled = enabled
+            )
+        }
+    }
+
     fun setMaxHistoryDays(value: Long) {
         viewModelScope.launch {
             _serverSettings.value = UpdateServerSettingsUseCase.updateMaxHistoryDays(

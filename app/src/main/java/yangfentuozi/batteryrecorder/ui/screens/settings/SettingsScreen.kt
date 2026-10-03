@@ -28,6 +28,7 @@ import yangfentuozi.batteryrecorder.ui.components.settings.sections.CalibrationS
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.LogSection
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.PredictionSection
 import yangfentuozi.batteryrecorder.ui.components.settings.sections.ServerSection
+import yangfentuozi.batteryrecorder.ui.components.settings.sections.VendorLogSection
 import yangfentuozi.batteryrecorder.ui.model.CalibrationActions
 import yangfentuozi.batteryrecorder.ui.model.LogActions
 import yangfentuozi.batteryrecorder.ui.model.PredictionActions
@@ -53,6 +54,7 @@ fun SettingsScreen(
         SettingsActions(
             setCheckUpdateOnStartup = settingsViewModel::setCheckUpdateOnStartup,
             setUpdateChannel = settingsViewModel::setUpdateChannel,
+            setVendorSystemLogEnabled = settingsViewModel::setVendorSystemLogEnabled,
             calibration = CalibrationActions(
                 setDualCellEnabled = settingsViewModel::setDualCellEnabled,
                 setDischargeDisplayPositiveEnabled = settingsViewModel::setDischargeDisplayPositiveEnabled,
@@ -108,6 +110,7 @@ fun SettingsScreen(
             alwaysPollingScreenStatusEnabled = serverSettings.alwaysPollingScreenStatusEnabled,
             segmentDurationMin = serverSettings.segmentDurationMin,
             rootBootAutoStartEnabled = appSettings.rootBootAutoStartEnabled,
+            vendorSystemLogEnabled = appSettings.vendorSystemLogEnabled,
             maxHistoryDays = serverSettings.maxHistoryDays,
             logLevel = serverSettings.logLevel,
             gamePackages = statisticsSettings.gamePackages,
@@ -161,6 +164,9 @@ fun SettingsScreen(
             }
             item {
                 PredictionSection(props = props)
+            }
+            item {
+                VendorLogSection(props = props)
             }
         }
     }

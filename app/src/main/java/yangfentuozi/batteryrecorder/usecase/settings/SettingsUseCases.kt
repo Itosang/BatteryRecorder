@@ -139,6 +139,25 @@ internal object UpdateAppSettingsUseCase {
         }
         return current.copy(rootBootAutoStartEnabled = enabled)
     }
+
+    /**
+     * 更新「查看厂商系统原生日志」开关。
+     *
+     * @param prefs 已定位好的设置存储。
+     * @param current 当前 AppSettings。
+     * @param enabled 新开关值。
+     * @return 返回更新后的 AppSettings。
+     */
+    fun updateVendorSystemLogEnabled(
+        prefs: SharedPreferences,
+        current: AppSettings,
+        enabled: Boolean
+    ): AppSettings {
+        prefs.edit {
+            SettingsConstants.vendorSystemLogEnabled.writeToSP(this, enabled)
+        }
+        return current.copy(vendorSystemLogEnabled = enabled)
+    }
 }
 
 /**

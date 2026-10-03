@@ -18,4 +18,10 @@ sealed class NavRoute(val route: String) {
     object RecordDetail : NavRoute("record/{type}/{name}") {
         fun createRoute(type: String, name: String): String = "record/$type/$name"
     }
+
+    /** 全量电池事件记录（可选带入时间窗，来自充放电记录详情）。 */
+    object BhRecords : NavRoute("bh_records?start={start}&end={end}") {
+        fun createRoute(startMs: Long = 0L, endMs: Long = 0L): String =
+            "bh_records?start=$startMs&end=$endMs"
+    }
 }

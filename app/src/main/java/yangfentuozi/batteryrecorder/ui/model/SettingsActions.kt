@@ -39,6 +39,7 @@ data class PredictionActions(
 data class SettingsActions(
     val setCheckUpdateOnStartup: (Boolean) -> Unit,
     val setUpdateChannel: (UpdateChannel) -> Unit,
+    val setVendorSystemLogEnabled: (Boolean) -> Unit,
     val calibration: CalibrationActions,
     val server: ServerActions,
     val log: LogActions,

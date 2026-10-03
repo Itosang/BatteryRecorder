@@ -21,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
+import yangfentuozi.batteryrecorder.ui.screens.bh.BhRecordsScreen
 import yangfentuozi.batteryrecorder.ui.screens.history.HistoryListScreen
 import yangfentuozi.batteryrecorder.ui.screens.history.RecordDetailScreen
 import yangfentuozi.batteryrecorder.ui.screens.home.HomeScreen
@@ -104,7 +105,29 @@ fun BatteryRecorderNavHost(
                 onNavigateToPredictionDetail = {
                     // 预测详情页无参数，直接走固定 route。
                     navController.navigate(NavRoute.PredictionDetail.route)
+                },
+                onNavigateToBhRecords = {
+                    navController.navigate(NavRoute.BhRecords.createRoute())
                 }
+            )
+        }
+        composable(
+            route = NavRoute.BhRecords.route,
+            arguments = listOf(
+                navArgument("start") { type = NavType.LongType; defaultValue = 0L },
+                navArgument("end") { type = NavType.LongType; defaultValue = 0L }
+            ),
+            enterTransition = { defaultEnterTransition },
+            exitTransition = { defaultExitTransition },
+            popEnterTransition = { defaultPopEnterTransition },
+            popExitTransition = { defaultPopExitTransition }
+        ) {
+            BhRecordsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                initialStartMs = it.arguments?.getLong("start") ?: 0L,
+                initialEndMs = it.arguments?.getLong("end") ?: 0L
             )
         }
         composable(
@@ -198,6 +221,9 @@ fun BatteryRecorderNavHost(
                 settingsViewModel = settingsViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToBhRecords = { startMs, endMs ->
+                    navController.navigate(NavRoute.BhRecords.createRoute(startMs, endMs))
                 }
             )
         }

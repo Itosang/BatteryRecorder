@@ -142,4 +142,6 @@ dependencies {
     implementation(libs.commonmark)
     debugImplementation(composeBom)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    testImplementation(libs.junit)
 }

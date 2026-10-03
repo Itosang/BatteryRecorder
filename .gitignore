@@ -16,3 +16,5 @@ local.properties
 /BatteryRecorder.jks
 /app/debug/
 /.codex
+/backup-official
+/bh-samples

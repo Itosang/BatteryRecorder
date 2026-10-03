@@ -147,6 +147,13 @@ object SettingsConstants {
             def = false
         )
 
+    /** 查看厂商系统原生日志（检测到澎湃OS 与 battery-history 数据后开放）。 */
+    val vendorSystemLogEnabled =
+        BooleanConfigItem(
+            key = "vendor_system_log_enabled",
+            def = true
+        )
+
     /** 游戏 App 包名列表（高负载排除） */
     val gamePackages =
         StringSetConfigItem(

@@ -328,4 +328,21 @@
     <string name="format_about_remaining_h">约 %1$dh</string>
     <string name="format_about_remaining_m">约 %1$dm</string>
     <string name="history_info_id">记录ID</string>
+
+    <!-- 厂商系统原生日志（澎湃OS 电池历史 .bh） -->
+    <string name="settings_section_vendor_system_log">厂商系统原生日志</string>
+    <string name="settings_vendor_system_log">查看厂商系统原生日志</string>
+    <string name="settings_vendor_system_log_summary">读取厂商系统记录的电池历史（.bh）；检测到对应系统与数据文件后开放。</string>
+    <string name="home_battery_events_title">电池事件记录</string>
+    <string name="home_battery_events_desc">厂商系统电池事件全量归档（按日期/时间段筛选，含统计与明细）</string>
+    <string name="record_detail_system_events_title">系统事件统计（%1$s）</string>
+    <string name="record_detail_system_events_total">事件总数</string>
+    <string name="record_detail_system_events_total_value">%1$d 个（精确 %2$d · 近似 %3$d）</string>
+    <string name="record_detail_system_events_screen">屏幕</string>
+    <string name="record_detail_system_events_screen_value">亮屏 %1$d · 熄屏 %2$d</string>
+    <string name="record_detail_system_events_doze_suffix"> · 息屏显示 %1$d</string>
+    <string name="record_detail_system_events_abort">休眠被阻止</string>
+    <string name="record_detail_system_events_wakeup">后台唤醒</string>
+    <string name="record_detail_system_events_abort_rank_title">休眠被阻止原因（共 %1$d 次）</string>
+    <string name="record_detail_system_events_open_detail">查看详细记录</string>
 </resources>

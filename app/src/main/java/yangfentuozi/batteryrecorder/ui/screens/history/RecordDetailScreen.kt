@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -55,10 +56,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import yangfentuozi.batteryrecorder.R
+import yangfentuozi.batteryrecorder.data.bh.BhEventDb
+import yangfentuozi.batteryrecorder.data.bh.BhFeature
+import yangfentuozi.batteryrecorder.data.bh.BhRangeStats
+import yangfentuozi.batteryrecorder.data.bh.BhSyncManager
+import yangfentuozi.batteryrecorder.data.bh.BhTimeline
+import yangfentuozi.batteryrecorder.data.bh.buildPackageLabelResolver
 import yangfentuozi.batteryrecorder.shared.data.BatteryStatus
 import yangfentuozi.batteryrecorder.shared.data.RecordsFile
 import yangfentuozi.batteryrecorder.ui.components.charts.PowerCurveMode
+import yangfentuozi.batteryrecorder.ui.components.global.SplicedColumnGroup
+import yangfentuozi.batteryrecorder.ui.components.global.StatRow
 import yangfentuozi.batteryrecorder.ui.dialog.history.ChartGuideDialog
+import yangfentuozi.batteryrecorder.ui.screens.bh.BhRankGroup
 import yangfentuozi.batteryrecorder.ui.viewmodel.HistorySharedViewModel
 import yangfentuozi.batteryrecorder.ui.viewmodel.SettingsViewModel
 import yangfentuozi.batteryrecorder.shared.util.LoggerX
@@ -85,7 +95,8 @@ fun RecordDetailScreen(
     recordsFile: RecordsFile,
     viewModel: HistorySharedViewModel = viewModel(),
     settingsViewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onNavigateToBhRecords: (Long, Long) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val locale = LocalLocale.current.platformLocale
@@ -115,6 +126,42 @@ fun RecordDetailScreen(
         context.getSharedPreferences(RECORD_DETAIL_CHART_PREFS_NAME, Context.MODE_PRIVATE)
     }
     var longScreenshotViewportSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // 电池事件统计（来自 App 内部数据库；打开时静默同步一次保证数据最新）
+    // 门控：设置开关 + 澎湃OS + 数据源检测（BhFeature），关闭或不可用时隐藏该区
+    var bhStats by remember { mutableStateOf<BhRangeStats.Stats?>(null) }
+    val bhDb = remember(context) { BhEventDb.get(context) }
+    LaunchedEffect(record, recordsFile) {
+        if (!BhFeature.isEnabled(context)) {
+            bhStats = null
+            return@LaunchedEffect
+        }
+        val detail = record?.takeIf { it.asRecordsFile() == recordsFile }
+        val stats = detail?.stats
+        if (stats == null || stats.endTime <= stats.startTime) {
+            bhStats = null
+            return@LaunchedEffect
+        }
+        bhStats = withContext(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            try {
+                BhSyncManager.sync(context)
+            } catch (_: Throwable) {
+            }
+            val st = try {
+                val groups = bhDb.textGroups(stats.startTime, stats.endTime)
+                BhRangeStats.stats(groups, buildPackageLabelResolver(context))
+            } catch (_: Throwable) {
+                null
+            }
+            LoggerX.i(
+                TAG,
+                "[系统事件统计] 耗时 ${System.currentTimeMillis() - startedAt}ms · " +
+                        (st?.let { "${it.total} 个事件（精确 ${it.exact}）" } ?: "无数据")
+            )
+            st
+        }
+    }
     val chargeDetailBatteryInfoText = remember(
         context,
         locale,
@@ -455,6 +502,14 @@ fun RecordDetailScreen(
                         displayConfig = appDetailDisplayConfig
                     )
                 }
+
+                // 系统事件（.bh）并入常规记录：挂起失败 / 唤醒归因 / 屏幕状态机。
+                RecordSystemEventsSection(
+                    stats = bhStats,
+                    recordStartMs = detailState?.stats?.startTime ?: 0L,
+                    recordEndMs = detailState?.stats?.endTime ?: 0L,
+                    onOpenFullDetail = onNavigateToBhRecords
+                )
             }
         }
     }
@@ -476,4 +531,76 @@ private fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/**
+ * 常规记录详情页的「系统事件」区：展示与该记录时间窗重叠的 .bh 会话事件。
+ *
+ * 事件内容来自 HyperOS 系统电池历史（/data/system/battery-history），
+ * 提供采样记录给不出的信息：挂起失败原因、唤醒锁/定时器归因、屏幕状态机。
+ */
+@Composable
+private fun RecordSystemEventsSection(
+    stats: BhRangeStats.Stats?,
+    recordStartMs: Long,
+    recordEndMs: Long,
+    onOpenFullDetail: (Long, Long) -> Unit
+) {
+    val st = stats ?: return
+    if (st.total <= 0) return
+    // 统计与明细范围 = 充放电记录的开始~截止时间
+    val startMs = recordStartMs.takeIf { it > 0 } ?: return
+    val endMs = recordEndMs.takeIf { it > startMs } ?: return
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SplicedColumnGroup(
+            title = stringResource(
+                R.string.record_detail_system_events_title,
+                BhTimeline.formatRange(startMs, endMs)
+            )
+        ) {
+            item {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    StatRow(
+                        stringResource(R.string.record_detail_system_events_total),
+                        stringResource(
+                            R.string.record_detail_system_events_total_value,
+                            st.total, st.exact, st.approx
+                        )
+                    )
+                    StatRow(
+                        stringResource(R.string.record_detail_system_events_screen),
+                        stringResource(
+                            R.string.record_detail_system_events_screen_value,
+                            st.screenOn, st.screenOff
+                        ) + if (st.dozeOn > 0) {
+                            stringResource(R.string.record_detail_system_events_doze_suffix, st.dozeOn)
+                        } else ""
+                    )
+                    StatRow(
+                        stringResource(R.string.record_detail_system_events_abort),
+                        stringResource(R.string.common_times_count, st.abortTotal)
+                    )
+                    StatRow(
+                        stringResource(R.string.record_detail_system_events_wakeup),
+                        stringResource(R.string.common_times_count, st.wakeTotal)
+                    )
+                }
+            }
+        }
+        if (st.abortRank.isNotEmpty()) {
+            BhRankGroup(
+                title = stringResource(
+                    R.string.record_detail_system_events_abort_rank_title,
+                    st.abortTotal
+                ),
+                rows = st.abortRank,
+                limit = 3
+            )
+        }
+        // 详细记录入口（范围与统计一致：充放电记录的开始~结束）
+        TextButton(onClick = { onOpenFullDetail(startMs, endMs) }) {
+            Text(stringResource(R.string.record_detail_system_events_open_detail))
+        }
+    }
 }

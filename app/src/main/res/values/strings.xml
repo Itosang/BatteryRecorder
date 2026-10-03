@@ -328,4 +328,21 @@
     <string name="format_about_remaining_h">About %1$dh</string>
     <string name="format_about_remaining_m">About %1$dm</string>
     <string name="history_info_id">ID</string>
+
+    <!-- Vendor system native log (HyperOS battery history, .bh) -->
+    <string name="settings_section_vendor_system_log">Vendor system native log</string>
+    <string name="settings_vendor_system_log">View vendor system native log</string>
+    <string name="settings_vendor_system_log_summary">Read the battery history (.bh) recorded by the vendor system. Available only after the system and data files are detected.</string>
+    <string name="home_battery_events_title">Battery events</string>
+    <string name="home_battery_events_desc">Full archive of vendor system battery events, filterable by date and time range with statistics and details</string>
+    <string name="record_detail_system_events_title">System events (%1$s)</string>
+    <string name="record_detail_system_events_total">Event count</string>
+    <string name="record_detail_system_events_total_value">%1$d events (exact %2$d, approximated %3$d)</string>
+    <string name="record_detail_system_events_screen">Screen</string>
+    <string name="record_detail_system_events_screen_value">On %1$d · Off %2$d</string>
+    <string name="record_detail_system_events_doze_suffix"> · Doze display %1$d</string>
+    <string name="record_detail_system_events_abort">Suspend aborted</string>
+    <string name="record_detail_system_events_wakeup">Background wakeups</string>
+    <string name="record_detail_system_events_abort_rank_title">Suspend abort sources (%1$d in total)</string>
+    <string name="record_detail_system_events_open_detail">View detailed records</string>
 </resources>
