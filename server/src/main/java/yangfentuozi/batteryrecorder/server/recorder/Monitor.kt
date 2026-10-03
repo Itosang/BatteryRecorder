@@ -8,6 +8,7 @@ import android.app.ITaskStackListener
 import android.app.TaskInfo
 import android.app.TaskStackListener
 import android.graphics.Rect
+import android.hardware.display.DisplayTopology
 import android.hardware.display.IDisplayManager
 import android.hardware.display.IDisplayManagerCallback
 import android.os.Handler
@@ -321,18 +322,39 @@ class Monitor(
                     )
                     return
                 }
-                val oldIsInteractive = isInteractive
-                val latestIsInteractive = iPowerManager.isInteractive
-                isInteractive = latestIsInteractive
-                updatePreciseScreenOffWakeLockState()
-                LoggerX.d(
-                    TAG,
-                    "onDisplayEvent: displayId=$displayId event=$event interactive $oldIsInteractive -> $latestIsInteractive paused=$paused"
-                )
-                if (isInteractive && paused) {
-                    LoggerX.d(TAG, "onDisplayEvent: 收到亮屏事件, 唤醒采样线程")
-                    notifyLock()
+                refreshInteractiveState("onDisplayEvent", "displayId=$displayId event=$event")
+            }
+
+            /**
+             * Android 16+ (API 36+) 新增回调：显示集合快照变化。
+             *
+             * 必须实现，否则系统事务派发会抛 AbstractMethodError（API 37 实测崩溃点）。
+             * 语义上仍属于屏幕状态变化，复用与 onDisplayEvent 一致的刷新逻辑。
+             */
+            @Keep
+            override fun onDisplaySnapshot(displayIds: IntArray?, displayStates: IntArray?) {
+                if (alwaysPollingScreenStatusEnabled) {
+                    LoggerX.v(
+                        TAG,
+                        "onDisplaySnapshot: 已忽略, 当前为轮询模式, displays=${displayIds?.size}"
+                    )
+                    return
                 }
+                refreshInteractiveState("onDisplaySnapshot", "displays=${displayIds?.size}")
+            }
+
+            /**
+             * Android 16+ (API 36+) 新增回调：显示拓扑变化（投屏/折叠/扩展屏等）。
+             *
+             * 必须实现，理由同上；拓扑变化时同样刷新一次交互状态即可。
+             */
+            @Keep
+            override fun onTopologyChanged(topology: DisplayTopology?) {
+                if (alwaysPollingScreenStatusEnabled) {
+                    LoggerX.v(TAG, "onTopologyChanged: 已忽略, 当前为轮询模式")
+                    return
+                }
+                refreshInteractiveState("onTopologyChanged")
             }
         }
         iDisplayManager.registerCallback(displayCallback)
@@ -346,6 +368,28 @@ class Monitor(
         LoggerX.v(TAG, "unregisterDisplayEventCallback: 清空 DisplayCallback 引用")
         displayCallback = null
         displayCallbackRegistered = false
+    }
+
+    /**
+     * Display 回调共用的刷新逻辑：拉取最新交互状态，亮屏且采样暂停时唤醒采样线程。
+     *
+     * @param source 回调名（用于日志定位）。
+     * @param detail 附加到日志的回调参数摘要；null 表示该回调无有用参数。
+     */
+    private fun refreshInteractiveState(source: String, detail: String? = null) {
+        val oldIsInteractive = isInteractive
+        val latestIsInteractive = iPowerManager.isInteractive
+        isInteractive = latestIsInteractive
+        updatePreciseScreenOffWakeLockState()
+        val detailText = detail?.let { "$it " } ?: ""
+        LoggerX.d(
+            TAG,
+            "$source: ${detailText}interactive $oldIsInteractive -> $latestIsInteractive paused=$paused"
+        )
+        if (isInteractive && paused) {
+            LoggerX.d(TAG, "$source: 收到亮屏事件, 唤醒采样线程")
+            notifyLock()
+        }
     }
 
     fun onStop() {
