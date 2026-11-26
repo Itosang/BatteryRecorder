@@ -15,7 +15,7 @@ It aims to record power accurately with minimal overhead and provide the most ac
 
 - Start the service before expecting BatteryRecorder to record data.
 - If power readings are inaccurate, check the Calibration guide first.
-- If screen state or foreground app detection is incorrect, open Compatibility settings from the Server section and enable the corresponding polling option.
+- If screen state or foreground app detection is incorrect, open Compatibility settings under Recording & sampling and enable the corresponding polling option.
 - Battery life prediction requires at least `3` valid records, and becomes more stable as more samples are collected.
 - Tap the Battery life prediction card on the home screen to open prediction details.
 - Swipe right on a history item to export it, or swipe left to delete it.
@@ -23,15 +23,12 @@ It aims to record power accurately with minimal overhead and provide the most ac
 
 ## Settings Sections
 
-The Settings screen currently contains four main sections:
-
 - General
-- Server
+- Recording & sampling
+- Notifications & alerts
+- Battery calibration
+- Battery life prediction
 - Logs
-- Prediction
-
-Battery life prediction settings are mainly located under Prediction.
-Power display and calibration settings are mainly located under General.
 
 ## Contents
 

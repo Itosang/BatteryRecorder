@@ -7,12 +7,13 @@ Tap the card to open prediction details.
 
 > The prediction card displays a score that reflects the reliability of the current result.
 
-To adjust prediction behavior, open the Prediction section in Settings and review:
+To adjust prediction behavior, open Battery life prediction in Settings and review:
 
 - Exclude high-load apps
 - Sample count
-- Enable weighted algorithm
 - Weight strength
+
+The active discharge record is weighted automatically when it meets the model's sample requirements.
 
 ## Why "Insufficient Data" Appears
 

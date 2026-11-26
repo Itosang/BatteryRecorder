@@ -30,18 +30,19 @@ After the service starts, the home screen displays:
 
 Open Settings and check these items first:
 
-- Calibration-related options under General; see [Calibration](calibration.md)
-- Exclude high-load apps under Prediction; see [Excluding High-load Apps](high-load-apps.md)
+- Calibration-related options under Battery calibration. See [Calibration](calibration.md).
+- Exclude high-load apps under Battery life prediction. See [Excluding High-load Apps](high-load-apps.md).
 
 > The first group determines whether **power readings** are correct, while the second keeps **battery life predictions** accurate.
 
 ## 4. Where to Go Next
 
-- To adjust power display, read [Calibration](calibration.md)
+- To change the discharge sign or the energy unit on discharge record details, use Battery calibration in Settings
+- To change the theme, open Theme settings under General
 - To exclude games or other high-load apps, read [Excluding High-load Apps](high-load-apps.md)
-- To adjust sampling, writing, or segmentation, open the Server section in Settings
-- If screen state or foreground app detection is incorrect, open Compatibility settings from the Server section and enable the corresponding polling option
-- If Realtime power notification is enabled but no notification appears, tap Manage Shell notification in the Server section and check whether the system disabled Shell notifications automatically
+- To adjust sampling, writing, or segmentation, open Recording & sampling in Settings
+- If screen state or foreground app detection is incorrect, open Compatibility settings under Recording & sampling and enable the corresponding polling option
+- If no notification appears after enabling Realtime notification, open Manage Shell notification under Notifications & alerts and check whether the system disabled Shell notifications
 - To adjust log retention or log level, open the Logs section
 - To understand prediction results, read [Battery Life Prediction](prediction.md)
 - To manage history files, read [History](history.md)

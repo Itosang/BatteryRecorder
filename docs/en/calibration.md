@@ -2,10 +2,12 @@
 
 ## Entry
 
-Open Settings. Under General, you will find:
+Open Settings. Under Battery calibration, you will find:
 
 - Dual-cell series
+- Prompt on suspected abnormal status
 - Show discharge as positive
+- Use mAh instead of Wh (discharge details only)
 - Current unit calibration
 - Battery status calibration
 

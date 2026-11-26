@@ -2,7 +2,7 @@
 
 ## Entry
 
-Open Settings, then tap Exclude high-load apps under Prediction.
+Open Settings, then tap Exclude high-load apps under Battery life prediction.
 
 Here, "exclude" means that selected apps do not participate in battery life prediction statistics.
 
