@@ -24,9 +24,9 @@ It aims to record power accurately with minimal overhead and provide the most ac
 ## Settings Sections
 
 - General
-- Recording & sampling
-- Notifications & alerts
 - Battery calibration
+- Notifications & alerts
+- Recording & sampling
 - Battery life prediction
 - Logs
 

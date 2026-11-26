@@ -43,8 +43,9 @@ It does not change how samples are recorded.
 
 ### Current Unit Calibration
 
-This option changes the current conversion scale and therefore the displayed power value.
-If power is clearly abnormal or remains at 0.00W, adjust this option to correct the display.
+Open Current unit calibration. Connect the recording service, unplug the power supply, and tap Start calibration. The page uses 10 new discharge samples to determine the current unit and direction. It saves the multiplier when measurement succeeds and shows a retry message if measurement fails.
+
+Use the plus and minus buttons to adjust the multiplier manually, or tap Reset to restore the default. Changes are saved immediately and reflected in the live power preview. With the correct calibration, charging shows a positive value and discharging shows a negative value.
 
 ### Battery Status Calibration
 
